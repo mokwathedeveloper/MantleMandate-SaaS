@@ -1,98 +1,167 @@
+# MantleMandate — Turing Test Hackathon 2026 Tech Stack
 
-# Turing Test Hackathon 2026 Tech Stack for MantleMandate-SaaS
-
-### **1. Backend**
-- **Node.js with Express.js**:
-  - **Why**: **Node.js** is ideal for fast, scalable backend handling of requests and real-time updates.
-  - **Why Express.js**: Express is lightweight and handles APIs that integrate **AI models**, **smart contracts**, and **Mantle** DeFi protocols.
-
-- **SQL Database (PostgreSQL or MySQL)**:
-  - **Why**: Since you’ll be writing **SQL queries from scratch**, **PostgreSQL** is ideal for handling structured data, such as **user profiles**, **trading history**, and **smart contract interactions**.
-  - **Why PostgreSQL**: It’s scalable and allows for complex queries related to **DeFi transactions** and **AI agent logs**.
-
-- **Solidity**:
-  - **Why**: **Smart contracts** must be written in **Solidity** to interact with **Mantle’s blockchain** and handle **AI trading strategies** and **risk management** tools.
-
-- **Python (For AI Models and Trading Algorithms)**:
-  - **Why**: Python is the best language for developing **AI-driven trading strategies**. Use **TensorFlow** or **PyTorch** for building **AI models** for trading, and **Scikit-learn** for machine learning algorithms.
+> **This is the confirmed, corrected tech stack for MantleMandate.**
+> See `docs/MASTER_Architecture_and_Stack.md` for the complete authoritative reference.
 
 ---
 
-### **2. Frontend**
-- **React.js with Next.js**:
-  - **Why**: **React.js** is perfect for building interactive UIs, and **Next.js** provides **server-side rendering (SSR)** for better performance.
-  - **Why Next.js**: It handles dynamic routing, SEO, and optimized rendering, which are crucial for real-time data like trading performance.
+## 1. Backend — Flask (Python 3.11+)
 
-- **Tailwind CSS**:
-  - **Why**: **Tailwind CSS** is a utility-first framework, allowing rapid prototyping and consistent design.
-  - **Why Tailwind**: It enables fast, flexible, and responsive UI design, which is crucial for building **clean and functional interfaces**.
+**Flask** is the primary backend — NOT Node.js/Express.js.
 
----
+- **Flask 3.x** with Application Factory + Blueprints for modularity
+- **Why Flask over Node.js**: The AI layer (trading models, mandate parsing, risk engine) is pure Python. Using Flask keeps the AI and API code in the same Python process, enabling direct function calls without HTTP round-trips between services.
+- **Flask-JWT-Extended**: Access tokens (15 min) + refresh tokens (30 days) for auth
+- **flask-bcrypt**: Password hashing (bcrypt, cost factor 12)
+- **SQLAlchemy 2.x + Flask-Migrate**: ORM + Alembic migrations — no raw SQL
+- **Flask-SocketIO + gevent**: Real-time WebSocket push to frontend
+- **Celery + Redis**: Background execution of AI agent trading loops
+- **web3.py**: All contract calls from the backend to Mantle Network
+- **marshmallow**: Input validation on every POST/PUT endpoint
+- **Flask-Limiter**: Rate limiting (5 login attempts/min, 100 API calls/min)
+- **pytest + pytest-flask**: Backend testing framework
 
-### **3. Blockchain Integration**
-- **Mantle Network**:
-  - **Why**: Since the hackathon requires deployment on **Mantle**, all **smart contracts** and **AI agents** must be deployed on **Mantle’s blockchain** to ensure **on-chain execution**.
-  - **Why Mantle**: Mantle’s infrastructure supports **DeFi protocols** and ensures **scalability**, **low transaction costs**, and **security** for your AI-driven trades.
+**Install command:**
+```bash
+pip install flask flask-jwt-extended flask-bcrypt flask-sqlalchemy \
+  flask-migrate flask-cors flask-socketio flask-limiter marshmallow \
+  celery redis python-dotenv web3 psycopg2-binary gunicorn gevent \
+  gevent-websocket pytest pytest-flask pytest-cov
+```
 
-- **Web3.js / Ethers.js**:
-  - **Why**: These libraries enable interaction between your **frontend** and **smart contracts** deployed on **Mantle**.
-
----
-
-### **4. AI and Data Analysis**
-- **AI Models (Python, TensorFlow, PyTorch, Scikit-learn)**:
-  - **Why**: **Python** with **TensorFlow** or **PyTorch** is essential for developing **AI-driven trading bots** and **market prediction models**. 
-  - **Libraries**: Use **TensorFlow** and **PyTorch** for deep learning and neural networks, and **Scikit-learn** for regression or classification models in trading.
-
-- **Bybit API** for Trading Data:
-  - **Why**: Integrate **Bybit API** to get real-time market data and execute **AI-driven trades**.
-
----
-
-### **5. Database and Storage**
-- **PostgreSQL** (SQL Database):
-  - **Why**: You will write **SQL queries** to track user interactions, AI performance, and trading history. **PostgreSQL** is perfect for complex queries and scaling.
-
-- **AWS S3**:
-  - **Why**: Use **AWS S3** for scalable file storage, like **AI model data**, **logs**, and **exported reports**.
+**Deployment:** Railway or Render (Gunicorn + gevent, single worker for SocketIO)
+```bash
+gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker \
+         -w 1 -b 0.0.0.0:5000 "app:create_app()"
+```
 
 ---
 
-### **6. Cloud and Hosting**
-- **Vercel**:
-  - **Why**: **Vercel** is ideal for hosting **React.js** and **Next.js** projects, ensuring easy deployment and **serverless architecture**.
+## 2. Frontend — Next.js 14 TypeScript
 
-- **AWS Lambda**:
-  - **Why**: Use **AWS Lambda** for serverless computing, handling **AI model inference** and **real-time updates** for smart contract interactions.
+- **Next.js 14** with App Router (`app/` directory) — NOT Pages Router
+- All files: `.tsx` for components and pages, `.ts` for hooks and utilities
+- **Tailwind CSS**: Utility-first styling, dark theme (`#0D1117` bg, `#161B22` cards)
+- **wagmi + viem**: Wallet connections (MetaMask, WalletConnect)
+- **Ethers.js v6**: Direct contract reads from the browser
+- **TanStack Query**: Server state management and caching
+- **Zustand**: Global client state (auth, alerts, UI) — NOT Redux
+- **React Hook Form + Zod**: Type-safe form validation
+- **socket.io-client**: Real-time WebSocket alert subscription
+- **Axios**: API communication with JWT interceptor
 
----
+**Install command:**
+```bash
+npx create-next-app@latest frontend --typescript --tailwind --app
+npm install axios zustand @tanstack/react-query react-hook-form zod \
+  wagmi viem ethers socket.io-client recharts lucide-react
+```
 
-### **7. Monitoring and Analytics**
-- **Prometheus & Grafana**:
-  - **Why**: Use **Prometheus** for collecting metrics and **Grafana** for real-time dashboards to monitor **AI agent performance** and **trading results**.
-
-- **Google Analytics**:
-  - **Why**: For tracking **user activity** and **app performance**, to enhance UI/UX and engage with users.
-
----
-
-### **8. Deployment and Version Control**
-- **GitHub**:
-  - **Why**: **GitHub** is essential for version control, **open-source code submission**, and collaboration.
-
----
-
-### **Final Recommendations for Tech Stack:**
-
-- **Emphasize On-Chain AI**: Ensure that **AI models** are integrated with **Mantle’s blockchain infrastructure**, and all actions are permanently recorded on-chain.
-- **User-Focused Design**: Use **React.js** and **Tailwind CSS** to create clean and intuitive user interfaces that clearly display key metrics and performance data.
-- **Optimize for Scalability**: Use **serverless functions** via **AWS Lambda** to handle high-frequency trading activities without worrying about server management.
-- **Focus on Transparency**: Display **real-time data** in the UI and make the **AI trading strategy** clear to users to meet the hackathon's emphasis on **radical transparency**.
-
-By aligning the tech stack with these components, you'll be in a great position to meet the hackathon's criteria and impress the judges.
+**Deployment:** Vercel (automatic via GitHub integration)
 
 ---
 
-# Download Tech Stack and Recommendations
+## 3. Blockchain — Mantle Network (Hardhat + Solidity 0.8.x)
 
-[Download Turing_Test_Hackathon_Strategy.md](sandbox:/mnt/data/Turing_Test_Hackathon_Strategy.md)
+- **Hardhat** for compiling, testing, deploying — NOT Truffle
+- **Solidity 0.8.x** smart contracts:
+  - `MandatePolicy.sol` — registers policy hashes on-chain
+  - `AgentExecutor.sol` — records trade execution on-chain
+  - `RiskGuard.sol` — enforces hard risk limits on-chain
+- **web3.py** for backend → contract calls
+- **Ethers.js v6 + wagmi** for frontend → contract reads/writes
+- Deploy to Mantle Sepolia testnet first, then mainnet
+
+**Install command:**
+```bash
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+```
+
+**Mantle RPC endpoints:**
+- Testnet: `https://rpc.sepolia.mantle.xyz` (Chain ID: 5003)
+- Mainnet: `https://rpc.mantle.xyz` (Chain ID: 5000)
+
+**DeFi protocol integrations (read-only for price/liquidity data):**
+- Merchant Moe
+- Agni Finance
+- Fluxion
+
+---
+
+## 4. AI Layer (inside Flask backend)
+
+- Python 3.11+ — TensorFlow / PyTorch / Scikit-learn
+- **Not a separate service** — AI modules live in `backend/ai/` and are called as Python functions
+- `mandate_parser.py` — NLP parsing of plain-English mandates → structured policy dict
+- `trading_model.py` — trading signal generation from Bybit market data
+- `risk_engine.py` — pre-trade risk validation (drawdown, position size, cooldown)
+- `bybit_feed.py` — read-only Bybit market data ingestion
+- Heavy inference jobs dispatched as **Celery tasks** (non-blocking)
+
+---
+
+## 5. Database and Storage
+
+| Component | Technology | Hosting |
+|-----------|-----------|---------|
+| Primary database | PostgreSQL 15 | Supabase or AWS RDS |
+| Cache + task broker | Redis | Upstash |
+| Exported files | AWS S3 | CSV/PDF reports |
+
+**Key PostgreSQL tables:** users, wallets, mandates, agents, trades, audit_logs, alerts, reports
+
+---
+
+## 6. Cloud and Hosting
+
+| Component | Platform | Notes |
+|-----------|---------|-------|
+| Frontend | Vercel | Auto-deploy from GitHub |
+| Flask backend | Railway or Render | Gunicorn + gevent |
+| Celery workers | Railway or Render | Separate process, same codebase |
+| PostgreSQL | Supabase or AWS RDS | Managed PostgreSQL 15 |
+| Redis | Upstash | Managed Redis |
+| Smart contracts | Mantle Network | Deployed via Hardhat |
+
+> **NOT AWS Lambda.** Flask-SocketIO requires a persistent process (gevent), which is incompatible with serverless Lambda. Use Railway or Render for always-on Flask hosting.
+
+---
+
+## 7. Monitoring and Analytics
+
+- **Prometheus + Grafana**: System metrics, agent performance, trade volume
+- **Sentry**: Error tracking (Flask + Next.js)
+- **GitHub Actions**: CI/CD pipeline (lint → test → deploy)
+
+---
+
+## 8. Testing
+
+| Layer | Framework | Command |
+|-------|----------|---------|
+| Backend | **pytest** + pytest-flask | `pytest tests/ -v --cov=app` |
+| Frontend | Jest + React Testing Library | `npm test` |
+| Smart contracts | Hardhat built-in | `npx hardhat test` |
+
+> Backend testing uses **pytest** — NOT Mocha or Chai. Those are JavaScript-only test frameworks.
+
+---
+
+## Key Judging Criteria Alignment
+
+| Criterion | Weight | MantleMandate Approach |
+|-----------|--------|----------------------|
+| Technical Depth | 30% | Flask AI layer + Celery + Mantle contracts working end-to-end |
+| Innovation | 25% | Plain-English mandate parsing → on-chain policy hash → autonomous AI agent |
+| Mantle Ecosystem Contribution | 25% | MandatePolicy.sol + AgentExecutor.sol + 3 DeFi protocol integrations |
+| Product Completeness | 20% | All 15 screens implemented, real-time alerts, exportable reports |
+
+---
+
+## Final Recommendations
+
+1. **On-Chain Transparency**: Every trade executed by an AI agent is recorded via `AgentExecutor.sol`. Users can verify any action on Mantle Explorer.
+2. **Non-Custodial**: MantleMandate never holds user funds. All trading execution is user-authorized through their connected wallet.
+3. **Honest Demo Data**: Use real data from Mantle testnet. Small real numbers are infinitely more credible than large fake numbers.
+4. **User-Focused Design**: Follow `uiux-v2/` specifications exactly — clean dark theme, clear metric hierarchy, actionable alerts.
+5. **Open Source**: Push to a public GitHub repo with a detailed README including deployed contract addresses and setup instructions.
