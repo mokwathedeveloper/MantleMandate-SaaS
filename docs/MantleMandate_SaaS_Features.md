@@ -1,5 +1,5 @@
 
-# MantleMandate-SaaS Features
+# MantleMandate Features
 
 ## Core Features
 
@@ -45,5 +45,20 @@
     - Ensures that trades follow **predefined risk parameters** and selects appropriate venues for execution (Merchant Moe, Agni, Fluxion).
     - Prevents risky or excessive trades via **deterministic rules**.
 
+## Pricing Tiers
+
+| Tier | Name | Price | Target User |
+|------|------|-------|-------------|
+| Entry | **Operator** | $29/month USD | Individual DeFi traders |
+| Mid | **Strategist** | $99/month USD | Active quant traders, small funds |
+| Full | **Institution** | $299/month USD | Funds, DAOs, institutional desks |
+
+Payment accepted in: USD (card), USDC, USDT, MNT (Mantle Network native token)
+Free trial: 14 days, no credit card or wallet required
+
+CTA copy: "Start Your 14-Day Free Trial — No Credit Card, No Wallet Required"
+
+---
+
 ## Conclusion
-These features align directly with the hackathon's judging criteria, emphasizing **autonomous AI trading agents**, **on-chain transparency**, and **trading volume/ROI**. The platform is designed to showcase innovation in **DeFi portfolio management** and **AI-powered asset management**.
+These features align directly with the hackathon's judging criteria, emphasizing **autonomous AI trading agents**, **on-chain transparency**, and **trading volume/ROI**. **MantleMandate** is designed to showcase innovation in **DeFi portfolio management** and **AI-powered asset management** on the Mantle Network.
