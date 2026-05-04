@@ -1,5 +1,5 @@
 
-# Turing Test Hackathon 2026 Strategy for MantleMandate-SaaS
+# Turing Test Hackathon 2026 Strategy for MantleMandate
 
 ### **Phase 1: ClawHack (AI Agent Deployment)**
 
@@ -67,4 +67,6 @@
 
 ---
 
-By focusing on these areas, you can maximize your chances of **winning the hackathon**. Good luck, and let me know if you need further assistance!
+By focusing on these areas, you can maximize your chances of **winning the hackathon**.
+
+> **Tech stack reference:** See `docs/Updated_Turing_Test_Hackathon_Strategy.md` for the confirmed Flask + Next.js TypeScript stack details.
