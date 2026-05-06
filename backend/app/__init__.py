@@ -25,6 +25,7 @@ def create_app(config_name: str = 'default') -> Flask:
     from app.reports import reports_bp
     from app.alerts import alerts_bp
     from app.blockchain import blockchain_bp
+    from app.portfolio import portfolio_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(mandates_bp, url_prefix='/api/mandates')
@@ -33,6 +34,7 @@ def create_app(config_name: str = 'default') -> Flask:
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     app.register_blueprint(alerts_bp, url_prefix='/api/alerts')
     app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
+    app.register_blueprint(portfolio_bp, url_prefix='/api/portfolio')
 
     @app.route('/api/health')
     def health():

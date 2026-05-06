@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from sqlalchemy.pool import StaticPool
 
 
 class BaseConfig:
@@ -32,17 +33,38 @@ class ProductionConfig(BaseConfig):
 
 class TestingConfig(BaseConfig):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'TEST_DATABASE_URL',
-        'postgresql://mantlemandate:devpassword@localhost:5432/mantlemandate_test'
-    )
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=5)
+    SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/mantlemandate_test.db'
+    SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'check_same_thread': False}}
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=300)
     CELERY_TASK_ALWAYS_EAGER = True
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', 'test-key')
+    BYBIT_API_KEY = os.environ.get('BYBIT_API_KEY', 'test-key')
+    BYBIT_SECRET = os.environ.get('BYBIT_SECRET', 'test-secret')
+    MANTLE_RPC_URL = os.environ.get('MANTLE_RPC_URL', 'http://localhost:8545')
+
+
+_LOCAL_DB = 'sqlite:///' + os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'mantlemandate_local.db')
+)
+
+
+class LocalConfig(BaseConfig):
+    """SQLite + no Redis — runs without Docker for local development."""
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = _LOCAL_DB
+    SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'check_same_thread': False}}
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+    BYBIT_API_KEY = os.environ.get('BYBIT_API_KEY', '')
+    BYBIT_SECRET = os.environ.get('BYBIT_SECRET', '')
 
 
 config = {
     'development': DevelopmentConfig,
+    'local': LocalConfig,
     'production': ProductionConfig,
     'testing': TestingConfig,
-    'default': DevelopmentConfig,
+    'default': LocalConfig,
 }
