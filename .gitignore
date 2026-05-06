@@ -61,3 +61,13 @@ celerybeat.pid
 
 # AWS
 *.pem
+
+# Local DB
+*.db
+*.sqlite3
+
+# Logs
+logs/
+
+# Memory/scratch files
+memory/
