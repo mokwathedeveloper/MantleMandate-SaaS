@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Plus, FileText, Search, Bot, TrendingUp, CheckCircle2 } from 'lucide-react'
 import { useMandates } from '@/hooks/useMandates'
+import { useAuthStore } from '@/store/authStore'
 import { formatDate } from '@/lib/utils'
 import type { Mandate } from '@/types/mandate'
 
@@ -227,9 +228,10 @@ export default function MandatesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
 
-  const { data, isLoading } = useMandates()
+  const { accessToken } = useAuthStore()
+  const { data, isLoading, isError } = useMandates({ enabled: !!accessToken })
   const apiMandates = data?.data ?? []
-  const isMock = !isLoading && apiMandates.length === 0
+  const isMock = !accessToken || (!isLoading && apiMandates.length === 0) || isError
 
   const allMandates = isMock ? MOCK_MANDATES : apiMandates
 

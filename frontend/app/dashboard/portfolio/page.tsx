@@ -9,6 +9,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import api from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -120,21 +121,24 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function PortfolioPage() {
   const [chartDays, setChartDays] = useState(30)
+  const { accessToken } = useAuthStore()
 
-  const { data: snapshot, isLoading: loadingSnap } = useQuery<PortfolioSnapshot>({
+  const { data: snapshot, isLoading: loadingSnap, isError: errSnap } = useQuery<PortfolioSnapshot>({
     queryKey: ['portfolio', 'snapshot'],
     queryFn: () => api.get('/portfolio/snapshot').then(r => r.data.data),
     retry: false,
+    enabled: !!accessToken,
   })
 
-  const { data: positions, isLoading: loadingPos } = useQuery<PositionRow[]>({
+  const { data: positions, isLoading: loadingPos, isError: errPos } = useQuery<PositionRow[]>({
     queryKey: ['portfolio', 'positions'],
     queryFn: () => api.get('/portfolio/positions').then(r => r.data.data),
     retry: false,
+    enabled: !!accessToken,
   })
 
   const isLoading = loadingSnap || loadingPos
-  const isMock    = !isLoading && (!snapshot || !positions?.length)
+  const isMock    = !accessToken || (!isLoading && (!snapshot || !positions?.length)) || errSnap || errPos
   const snap      = snapshot ?? MOCK_SNAPSHOT
   const pos       = positions?.length ? positions : MOCK_POSITIONS
 

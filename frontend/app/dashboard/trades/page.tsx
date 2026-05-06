@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Activity, ChevronLeft, ChevronRight, Download, ExternalLink, TrendingUp, TrendingDown, Search, X } from 'lucide-react'
 import { useTrades } from '@/hooks/useTrades'
+import { useAuthStore } from '@/store/authStore'
 import type { Trade } from '@/types/trade'
 
 const PROTOCOL_LABELS: Record<string, string> = {
@@ -207,13 +208,15 @@ export default function TradesPage() {
   const [page,   setPage]   = useState(1)
   const [filter, setFilter] = useState<Filter>({})
 
-  const { data: apiData, isLoading } = useTrades({
+  const { accessToken } = useAuthStore()
+  const { data: apiData, isLoading, isError } = useTrades({
     page,
     per_page: 25,
     status:   filter.status,
+    enabled:  !!accessToken,
   })
 
-  const isMock  = !isLoading && !apiData?.data?.length
+  const isMock  = !accessToken || (!isLoading && !apiData?.data?.length) || isError
   const raw     = isMock ? MOCK_RESPONSE : (apiData ?? MOCK_RESPONSE)
 
   const visibleTrades = useMemo(() => {

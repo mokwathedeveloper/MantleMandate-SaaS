@@ -12,7 +12,7 @@ interface TradesResponse {
   total_pages: number
 }
 
-export function useTrades(params?: { page?: number; per_page?: number; agent_id?: string; status?: string; direction?: string }) {
+export function useTrades(params?: { page?: number; per_page?: number; agent_id?: string; status?: string; direction?: string; enabled?: boolean }) {
   const query = new URLSearchParams()
   if (params?.page)      query.set('page',      String(params.page))
   if (params?.per_page)  query.set('per_page',  String(params.per_page))
@@ -23,7 +23,9 @@ export function useTrades(params?: { page?: number; per_page?: number; agent_id?
   return useQuery<TradesResponse>({
     queryKey: ['trades', params],
     queryFn: () => api.get(`/trades?${query}`).then((r) => r.data),
-    refetchInterval: 15_000,
+    retry: false,
+    enabled: params?.enabled !== false,
+    refetchInterval: params?.enabled !== false ? 15_000 : false,
   })
 }
 

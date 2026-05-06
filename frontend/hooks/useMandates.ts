@@ -12,7 +12,7 @@ interface MandateListResponse {
   total_pages: number
 }
 
-export function useMandates(params?: { page?: number; status?: string }) {
+export function useMandates(params?: { page?: number; status?: string; enabled?: boolean }) {
   const query = new URLSearchParams()
   if (params?.page)   query.set('page',   String(params.page))
   if (params?.status) query.set('status', params.status)
@@ -20,6 +20,8 @@ export function useMandates(params?: { page?: number; status?: string }) {
   return useQuery<MandateListResponse>({
     queryKey: ['mandates', params],
     queryFn: () => api.get(`/mandates?${query}`).then((r) => r.data),
+    retry: false,
+    enabled: params?.enabled !== false,
   })
 }
 
