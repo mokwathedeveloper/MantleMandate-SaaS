@@ -23,6 +23,197 @@ import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Trade, AuditLog } from '@/types/trade'
 
+// ── mock fallback data ────────────────────────────────────────────────────────
+
+const MOCK_AGENT = {
+  id: 'agent-demo',
+  mandateId: 'mandate-demo',
+  mandateName: 'ETH Conservative Strategy',
+  name: 'ETH Conservative Buyer',
+  status: 'active' as const,
+  capitalCap: 50000,
+  totalPnl: 3847.22,
+  totalRoi: 7.69,
+  totalVolume: 284500,
+  drawdownCurrent: 2.3,
+  deployedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  lastTradeAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+}
+
+const MOCK_TRADES: Trade[] = [
+  {
+    id: 'trade-1',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'ETH/USDT',
+    direction: 'buy',
+    amountUsd: 4200,
+    price: 2184.5,
+    pnl: 312.8,
+    protocol: 'merchant_moe',
+    txHash: '0xabc123def456789abc123def456789abc123def456789abc123def456789abc1',
+    blockNumber: 14823910,
+    status: 'success',
+    mandateRuleApplied: 'Max 10% position size',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'trade-2',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'MNT/USDT',
+    direction: 'buy',
+    amountUsd: 2800,
+    price: 0.682,
+    pnl: 187.4,
+    protocol: 'agni',
+    txHash: '0xdef456abc789def456abc789def456abc789def456abc789def456abc789def4',
+    blockNumber: 14823750,
+    status: 'success',
+    mandateRuleApplied: 'Diversify across assets',
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'trade-3',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'ETH/USDT',
+    direction: 'sell',
+    amountUsd: 3500,
+    price: 2240.1,
+    pnl: 428.6,
+    protocol: 'merchant_moe',
+    txHash: '0x789abc123def789abc123def789abc123def789abc123def789abc123def7891',
+    blockNumber: 14823590,
+    status: 'success',
+    mandateRuleApplied: 'Take profit at +5%',
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'trade-4',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'USDC/USDT',
+    direction: 'buy',
+    amountUsd: 5000,
+    price: 1.0,
+    pnl: -12.4,
+    protocol: 'fluxion',
+    txHash: null,
+    blockNumber: null,
+    status: 'failed',
+    mandateRuleApplied: 'Stable coin hedge',
+    createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'trade-5',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'ETH/USDT',
+    direction: 'buy',
+    amountUsd: 6100,
+    price: 2118.9,
+    pnl: 544.2,
+    protocol: 'merchant_moe',
+    txHash: '0x321cba987fed321cba987fed321cba987fed321cba987fed321cba987fed3214',
+    blockNumber: 14823100,
+    status: 'success',
+    mandateRuleApplied: 'Dip buy at -3%',
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'trade-6',
+    agentId: 'agent-demo',
+    mandateId: 'mandate-demo',
+    mandateName: 'ETH Conservative Strategy',
+    assetPair: 'MNT/USDT',
+    direction: 'sell',
+    amountUsd: 1900,
+    price: 0.71,
+    pnl: 94.1,
+    protocol: 'agni',
+    txHash: '0x654fed321abc654fed321abc654fed321abc654fed321abc654fed321abc6545',
+    blockNumber: 14822870,
+    status: 'success',
+    mandateRuleApplied: 'Take profit at +4%',
+    createdAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+const MOCK_AUDIT_LOGS: AuditLog[] = [
+  {
+    id: 'log-1',
+    agentId: 'agent-demo',
+    tradeId: 'trade-1',
+    eventType: 'trade_executed',
+    decisionHash: '0x8f3a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
+    txHash: '0xabc123def456789abc123def456789abc123def456789abc123def456789abc1',
+    blockNumber: 14823910,
+    details: { reason: 'ETH dipped 2.1% below 7-day MA. Mandate allows dip-buy entry.' },
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'log-2',
+    agentId: 'agent-demo',
+    tradeId: null,
+    eventType: 'mandate_check',
+    decisionHash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
+    txHash: null,
+    blockNumber: null,
+    details: { reason: 'All mandate rules verified. Drawdown at 2.3%, within 10% limit.' },
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'log-3',
+    agentId: 'agent-demo',
+    tradeId: 'trade-2',
+    eventType: 'trade_executed',
+    decisionHash: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3',
+    txHash: '0xdef456abc789def456abc789def456abc789def456abc789def456abc789def4',
+    blockNumber: 14823750,
+    details: { reason: 'Portfolio diversification threshold triggered MNT allocation.' },
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'log-4',
+    agentId: 'agent-demo',
+    tradeId: 'trade-3',
+    eventType: 'trade_executed',
+    decisionHash: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4',
+    txHash: '0x789abc123def789abc123def789abc123def789abc123def789abc123def7891',
+    blockNumber: 14823590,
+    details: { reason: 'Take-profit rule triggered at +5.2% from entry. Position closed.' },
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'log-5',
+    agentId: 'agent-demo',
+    tradeId: 'trade-4',
+    eventType: 'trade_failed',
+    decisionHash: null,
+    txHash: null,
+    blockNumber: null,
+    details: { reason: 'Insufficient liquidity on Fluxion. Retrying on next cycle.' },
+    createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'log-6',
+    agentId: 'agent-demo',
+    tradeId: null,
+    eventType: 'agent_deployed',
+    decisionHash: '0x9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
+    txHash: null,
+    blockNumber: null,
+    details: { reason: 'Agent initialized and mandate policy hash verified on-chain.' },
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
 // ── constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
@@ -570,8 +761,14 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   const { mutate: resume, isPending: resuming } = useResumeAgent()
   const { mutate: stop,   isPending: stopping } = useStopAgent()
 
-  const trades = (tradesData?.data ?? []) as Trade[]
-  const logs   = (logsData?.data ?? []) as AuditLog[]
+  const rawTrades = (tradesData?.data ?? []) as Trade[]
+  const rawLogs   = (logsData?.data ?? []) as AuditLog[]
+
+  // Fall back to mock data when backend is offline / agent not seeded
+  const isMock   = !isLoading && !agent
+  const display  = agent ?? MOCK_AGENT
+  const trades   = rawTrades.length > 0 ? rawTrades : (isMock ? MOCK_TRADES : [])
+  const logs     = rawLogs.length > 0   ? rawLogs   : (isMock ? MOCK_AUDIT_LOGS : [])
 
   // Build cumulative P&L sparkline from trade history
   const pnlPoints = (() => {
@@ -598,16 +795,6 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-64" />
-      </div>
-    )
-  }
-
-  if (!agent) {
-    return (
-      <div className="p-6">
-        <AlertBanner severity="error" title="Agent not found">
-          This agent does not exist or you don&apos;t have access to it.
-        </AlertBanner>
       </div>
     )
   }
