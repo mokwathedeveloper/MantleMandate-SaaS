@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from app import create_app
 from app.extensions import db as _db
@@ -5,10 +6,10 @@ from app.extensions import db as _db
 
 @pytest.fixture(scope='session')
 def app():
-    app = create_app('testing')
-    with app.app_context():
+    application = create_app('testing')
+    with application.app_context():
         _db.create_all()
-        yield app
+        yield application
         _db.drop_all()
 
 
@@ -25,14 +26,16 @@ def db(app):
 
 @pytest.fixture(scope='function')
 def auth_headers(client):
+    email = f'testuser_{uuid.uuid4().hex[:8]}@mantlemandate.com'
     client.post('/api/auth/signup', json={
         'name': 'Test User',
-        'email': 'test@mantlemandate.com',
+        'email': email,
         'password': 'TestPass123!',
     })
     res = client.post('/api/auth/login', json={
-        'email': 'test@mantlemandate.com',
+        'email': email,
         'password': 'TestPass123!',
     })
-    token = res.json['access_token']
+    body = res.get_json()
+    token = (body.get('data') or {}).get('access_token') or body.get('access_token')
     return {'Authorization': f'Bearer {token}'}
