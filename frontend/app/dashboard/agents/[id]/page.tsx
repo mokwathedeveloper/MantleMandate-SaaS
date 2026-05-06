@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -558,8 +558,8 @@ function SettingsTab({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function AgentDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
   const { data: agent, isLoading } = useAgent(id)
