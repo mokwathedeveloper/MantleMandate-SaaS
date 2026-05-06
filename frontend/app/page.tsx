@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
@@ -36,11 +37,8 @@ function Navbar() {
     )}>
       <div className="max-w-[1280px] mx-auto px-6 w-full flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs tracking-tight">MM</span>
-          </div>
-          <span className="text-text-primary font-bold text-lg tracking-tight">MantleMandate</span>
+        <Link href="/" className="flex items-center shrink-0">
+          <Image src="/logo.png" alt="MantleMandate" width={160} height={32} className="h-8 w-auto object-contain" />
         </Link>
 
         {/* Desktop nav */}
@@ -641,10 +639,7 @@ function Footer() {
           {/* Col 1: Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-xs">MM</span>
-              </div>
-              <span className="text-text-primary font-bold">MantleMandate</span>
+              <img src="/logo.png" alt="MantleMandate" className="h-7 w-auto object-contain" />
             </div>
             <p className="text-xs text-text-secondary leading-relaxed max-w-[160px]">
               Your AI. Your Rules. On-Chain.
