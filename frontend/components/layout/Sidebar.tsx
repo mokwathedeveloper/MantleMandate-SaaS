@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileText, TrendingUp, Zap, Shield,
@@ -102,10 +103,7 @@ export function Sidebar() {
     <aside className="flex h-full w-60 flex-col bg-page border-r border-border">
       {/* Logo — 64px height */}
       <div className="flex h-16 items-center gap-2.5 px-4 border-b border-border shrink-0">
-        <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <span className="text-white font-bold text-xs tracking-tight">MM</span>
-        </div>
-        <span className="font-semibold text-text-primary tracking-tight text-[15px]">MantleMandate</span>
+        <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto shrink-0 object-contain" />
       </div>
 
       {/* Nav */}
