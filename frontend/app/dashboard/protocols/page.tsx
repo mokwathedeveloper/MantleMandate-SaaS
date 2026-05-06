@@ -1090,7 +1090,7 @@ export default function ProtocolsPage() {
               key={p.id}
               p={p}
               onConfigure={setConfig}
-              onAdd={(proto) => setShowAdd(true)}
+              onAdd={() => setShowAdd(true)}
             />
           ))}
         </div>
