@@ -71,3 +71,9 @@ logs/
 
 # Memory/scratch files
 memory/
+
+# Development screenshots (generated during local testing)
+.playwright-mcp/
+/*.png
+/*.jpeg
+/*.jpg
