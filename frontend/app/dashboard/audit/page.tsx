@@ -189,9 +189,6 @@ function truncateHash(hash: string): string {
   return `${hash.slice(0, 8)}...${hash.slice(-4)}`
 }
 
-function truncateAddr(addr: string): string {
-  return addr  // Already pre-truncated in mock data
-}
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
