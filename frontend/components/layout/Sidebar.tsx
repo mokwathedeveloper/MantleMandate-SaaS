@@ -101,9 +101,9 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-full w-60 flex-col bg-page border-r border-border">
-      {/* Logo — 64px height */}
-      <div className="flex h-16 items-center gap-2.5 px-4 border-b border-border shrink-0">
-        <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto shrink-0 object-contain" />
+      {/* Logo */}
+      <div className="flex h-[120px] items-center justify-center border-b border-border shrink-0">
+        <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
       </div>
 
       {/* Nav */}

@@ -18,8 +18,8 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
       <div className="flex flex-1 flex-col items-center justify-center bg-card px-8 py-16 lg:px-16">
         <div className="w-full max-w-[400px]">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
+          <div className="flex items-center mb-8 lg:hidden">
+            <Image src="/logo.png" alt="MantleMandate" width={160} height={160} className="h-40 w-40 object-contain" />
           </div>
           {children}
         </div>
@@ -32,9 +32,7 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
 
 export function BrandLogo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <Image src="/logo.png" alt="MantleMandate" width={160} height={36} className="h-9 w-auto object-contain" />
-    </div>
+    <Image src="/logo.png" alt="MantleMandate" width={320} height={320} className="h-80 w-80 object-contain" />
   )
 }
 

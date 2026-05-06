@@ -32,13 +32,13 @@ function Navbar() {
 
   return (
     <header className={cn(
-      'fixed top-0 left-0 right-0 z-50 h-16 flex items-center border-b border-border transition-all duration-200',
+      'fixed top-0 left-0 right-0 z-50 h-28 flex items-center border-b border-border transition-all duration-200',
       scrolled ? 'bg-page/90 backdrop-blur-md' : 'bg-page',
     )}>
       <div className="max-w-[1280px] mx-auto px-6 w-full flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center shrink-0">
-          <Image src="/logo.png" alt="MantleMandate" width={160} height={32} className="h-8 w-auto object-contain" />
+        <Link href="/" className="shrink-0">
+          <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
         </Link>
 
         {/* Desktop nav */}
@@ -638,9 +638,7 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Col 1: Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
-            <div className="flex items-center gap-2">
-              <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
-            </div>
+            <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
             <p className="text-xs text-text-secondary leading-relaxed max-w-[160px]">
               Your AI. Your Rules. On-Chain.
             </p>

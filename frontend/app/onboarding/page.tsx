@@ -492,10 +492,8 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-page flex flex-col">
       {/* Top bar */}
-      <div className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
-        <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
-        </div>
+      <div className="h-28 flex items-center justify-between px-6 border-b border-border shrink-0">
+        <Image src="/logo.png" alt="MantleMandate" width={96} height={96} className="h-24 w-24 object-contain" />
         <Link
           href="/dashboard"
           className="text-[13px] text-text-secondary hover:text-text-primary transition-colors"
