@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import Image from 'next/image'
 
 interface AuthShellProps {
   leftPanel: ReactNode
@@ -18,10 +19,7 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
         <div className="w-full max-w-[400px]">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xs">MM</span>
-            </div>
-            <span className="text-text-primary font-semibold">MantleMandate</span>
+            <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
           </div>
           {children}
         </div>
@@ -35,10 +33,7 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
 export function BrandLogo() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-        <span className="text-white font-bold text-xs tracking-tight">MM</span>
-      </div>
-      <span className="text-text-primary font-bold text-xl tracking-tight">MantleMandate</span>
+      <Image src="/logo.png" alt="MantleMandate" width={160} height={36} className="h-9 w-auto object-contain" />
     </div>
   )
 }
