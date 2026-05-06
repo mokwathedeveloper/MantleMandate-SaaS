@@ -801,6 +801,20 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="p-6 space-y-5">
+      {/* Demo notice when using mock fallback */}
+      {isMock && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-md text-xs"
+          style={{ background: '#1C2128', border: '1px solid #30363D', color: '#8B949E' }}
+        >
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: '#F5C542' }}
+          />
+          Demo data — backend not connected. Real agent data will appear once the API is running.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -809,16 +823,24 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           </Link>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold text-text-primary">{agent.name}</h1>
-              <Badge variant={STATUS_VARIANT[agent.status]} dot>{agent.status}</Badge>
+              <h1 className="text-xl font-bold text-text-primary">{display.name}</h1>
+              <Badge variant={STATUS_VARIANT[display.status]} dot>{display.status}</Badge>
+              {isMock && (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  style={{ background: '#2A2000', color: '#F5C542', border: '1px solid rgba(245,197,66,0.3)' }}
+                >
+                  DEMO
+                </span>
+              )}
             </div>
-            <p className="text-sm text-text-secondary mt-0.5">Running: {agent.mandateName}</p>
+            <p className="text-sm text-text-secondary mt-0.5">Running: {display.mandateName}</p>
           </div>
         </div>
 
         {/* Quick action buttons in header */}
         <div className="flex items-center gap-2 shrink-0">
-          {agent.status === 'active' && (
+          {display.status === 'active' && !isMock && (
             <>
               <Button variant="secondary" size="sm" loading={pausing} onClick={() => pause(id)}>
                 <Pause className="h-3.5 w-3.5" /> Pause
@@ -828,7 +850,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
               </Button>
             </>
           )}
-          {agent.status === 'paused' && (
+          {display.status === 'paused' && !isMock && (
             <>
               <Button variant="primary" size="sm" loading={resuming} onClick={() => resume(id)}>
                 <Play className="h-3.5 w-3.5" /> Resume
@@ -862,27 +884,27 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} />
+        <OverviewTab agent={display} trades={trades} pnlPoints={pnlPoints} />
       )}
 
       {activeTab === 'trades' && (
-        <TradeHistoryTab trades={trades} total={tradesData?.total ?? 0} />
+        <TradeHistoryTab trades={trades} total={tradesData?.total ?? trades.length} />
       )}
 
       {activeTab === 'mandate' && (
-        <MandateTab mandateId={agent.mandateId} />
+        <MandateTab mandateId={display.mandateId} />
       )}
 
       {activeTab === 'audit' && (
-        <AuditTrailTab logs={logs} total={logsData?.total ?? 0} />
+        <AuditTrailTab logs={logs} total={logsData?.total ?? logs.length} />
       )}
 
       {activeTab === 'settings' && (
         <SettingsTab
-          agent={agent}
-          onPause={() => pause(id)}
-          onResume={() => resume(id)}
-          onStop={() => stop(id)}
+          agent={display}
+          onPause={() => !isMock && pause(id)}
+          onResume={() => !isMock && resume(id)}
+          onStop={() => !isMock && stop(id)}
           pausing={pausing}
           resuming={resuming}
           stopping={stopping}
