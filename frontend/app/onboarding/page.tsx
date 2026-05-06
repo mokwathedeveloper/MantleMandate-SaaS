@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { CheckCircle2, ChevronRight, ChevronLeft, Zap, Copy, ExternalLink, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCreateMandate } from '@/hooks/useMandates'
@@ -493,10 +494,7 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-white font-bold text-xs">MM</span>
-          </div>
-          <span className="text-text-primary font-semibold">MantleMandate</span>
+          <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
         </div>
         <Link
           href="/dashboard"
