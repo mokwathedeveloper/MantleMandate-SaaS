@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart2, Download, X, Eye, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { BarChart2, Download, X, Eye, CheckCircle2 } from 'lucide-react'
 import NextLink from 'next/link'
 import {
   ResponsiveContainer,
