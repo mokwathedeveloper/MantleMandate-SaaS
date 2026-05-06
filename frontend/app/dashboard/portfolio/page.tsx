@@ -1,10 +1,16 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { TrendingUp, TrendingDown, BarChart2 } from 'lucide-react'
 import NextLink from 'next/link'
+import {
+  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+} from 'recharts'
 import api from '@/lib/api'
-import { cn } from '@/lib/utils'
+
+// ── types ─────────────────────────────────────────────────────────────────────
 
 interface PortfolioSnapshot {
   totalValue: number
@@ -30,196 +36,375 @@ interface PositionRow {
   status: 'open' | 'closed'
 }
 
+interface PnlPoint { date: string; value: number }
+
+// ── mock data ─────────────────────────────────────────────────────────────────
+
+const MOCK_SNAPSHOT: PortfolioSnapshot = {
+  totalValue:  52_847.22,
+  totalPnl:    3_847.22,
+  totalRoi:    7.84,
+  dayPnl:      312.45,
+  dayPnlPct:   0.60,
+  maxDrawdown: 3.2,
+  sharpeRatio: 1.87,
+  winRate:     74.2,
+}
+
+const MOCK_POSITIONS: PositionRow[] = [
+  { id: 'pos-1', asset: 'ETH',  protocol: 'merchant_moe', direction: 'long',  size: 12_400, entryPrice: 2847.32, currentPrice: 3041.50, pnl: 318.45,  pnlPct: 2.57,  status: 'open' },
+  { id: 'pos-2', asset: 'USDC', protocol: 'agni',         direction: 'long',  size: 18_500, entryPrice: 1.0001,  currentPrice: 1.0003,  pnl: 42.30,   pnlPct: 0.23,  status: 'open' },
+  { id: 'pos-3', asset: 'MNT',  protocol: 'fluxion',      direction: 'long',  size: 3_200,  entryPrice: 0.8234,  currentPrice: 0.8480,  pnl: 95.60,   pnlPct: 2.99,  status: 'open' },
+  { id: 'pos-4', asset: 'WBTC', protocol: 'merchant_moe', direction: 'long',  size: 8_100,  entryPrice: 62_430,  currentPrice: 63_180,  pnl: 97.40,   pnlPct: 1.20,  status: 'open' },
+  { id: 'pos-5', asset: 'ETH',  protocol: 'fluxion',      direction: 'short', size: 5_200,  entryPrice: 3089.00, currentPrice: 3041.50, pnl: 79.80,   pnlPct: 1.54,  status: 'open' },
+  { id: 'pos-6', asset: 'USDT', protocol: 'agni',         direction: 'long',  size: 9_000,  entryPrice: 1.0000,  currentPrice: 0.9998,  pnl: -18.00,  pnlPct: -0.20, status: 'closed' },
+  { id: 'pos-7', asset: 'ETH',  protocol: 'merchant_moe', direction: 'long',  size: 4_500,  entryPrice: 2690.14, currentPrice: 3041.50, pnl: 585.20,  pnlPct: 13.06, status: 'closed' },
+]
+
+function generatePnlHistory(): PnlPoint[] {
+  const points: PnlPoint[] = []
+  let val = 49_000
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(2026, 4, 6)
+    d.setDate(d.getDate() - i)
+    val += (Math.random() - 0.42) * 800
+    val = Math.max(47_000, val)
+    points.push({
+      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: Math.round(val * 100) / 100,
+    })
+  }
+  points[points.length - 1].value = 52_847.22
+  return points
+}
+
+const MOCK_PNL_HISTORY = generatePnlHistory()
+
+const PROTOCOL_LABELS: Record<string, string> = {
+  merchant_moe: 'Merchant Moe',
+  agni:         'Agni Finance',
+  fluxion:      'Fluxion',
+}
+
+const PROTOCOL_COLORS: Record<string, string> = {
+  merchant_moe: '#0066FF',
+  agni:         '#22C55E',
+  fluxion:      '#58A6FF',
+}
+
+// ── sub-components ────────────────────────────────────────────────────────────
+
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">{label}</p>
-      <p className={cn('text-xl font-bold', color ?? 'text-text-primary')}>{value}</p>
-      {sub && <p className="text-xs text-text-secondary mt-0.5">{sub}</p>}
+    <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '14px 16px' }}>
+      <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8B949E', margin: '0 0 4px' }}>{label}</p>
+      <p style={{ fontSize: 20, fontWeight: 700, color: color ?? '#F0F6FC', margin: '0 0 2px' }}>{value}</p>
+      {sub && <p style={{ fontSize: 11, color: '#8B949E', margin: 0 }}>{sub}</p>}
     </div>
   )
 }
 
-function Skeleton() {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+  if (!active || !payload?.length) return null
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-card border border-border rounded-lg p-4 h-20 animate-pulse" />
-        ))}
-      </div>
-      <div className="bg-card border border-border rounded-lg h-64 animate-pulse" />
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <BarChart2 className="h-12 w-12 text-text-disabled mb-4" />
-      <p className="text-text-primary font-semibold text-base mb-1">No portfolio data yet</p>
-      <p className="text-text-secondary text-sm max-w-sm mb-6">
-        Deploy an AI agent and let it execute trades to see your portfolio performance here.
+    <div style={{ background: '#1C2128', border: '1px solid #30363D', borderRadius: 6, padding: '8px 12px' }}>
+      <p style={{ fontSize: 11, color: '#8B949E', margin: '0 0 3px' }}>{label}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>
+        ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </p>
-      <NextLink
-        href="/dashboard/agents/deploy"
-        className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
-      >
-        Deploy Your First Agent →
-      </NextLink>
     </div>
   )
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  open:   'bg-success-bg text-success',
-  closed: 'bg-surface text-text-disabled',
-}
+// ── page ──────────────────────────────────────────────────────────────────────
 
 export default function PortfolioPage() {
+  const [chartDays, setChartDays] = useState(30)
+
   const { data: snapshot, isLoading: loadingSnap } = useQuery<PortfolioSnapshot>({
     queryKey: ['portfolio', 'snapshot'],
     queryFn: () => api.get('/portfolio/snapshot').then(r => r.data.data),
+    retry: false,
   })
 
   const { data: positions, isLoading: loadingPos } = useQuery<PositionRow[]>({
     queryKey: ['portfolio', 'positions'],
     queryFn: () => api.get('/portfolio/positions').then(r => r.data.data),
+    retry: false,
   })
 
   const isLoading = loadingSnap || loadingPos
-  const isEmpty = !isLoading && (!positions || positions.length === 0)
+  const isMock    = !isLoading && (!snapshot || !positions?.length)
+  const snap      = snapshot ?? MOCK_SNAPSHOT
+  const pos       = positions?.length ? positions : MOCK_POSITIONS
 
-  if (isLoading) return <Skeleton />
+  const openPositions   = pos.filter(p => p.status === 'open')
+  const closedPositions = pos.filter(p => p.status === 'closed')
+
+  const allocationByProtocol = useMemo(() => {
+    const totals: Record<string, number> = {}
+    openPositions.forEach(p => { totals[p.protocol] = (totals[p.protocol] ?? 0) + p.size })
+    const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0)
+    return Object.entries(totals).map(([k, v]) => ({ protocol: k, pct: Math.round((v / grandTotal) * 100) }))
+  }, [openPositions])
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} style={{ height: 72, borderRadius: 8, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
+          ))}
+        </div>
+        <div style={{ height: 260, borderRadius: 8, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Portfolio</h2>
-        <p className="text-sm text-text-secondary mt-0.5">Live view of all positions and performance across your agents.</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>Portfolio</h2>
+          <p style={{ fontSize: 13, color: '#8B949E', margin: '4px 0 0' }}>
+            Live view of all positions and performance across your agents
+          </p>
+        </div>
+        {isMock && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: '#F5C542',
+            background: '#2A2000', border: '1px solid #F5C54266',
+            padding: '3px 10px', borderRadius: 4, letterSpacing: '0.08em',
+          }}>
+            DEMO DATA
+          </span>
+        )}
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Primary KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         <StatCard
           label="Total Portfolio Value"
-          value={snapshot ? `$${snapshot.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+          value={`$${snap.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           sub="Live estimate"
         />
         <StatCard
           label="Total P&L"
-          value={snapshot ? `${snapshot.totalPnl >= 0 ? '+' : ''}$${Math.abs(snapshot.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
-          sub={snapshot ? `${snapshot.totalRoi >= 0 ? '+' : ''}${snapshot.totalRoi.toFixed(2)}% all time` : undefined}
-          color={snapshot && snapshot.totalPnl >= 0 ? 'text-success' : 'text-error'}
+          value={`${snap.totalPnl >= 0 ? '+' : ''}$${Math.abs(snap.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          sub={`${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}% all time`}
+          color={snap.totalPnl >= 0 ? '#22C55E' : '#EF4444'}
         />
         <StatCard
           label="24h Change"
-          value={snapshot ? `${snapshot.dayPnl >= 0 ? '+' : ''}$${Math.abs(snapshot.dayPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
-          sub={snapshot ? `${snapshot.dayPnlPct >= 0 ? '+' : ''}${snapshot.dayPnlPct.toFixed(2)}%` : undefined}
-          color={snapshot && snapshot.dayPnl >= 0 ? 'text-success' : 'text-error'}
+          value={`${snap.dayPnl >= 0 ? '+' : ''}$${Math.abs(snap.dayPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          sub={`${snap.dayPnlPct >= 0 ? '+' : ''}${snap.dayPnlPct.toFixed(2)}%`}
+          color={snap.dayPnl >= 0 ? '#22C55E' : '#EF4444'}
         />
         <StatCard
           label="Sharpe Ratio"
-          value={snapshot ? snapshot.sharpeRatio.toFixed(2) : '—'}
-          sub={snapshot ? `Win rate: ${snapshot.winRate.toFixed(1)}%` : undefined}
+          value={snap.sharpeRatio.toFixed(2)}
+          sub={`Win rate: ${snap.winRate.toFixed(1)}%`}
         />
       </div>
 
-      {/* Secondary metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Secondary KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         <StatCard
           label="Max Drawdown"
-          value={snapshot ? `${snapshot.maxDrawdown.toFixed(2)}%` : '—'}
-          color={snapshot ? (snapshot.maxDrawdown < 5 ? 'text-success' : snapshot.maxDrawdown < 15 ? 'text-warning' : 'text-error') : undefined}
+          value={`${snap.maxDrawdown.toFixed(2)}%`}
+          color={snap.maxDrawdown < 5 ? '#22C55E' : snap.maxDrawdown < 15 ? '#F5C542' : '#EF4444'}
         />
-        <StatCard label="Active Positions"  value={positions ? String(positions.filter(p => p.status === 'open').length) : '—'} />
-        <StatCard label="Closed Positions"  value={positions ? String(positions.filter(p => p.status === 'closed').length) : '—'} />
-        <StatCard label="Total Protocols"   value="3" sub="Merchant Moe, Agni, Fluxion" />
+        <StatCard label="Active Positions"  value={String(openPositions.length)} />
+        <StatCard label="Closed Positions"  value={String(closedPositions.length)} />
+        <StatCard label="Protocols Active"  value="3" sub="Merchant Moe · Agni · Fluxion" />
+      </div>
+
+      {/* PnL Chart */}
+      <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Portfolio Value</h4>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[7, 14, 30].map(d => (
+              <button
+                key={d}
+                onClick={() => setChartDays(d)}
+                style={{
+                  height: 26, padding: '0 10px', borderRadius: 4, fontSize: 11,
+                  border: `1px solid ${chartDays === d ? '#0066FF' : '#30363D'}`,
+                  background: chartDays === d ? '#0066FF1A' : 'transparent',
+                  color: chartDays === d ? '#58A6FF' : '#8B949E',
+                  cursor: 'pointer',
+                }}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={MOCK_PNL_HISTORY.slice(-chartDays)} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8B949E' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <YAxis
+              tick={{ fontSize: 10, fill: '#8B949E' }} tickLine={false} axisLine={false}
+              tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+              domain={['auto', 'auto']}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone" dataKey="value"
+              stroke="#22C55E" strokeWidth={2}
+              fill="url(#portfolioGrad)"
+              dot={false} activeDot={{ r: 4, fill: '#22C55E' }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Positions table */}
-      {isEmpty ? (
-        <EmptyState />
-      ) : (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="grid bg-page px-4 py-2.5" style={{ gridTemplateColumns: '14% 14% 10% 12% 12% 12% 12% 10% 10%' }}>
-            {['ASSET', 'PROTOCOL', 'SIDE', 'SIZE', 'ENTRY', 'CURRENT', 'P&L', 'P&L %', 'STATUS'].map(h => (
-              <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{h}</span>
-            ))}
-          </div>
+      <div style={{ border: '1px solid #21262D', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ padding: '14px 16px', background: '#161B22', borderBottom: '1px solid #21262D', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Open Positions</h4>
+          <span style={{ fontSize: 11, color: '#8B949E' }}>{openPositions.length} positions</span>
+        </div>
 
-          {positions?.map((pos, i) => {
-            const pnlColor = pos.pnl >= 0 ? 'text-success' : 'text-error'
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '80px 120px 80px 100px 100px 100px 90px 90px 80px',
+          padding: '8px 16px',
+          background: '#0D1117',
+          borderBottom: '1px solid #21262D',
+        }}>
+          {['ASSET', 'PROTOCOL', 'SIDE', 'SIZE', 'ENTRY', 'CURRENT', 'P&L', 'P&L %', 'STATUS'].map(h => (
+            <span key={h} style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: '#8B949E' }}>{h}</span>
+          ))}
+        </div>
+
+        {openPositions.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: 12 }}>
+            <BarChart2 style={{ width: 40, height: 40, color: '#8B949E', opacity: 0.4 }} />
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>No open positions</p>
+            <NextLink
+              href="/dashboard/agents/deploy"
+              style={{ fontSize: 12, color: '#58A6FF', textDecoration: 'none' }}
+            >
+              Deploy an agent →
+            </NextLink>
+          </div>
+        ) : (
+          openPositions.map((pos, i) => {
+            const pnlColor = pos.pnl >= 0 ? '#22C55E' : '#EF4444'
             return (
               <div
                 key={pos.id}
-                className={cn('grid px-4 items-center hover:bg-surface transition-colors', i % 2 === 0 ? 'bg-card' : 'bg-page')}
-                style={{ gridTemplateColumns: '14% 14% 10% 12% 12% 12% 12% 10% 10%', minHeight: '52px' }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '80px 120px 80px 100px 100px 100px 90px 90px 80px',
+                  padding: '0 16px',
+                  minHeight: 52,
+                  alignItems: 'center',
+                  background: i % 2 === 0 ? '#0D1117' : '#161B22',
+                  borderBottom: i < openPositions.length - 1 ? '1px solid #21262D' : 'none',
+                }}
               >
-                <span className="text-sm font-medium text-text-primary">{pos.asset}</span>
-                <span className="text-xs text-text-secondary capitalize">{pos.protocol.replace('_', ' ')}</span>
-                <div className="flex items-center gap-1">
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC' }}>{pos.asset}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{
+                    display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                    background: PROTOCOL_COLORS[pos.protocol] ?? '#8B949E', flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: 11, color: '#8B949E' }}>{PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   {pos.direction === 'long'
-                    ? <TrendingUp className="h-3.5 w-3.5 text-success" />
-                    : <TrendingDown className="h-3.5 w-3.5 text-error" />
+                    ? <TrendingUp style={{ width: 12, height: 12, color: '#22C55E' }} />
+                    : <TrendingDown style={{ width: 12, height: 12, color: '#EF4444' }} />
                   }
-                  <span className={cn('text-xs font-medium', pos.direction === 'long' ? 'text-success' : 'text-error')}>
-                    {pos.direction.toUpperCase()}
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: pos.direction === 'long' ? '#22C55E' : '#EF4444' }}>
+                    {pos.direction}
                   </span>
                 </div>
-                <span className="text-sm text-text-primary">${pos.size.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                <span className="text-sm text-text-secondary">${pos.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                <span className="text-sm text-text-primary">${pos.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                <span className={cn('text-sm font-medium', pnlColor)}>
-                  {pos.pnl >= 0 ? '+' : ''}${Math.abs(pos.pnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <span style={{ fontSize: 12, color: '#F0F6FC' }}>
+                  ${pos.size.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                 </span>
-                <span className={cn('text-sm font-medium', pnlColor)}>
+                <span style={{ fontSize: 12, color: '#8B949E' }}>
+                  ${pos.entryPrice.toLocaleString('en-US', { minimumFractionDigits: pos.entryPrice < 10 ? 4 : 2 })}
+                </span>
+                <span style={{ fontSize: 12, color: '#F0F6FC' }}>
+                  ${pos.currentPrice.toLocaleString('en-US', { minimumFractionDigits: pos.currentPrice < 10 ? 4 : 2 })}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: pnlColor }}>
+                  {pos.pnl >= 0 ? '+' : ''}${Math.abs(pos.pnl).toFixed(2)}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: pnlColor }}>
                   {pos.pnlPct >= 0 ? '+' : ''}{pos.pnlPct.toFixed(2)}%
                 </span>
-                <span className={cn('text-[10px] font-semibold uppercase px-2 py-0.5 rounded w-fit', STATUS_STYLE[pos.status])}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                  padding: '2px 8px', borderRadius: 4,
+                  background: pos.status === 'open' ? '#0D2818' : '#161B22',
+                  color: pos.status === 'open' ? '#22C55E' : '#8B949E',
+                }}>
                   {pos.status}
                 </span>
               </div>
             )
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
 
-      {/* Allocation breakdown */}
-      {!isEmpty && (
-        <div className="grid lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 bg-card border border-border rounded-lg p-5">
-            <h4 className="text-sm font-semibold text-text-primary mb-4">Allocation by Protocol</h4>
-            {[
-              { name: 'Merchant Moe', pct: 40, color: 'bg-primary' },
-              { name: 'Agni Finance', pct: 35, color: 'bg-accent' },
-              { name: 'Fluxion',      pct: 25, color: 'bg-success' },
-            ].map(p => (
-              <div key={p.name} className="flex items-center gap-3 mb-3 last:mb-0">
-                <span className="text-xs text-text-secondary w-28 shrink-0">{p.name}</span>
-                <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
-                  <div className={`h-2 rounded-full ${p.color}`} style={{ width: `${p.pct}%` }} />
+      {/* Bottom row: allocation + risk */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        {/* Allocation by protocol */}
+        <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '16px 20px' }}>
+          <h4 style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 14px' }}>Allocation by Protocol</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {allocationByProtocol.map(({ protocol, pct }) => (
+              <div key={protocol} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 12, color: '#8B949E', width: 110, flexShrink: 0 }}>
+                  {PROTOCOL_LABELS[protocol] ?? protocol}
+                </span>
+                <div style={{ flex: 1, height: 8, background: '#21262D', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: 8, borderRadius: 999, background: PROTOCOL_COLORS[protocol] ?? '#8B949E', width: `${pct}%`, transition: 'width 0.5s' }} />
                 </div>
-                <span className="text-xs font-medium text-text-primary w-10 text-right">{p.pct}%</span>
-              </div>
-            ))}
-          </div>
-          <div className="bg-card border border-border rounded-lg p-5">
-            <h4 className="text-sm font-semibold text-text-primary mb-4">Risk Exposure</h4>
-            {[
-              { label: 'Current Drawdown', value: `${snapshot?.maxDrawdown?.toFixed(2) ?? '—'}%`, color: 'text-success' },
-              { label: 'Sharpe Ratio',     value: snapshot ? snapshot.sharpeRatio.toFixed(2) : '—', color: 'text-text-primary' },
-              { label: 'Win Rate',         value: snapshot ? `${snapshot.winRate.toFixed(1)}%` : '—', color: 'text-success' },
-            ].map(r => (
-              <div key={r.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <span className="text-xs text-text-secondary">{r.label}</span>
-                <span className={cn('text-sm font-medium', r.color)}>{r.value}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#F0F6FC', width: 36, textAlign: 'right' }}>{pct}%</span>
               </div>
             ))}
           </div>
         </div>
-      )}
+
+        {/* Risk exposure */}
+        <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '16px 20px' }}>
+          <h4 style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 14px' }}>Risk Exposure</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              { label: 'Current Drawdown', value: `${snap.maxDrawdown.toFixed(2)}%`, color: snap.maxDrawdown < 5 ? '#22C55E' : '#F5C542' },
+              { label: 'Sharpe Ratio',     value: snap.sharpeRatio.toFixed(2), color: '#F0F6FC' },
+              { label: 'Win Rate',         value: `${snap.winRate.toFixed(1)}%`, color: snap.winRate > 60 ? '#22C55E' : '#F5C542' },
+              { label: 'Total ROI',        value: `${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}%`, color: snap.totalRoi >= 0 ? '#22C55E' : '#EF4444' },
+            ].map((r, i, arr) => (
+              <div
+                key={r.label}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 0',
+                  borderBottom: i < arr.length - 1 ? '1px solid #21262D' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 12, color: '#8B949E' }}>{r.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: r.color }}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
