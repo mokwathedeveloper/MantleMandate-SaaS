@@ -639,7 +639,7 @@ function Footer() {
           {/* Col 1: Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="MantleMandate" className="h-7 w-auto object-contain" />
+              <Image src="/logo.png" alt="MantleMandate" width={120} height={28} className="h-7 w-auto object-contain" />
             </div>
             <p className="text-xs text-text-secondary leading-relaxed max-w-[160px]">
               Your AI. Your Rules. On-Chain.
