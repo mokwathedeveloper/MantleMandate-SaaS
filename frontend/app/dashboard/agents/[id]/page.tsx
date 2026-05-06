@@ -22,10 +22,11 @@ import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Trade, AuditLog } from '@/types/trade'
+import type { Agent } from '@/types/agent'
 
 // ── mock fallback data ────────────────────────────────────────────────────────
 
-const MOCK_AGENT = {
+const MOCK_AGENT: Agent = {
   id: 'agent-demo',
   mandateId: 'mandate-demo',
   mandateName: 'ETH Conservative Strategy',
