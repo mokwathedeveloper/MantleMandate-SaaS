@@ -16,6 +16,7 @@ interface AlertState {
   addAlert: (alert: AlertItem) => void
   markRead: (id: string) => void
   markAllRead: () => void
+  clearAll: () => void
 }
 
 export const useAlertStore = create<AlertState>((set) => ({
@@ -36,4 +37,5 @@ export const useAlertStore = create<AlertState>((set) => ({
       alerts: state.alerts.map((a) => ({ ...a, isRead: true })),
       unreadCount: 0,
     })),
+  clearAll: () => set({ alerts: [], unreadCount: 0 }),
 }))
