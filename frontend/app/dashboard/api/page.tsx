@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Copy, Plus, TrendingUp, TrendingDown, CheckCircle2,
-  Edit2, Trash2, Download, Filter, ChevronDown,
+  Download, Filter, ChevronDown,
   Wifi, Cpu, Layers, Clock,
 } from 'lucide-react'
 
