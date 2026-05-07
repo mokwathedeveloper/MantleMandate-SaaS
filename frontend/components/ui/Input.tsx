@@ -16,7 +16,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-text-primary">
+          <label htmlFor={inputId} className="text-[13px] font-medium text-text-secondary">
             {label}
           </label>
         )}
@@ -28,14 +28,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full h-10 rounded-lg border bg-surface px-3 text-sm text-text-primary placeholder:text-text-secondary',
+              'w-full h-11 rounded-md border bg-page px-3 text-[14px] text-text-primary placeholder:text-text-disabled',
               'transition-colors duration-150',
-              'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
+              'focus:outline-none focus:border-primary',
               error
-                ? 'border-error focus:ring-error'
-                : 'border-border hover:border-text-secondary',
-              left  && 'pl-9',
-              right && 'pr-9',
+                ? 'border-error focus:border-error'
+                : 'border-border',
+              left  && 'pl-10',
+              right && 'pr-10',
               className,
             )}
             {...props}
