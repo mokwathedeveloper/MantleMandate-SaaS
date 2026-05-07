@@ -1,23 +1,44 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
-  CheckCircle2,
+  CheckCircle2, Play, Star, ArrowRight, Sparkles,
+  KeyRound, Users, Eye, Award, Hexagon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ── Nav Bar ───────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   Reusable bits
+   ───────────────────────────────────────────────────────────────── */
+
+function MMLogo({ size = 32 }: { size?: number }) {
+  return (
+    <div
+      className="rounded-md bg-primary text-white font-black flex items-center justify-center shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.45, letterSpacing: '-0.02em' }}
+    >
+      MM
+    </div>
+  )
+}
+
+function MantleHex({ className }: { className?: string }) {
+  return <Hexagon className={cn('text-primary', className)} strokeWidth={2} />
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   1. NAVBAR
+   ───────────────────────────────────────────────────────────────── */
 
 const NAV_LINKS = [
-  { label: 'Platform',     href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Docs',         href: '#docs' },
-  { label: 'Pricing',      href: '#pricing' },
-  { label: 'Team',         href: '#team' },
+  { label: 'Platform',     href: '#features',     active: true  },
+  { label: 'How It Works', href: '#how-it-works', active: false },
+  { label: 'Docs',         href: '#docs',         active: false },
+  { label: 'Pricing',      href: '#pricing',      active: false },
+  { label: 'Team',         href: '#team',         active: false },
 ]
 
 function Navbar() {
@@ -25,80 +46,92 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
+    const onScroll = () => setScrolled(window.scrollY > 8)
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
     <header className={cn(
-      'fixed top-0 left-0 right-0 z-50 h-28 flex items-center border-b border-border transition-all duration-200',
-      scrolled ? 'bg-page/90 backdrop-blur-md' : 'bg-page',
+      'fixed top-0 left-0 right-0 z-50 h-16 border-b transition-all duration-200',
+      scrolled
+        ? 'bg-page/85 backdrop-blur-md border-border'
+        : 'bg-page border-transparent',
     )}>
-      <div className="max-w-[1280px] mx-auto px-6 w-full flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="shrink-0">
-          <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
+      <div className="max-w-[1280px] mx-auto h-full px-6 flex items-center justify-between">
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <MMLogo size={32} />
+          <span className="text-[17px] font-bold tracking-tight text-text-primary">
+            MantleMandate
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6">
-          {NAV_LINKS.map(({ label, href }) => (
+        {/* Center nav */}
+        <nav className="hidden md:flex items-center gap-7">
+          {NAV_LINKS.map(({ label, href, active }) => (
             <a
               key={label}
               href={href}
-              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              className={cn(
+                'relative text-[14px] font-medium transition-colors',
+                active
+                  ? 'text-text-primary'
+                  : 'text-text-secondary hover:text-text-primary',
+              )}
             >
               {label}
+              {active && (
+                <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+              )}
             </a>
           ))}
         </nav>
 
-        {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* CTAs */}
+        <div className="hidden md:flex items-center gap-2">
           <Link
             href="/login"
-            className="h-9 px-4 flex items-center text-sm font-semibold text-text-primary border border-border rounded-md hover:bg-card transition-colors"
+            className="h-9 px-4 inline-flex items-center text-[13px] font-semibold text-text-primary border border-border rounded-md hover:border-text-secondary hover:bg-card transition-colors"
           >
             Sign In
           </Link>
           <Link
             href="/signup"
-            className="h-9 px-4 flex items-center text-sm font-semibold text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
+            className="h-9 px-4 inline-flex items-center gap-1 text-[13px] font-semibold text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
           >
-            Start Free →
+            Start Free <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Mobile toggle */}
         <button
-          className="md:hidden text-text-secondary hover:text-text-primary transition-colors"
           onClick={() => setMobileOpen((v) => !v)}
+          className="md:hidden text-text-primary p-1"
           aria-label="Toggle menu"
         >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-card border-b border-border shadow-modal md:hidden">
-          <div className="flex flex-col p-4 space-y-1">
+        <div className="md:hidden absolute top-16 inset-x-0 bg-card border-b border-border shadow-modal">
+          <div className="p-4 space-y-1">
             {NAV_LINKS.map(({ label, href }) => (
               <a
                 key={label}
                 href={href}
                 onClick={() => setMobileOpen(false)}
-                className="py-2.5 px-3 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface rounded-md transition-colors"
+                className="block py-2.5 px-3 text-[14px] font-medium text-text-secondary hover:text-text-primary hover:bg-page rounded-md"
               >
                 {label}
               </a>
             ))}
-            <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <Link href="/login" className="py-2 text-center text-sm font-semibold text-text-primary border border-border rounded-md hover:bg-surface transition-colors">
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border mt-3">
+              <Link href="/login" className="h-10 inline-flex items-center justify-center text-sm font-semibold text-text-primary border border-border rounded-md">
                 Sign In
               </Link>
-              <Link href="/signup" className="py-2 text-center text-sm font-semibold text-white bg-primary rounded-md hover:bg-primary-hover transition-colors">
+              <Link href="/signup" className="h-10 inline-flex items-center justify-center text-sm font-semibold text-white bg-primary rounded-md">
                 Start Free →
               </Link>
             </div>
@@ -109,72 +142,122 @@ function Navbar() {
   )
 }
 
-// ── Hero Section ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   2. HERO
+   ───────────────────────────────────────────────────────────────── */
 
-function HeroIllustration() {
+function HeroFlow() {
   return (
-    <div className="relative flex items-center justify-center h-full min-h-[360px]">
-      {/* Radial glow */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-64 h-64 rounded-full" style={{ background: 'radial-gradient(circle, rgba(0,102,255,0.08) 0%, transparent 70%)' }} />
-      </div>
+    <div className="relative w-full h-full flex items-center justify-center py-4">
+      {/* Background glow */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, rgba(0,102,255,0.18) 0%, rgba(0,194,255,0.08) 35%, transparent 70%)',
+        }}
+      />
 
-      {/* 3-panel flow */}
-      <div className="relative flex items-center gap-3 z-10">
-        {/* Panel 1: Mandate text */}
-        <div className="w-[140px] h-[160px] bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shadow-card">
-          <div className="h-2 w-16 bg-text-disabled/40 rounded-full" />
-          <div className="h-2 w-20 bg-text-disabled/30 rounded-full" />
-          <div className="h-2 w-14 bg-text-disabled/30 rounded-full" />
-          <div className="mt-2 space-y-1">
-            <div className="h-1.5 w-full bg-primary/20 rounded-full" />
-            <div className="h-1.5 w-3/4 bg-primary/20 rounded-full" />
-            <div className="h-1.5 w-5/6 bg-primary/20 rounded-full" />
+      <div className="relative z-10 grid grid-cols-[170px_28px_140px_28px_170px] items-center gap-0 max-w-[600px] w-full">
+        {/* ── Card 1: Your Mandate ─────────────────── */}
+        <div
+          className="rounded-xl border border-border bg-card p-3.5 h-[210px] flex flex-col gap-2 relative"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,0.08), 0 12px 30px -12px rgba(0,102,255,0.30)' }}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-primary/80">Your Mandate</span>
+            <FileText className="h-3 w-3 text-primary" />
           </div>
-          <div className="mt-auto flex items-center gap-1.5">
-            <FileText className="h-4 w-4 text-primary" />
-            <span className="text-[10px] font-medium text-primary">Mandate</span>
+          <div className="rounded-md bg-page border border-border px-2 py-2 space-y-1.5 flex-1">
+            <p className="text-[10px] text-text-primary leading-snug">
+              Buy <span className="text-primary font-semibold">ETH</span> when RSI &lt; 30.
+            </p>
+            <p className="text-[10px] text-text-primary leading-snug">
+              Stop loss at <span className="text-error font-semibold">2%</span>.
+            </p>
+            <p className="text-[10px] text-text-primary leading-snug">
+              Max 5% per trade.
+            </p>
+            <p className="text-[10px] text-text-primary leading-snug">
+              Pause on drawdown &gt;<span className="text-warning font-semibold">10%</span>.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 pt-0.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
+            <span className="text-[9px] text-text-secondary font-medium">Verified</span>
+            <span className="ml-auto font-mono text-[8px] text-text-disabled">0x8f3a…b5c</span>
           </div>
         </div>
 
-        {/* Arrow */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="h-px w-8 border-t-2 border-dashed border-border" />
-          <ChevronRight className="h-4 w-4 text-text-secondary -mt-1" />
+        {/* arrow */}
+        <ArrowRight className="h-3.5 w-3.5 text-text-disabled mx-auto" />
+
+        {/* ── Card 2: AI Agent ─────────────────────── */}
+        <div
+          className="rounded-xl border border-primary/30 bg-card p-3 h-[170px] flex flex-col items-center justify-center gap-2 relative"
+          style={{ boxShadow: '0 0 30px -8px rgba(0,102,255,0.4)' }}
+        >
+          {/* radial pulses */}
+          <div aria-hidden className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-xl">
+            <div className="h-20 w-20 rounded-full border border-primary/20 animate-pulse-slow" />
+            <div className="absolute h-16 w-16 rounded-full border border-primary/30" />
+          </div>
+          <div className="relative z-10 flex flex-col items-center gap-1.5">
+            <div
+              className="h-12 w-12 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center"
+              style={{ boxShadow: '0 0 20px rgba(0,102,255,0.5)' }}
+            >
+              <Bot className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-[10px] font-semibold text-text-primary mt-1">AI Agent</p>
+            <div className="flex items-center gap-0.5">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="h-1 w-1 rounded-full bg-primary animate-pulse-dot"
+                  style={{ animationDelay: `${i * 200}ms` }}
+                />
+              ))}
+            </div>
+            <p className="text-[8px] text-text-secondary uppercase tracking-wider">Reading…</p>
+          </div>
         </div>
 
-        {/* Panel 2: AI brain */}
-        <div className="w-[120px] h-[120px] bg-card border border-border rounded-xl flex flex-col items-center justify-center gap-2 shadow-card">
-          <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center">
-            <Bot className="h-5 w-5 text-primary" />
-          </div>
-          <span className="text-[10px] font-medium text-primary">AI Agent</span>
-          <div className="flex gap-1">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-1 w-4 bg-primary/30 rounded-full animate-pulse-slow" style={{ animationDelay: `${i * 200}ms` }} />
-            ))}
-          </div>
-        </div>
+        {/* arrow */}
+        <ArrowRight className="h-3.5 w-3.5 text-text-disabled mx-auto" />
 
-        {/* Arrow */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="h-px w-8 border-t-2 border-dashed border-border" />
-          <ChevronRight className="h-4 w-4 text-text-secondary -mt-1" />
-        </div>
+        {/* ── Card 3: On-Chain Execution ────────── */}
+        <div
+          className="rounded-xl border border-success/40 bg-card p-3.5 h-[210px] flex flex-col gap-2 relative"
+          style={{ boxShadow: '0 0 0 1px rgba(34,197,94,0.08), 0 12px 30px -12px rgba(34,197,94,0.30)' }}
+        >
+          <div className="flex items-center gap-1 mb-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-success">Executing</span>
+          </div>
 
-        {/* Panel 3: On-chain execution */}
-        <div className="w-[140px] h-[160px] bg-card border border-success/30 rounded-xl p-4 flex flex-col gap-2 shadow-card">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="h-2 w-2 rounded-full bg-success animate-pulse-dot" />
-            <span className="text-[10px] font-semibold text-success uppercase tracking-wider">Executed</span>
+          <div className="rounded-md bg-success-bg border border-success/30 p-2 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9px] text-text-secondary">ETH/USDC</span>
+              <span className="text-[9px] font-bold text-success">+2.57%</span>
+            </div>
+            <p className="text-[14px] font-bold text-success">+$2,450</p>
           </div>
-          <div className="bg-success-bg rounded-md p-2 space-y-1">
-            <div className="text-[9px] font-mono text-success">BTC/USDT</div>
-            <div className="text-[10px] font-semibold text-success">+$2,450</div>
+
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-3 w-3 text-text-disabled" />
+            <span className="text-[8px] text-text-secondary">Merchant Moe</span>
           </div>
-          <div className="mt-auto flex items-center gap-1.5">
-            <Link2 className="h-4 w-4 text-text-secondary" />
-            <span className="text-[9px] font-mono text-text-secondary">0x4f2a…</span>
+
+          <div className="mt-auto rounded-md bg-page border border-border p-1.5 flex items-center gap-1.5">
+            <Link2 className="h-2.5 w-2.5 text-text-disabled shrink-0" />
+            <span className="font-mono text-[8px] text-text-link truncate">0x4f2a…b9e1</span>
+          </div>
+
+          {/* Mantle hex badge */}
+          <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-page border border-success/40 flex items-center justify-center">
+            <Hexagon className="h-3 w-3 text-success" />
           </div>
         </div>
       </div>
@@ -184,61 +267,70 @@ function HeroIllustration() {
 
 function HeroSection() {
   return (
-    <section className="min-h-screen flex items-center pt-16" style={{ background: 'linear-gradient(180deg, #0D1117 0%, #0D1117 100%)' }}>
-      <div className="max-w-[1280px] mx-auto px-6 w-full py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left: Text */}
-          <div className="space-y-8">
-            {/* Pre-headline */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-[11px] font-semibold uppercase tracking-widest text-primary" style={{ background: 'rgba(0,102,255,0.1)' }}>
-              <span className="text-primary text-base leading-none">⬡</span>
+    <section
+      className="relative overflow-hidden"
+      style={{
+        background: '#0D1117',
+        backgroundImage:
+          'radial-gradient(circle at 20% 30%, rgba(0,102,255,0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0,194,255,0.04) 0%, transparent 50%)',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-6 pt-28 pb-20 lg:pt-32 lg:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_540px] gap-10 lg:gap-12 items-center">
+          {/* Left */}
+          <div className="space-y-6 max-w-[560px]">
+            <div className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary bg-primary/10 border border-primary/20">
+              <MantleHex className="h-3 w-3" />
               Built on Mantle Network
             </div>
 
-            {/* Headline */}
-            <div>
-              <h1 className="text-[64px] font-black text-text-primary leading-[1.1] tracking-[-0.02em]">
-                Your AI.<br />
-                Your Rules.<br />
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{ backgroundImage: 'linear-gradient(90deg, #0066FF, #00C2FF)' }}
-                >
-                  On-Chain.
-                </span>
-              </h1>
-            </div>
+            <h1 className="text-[44px] sm:text-[52px] lg:text-[60px] font-black text-text-primary leading-[1.05] tracking-[-0.025em]">
+              Your AI.<br />
+              Your Rules.<br />
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: 'linear-gradient(90deg, #0066FF 0%, #00C2FF 100%)' }}
+              >
+                On-Chain.
+              </span>
+            </h1>
 
-            {/* Sub-headline */}
-            <p className="text-lg text-text-secondary leading-[1.6] max-w-[480px]">
-              Write your trading strategy in plain English.
-              MantleMandate deploys an AI agent to execute it —
-              transparent, verifiable, and unstoppable on Mantle Network.
+            <p className="text-[16px] leading-[1.55] text-text-secondary max-w-[460px]">
+              Write your trading strategy in plain English. MantleMandate deploys
+              an AI agent to execute it — transparent, verifiable, and unstoppable
+              on Mantle Network.
             </p>
 
-            {/* CTA row */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center h-[52px] px-7 text-base font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors"
+                className="inline-flex items-center justify-center h-[48px] px-6 text-[14px] font-semibold text-white bg-primary hover:bg-primary-hover transition-colors rounded-lg"
               >
                 Start Free — No Wallet Required
               </Link>
-              <button className="inline-flex items-center justify-center h-[52px] px-7 text-base font-semibold text-text-primary bg-card border border-border rounded-lg hover:bg-surface transition-colors gap-2">
-                <span className="text-primary text-lg">▷</span>
+              <button className="inline-flex items-center justify-center gap-2 h-[48px] px-5 text-[14px] font-semibold text-text-primary bg-card border border-border hover:border-text-secondary transition-colors rounded-lg">
+                <Play className="h-4 w-4 text-primary fill-primary" />
                 Watch 2-Min Demo
               </button>
             </div>
 
-            {/* Social proof */}
-            <p className="text-sm text-text-secondary">
-              <span className="text-warning">★★★★★</span> Trusted by traders on Mantle Network
-            </p>
+            <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5 text-warning fill-warning" />
+                ))}
+              </div>
+              <p className="text-[13px] text-text-secondary">
+                <span className="text-text-primary font-semibold">2,852 ready</span>, trading-safe agents
+                <span className="mx-1.5">·</span>
+                Trusted by traders on Mantle
+              </p>
+            </div>
           </div>
 
-          {/* Right: Illustration */}
+          {/* Right — illustration */}
           <div className="hidden lg:block">
-            <HeroIllustration />
+            <HeroFlow />
           </div>
         </div>
       </div>
@@ -246,82 +338,88 @@ function HeroSection() {
   )
 }
 
-// ── Trust Bar ─────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   3. TRUST BAR
+   ───────────────────────────────────────────────────────────────── */
 
 function TrustBar() {
   const items = [
-    { Icon: Lock,   text: 'SOC2-ready, multisig-protected' },
-    { Icon: Zap,    text: 'Live P&L, updated every block' },
-    { Icon: Link2,  text: 'Every trade hashed on Mantle' },
+    { Icon: Lock,  text: 'SOC2-ready, multisig-protected' },
+    { Icon: Zap,   text: 'Live P&L, updated every block'  },
+    { Icon: Link2, text: 'Every trade hashed on Mantle'   },
   ]
   return (
-    <section className="bg-card border-t border-b border-border h-[72px] flex items-center">
-      <div className="max-w-[1280px] mx-auto px-6 w-full">
-        <div className="flex items-center justify-center gap-0 divide-x divide-border">
-          {items.map(({ Icon, text }) => (
-            <div key={text} className="flex items-center gap-2.5 px-10">
-              <Icon className="h-[18px] w-[18px] text-primary shrink-0" />
-              <span className="text-[13px] font-medium text-text-secondary">{text}</span>
-            </div>
-          ))}
-        </div>
+    <section className="bg-card border-y border-border">
+      <div className="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-center gap-0 divide-x divide-border">
+        {items.map(({ Icon, text }) => (
+          <div key={text} className="flex items-center gap-2 px-6 lg:px-12 first:pl-0 last:pr-0">
+            <Icon className="h-[16px] w-[16px] text-primary shrink-0" />
+            <span className="text-[13px] font-medium text-text-secondary whitespace-nowrap">{text}</span>
+          </div>
+        ))}
       </div>
     </section>
   )
 }
 
-// ── Feature Section ───────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   4. FEATURE SECTION
+   ───────────────────────────────────────────────────────────────── */
 
 const FEATURES = [
   {
     Icon: Bot,
     title: 'Write It. Deploy It. Done.',
     body:  'Write your mandate in plain English. The AI agent reads it, interprets it, and executes — no coding, no configuration, no PhD required.',
-    link:  'See how it works →',
+    link:  'See how it works',
   },
   {
     Icon: Gauge,
     title: 'Rules the AI Cannot Break',
     body:  'Set hard caps: max drawdown, stop-loss, position limits. Your mandate is law. The AI executes within your boundaries — always.',
-    link:  'View risk controls →',
+    link:  'View risk controls',
   },
   {
     Icon: Shield,
     title: 'Every Decision On-Chain',
     body:  'Every trade decision is hashed on Mantle Network. Share a public audit link with anyone. No trust required — verify it yourself.',
-    link:  'Explore the audit viewer →',
+    link:  'Explore the audit viewer',
   },
   {
     Icon: Network,
     title: 'Best Price, Automatically',
     body:  'Executes across Merchant Moe, Agni Finance, and Fluxion — routes to best price automatically. You never need to choose.',
-    link:  'See all protocols →',
+    link:  'See all protocols',
   },
 ]
 
 function FeatureSection() {
   return (
-    <section id="features" className="py-24 bg-page">
+    <section id="features" className="py-16 lg:py-20 bg-page">
       <div className="max-w-[1280px] mx-auto px-6">
-        <div className="text-center mb-14 space-y-3">
-          <h2 className="text-[28px] font-semibold text-text-primary">
+        <div className="text-center mb-10 space-y-2 max-w-[640px] mx-auto">
+          <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight">
             Everything you need to trade with confidence
           </h2>
-          <p className="text-base text-text-secondary max-w-[600px] mx-auto leading-relaxed">
+          <p className="text-[15px] text-text-secondary leading-relaxed">
             MantleMandate combines AI intelligence with on-chain verifiability —
             so you stay in control without staying at the screen.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[1080px] mx-auto">
           {FEATURES.map(({ Icon, title, body, link }) => (
-            <div key={title} className="bg-card border border-border rounded-lg p-6 space-y-4 hover:border-border/80 hover:bg-surface transition-colors">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon className="h-8 w-8 text-primary" />
+            <div
+              key={title}
+              className="group rounded-lg border border-border bg-card p-6 transition-all duration-150 hover:border-primary/30 hover:bg-surface"
+            >
+              <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+                <Icon className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="text-[20px] font-semibold text-text-primary">{title}</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">{body}</p>
-              <a href="#" className="text-sm font-medium text-text-link hover:text-text-link-hover transition-colors inline-flex items-center gap-1">
+              <h3 className="text-[18px] font-semibold text-text-primary mb-2">{title}</h3>
+              <p className="text-[13.5px] text-text-secondary leading-[1.6] mb-3">{body}</p>
+              <a href="#" className="inline-flex items-center gap-1 text-[13px] font-medium text-text-link group-hover:text-text-link-hover transition-colors">
                 {link}
+                <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </div>
           ))}
@@ -331,66 +429,81 @@ function FeatureSection() {
   )
 }
 
-// ── How It Works ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   5. HOW IT WORKS
+   ───────────────────────────────────────────────────────────────── */
 
 const STEPS = [
   {
-    num:  '01',
-    Icon: FileText,
-    iconCls: 'text-primary',
+    num:   '01',
+    Icon:  FileText,
     title: 'Write Your Mandate',
     body:  'Describe your trading strategy in plain English. No syntax. No special formatting. Just tell the AI what you want it to do.',
     chip:  '"Buy ETH when RSI < 30. Never exceed 5% per trade."',
+    accent: 'primary' as const,
   },
   {
-    num:  '02',
-    Icon: Bot,
-    iconCls: 'text-primary',
+    num:   '02',
+    Icon:  Bot,
     title: 'Deploy Your Agent',
     body:  'MantleMandate compiles your mandate into an enforceable policy, generates an on-chain hash, and deploys your AI agent.',
     chip:  null,
+    accent: 'primary' as const,
   },
   {
-    num:  '03',
-    Icon: TrendingUp,
-    iconCls: 'text-success',
+    num:   '03',
+    Icon:  TrendingUp,
     title: 'Watch It Execute',
     body:  'Your agent trades autonomously within your rules. Every action is recorded on Mantle Network — visible to you (and anyone you share it with).',
     chip:  null,
+    accent: 'success' as const,
   },
 ]
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 bg-card border-t border-b border-border">
+    <section id="how-it-works" className="py-16 lg:py-20 bg-card border-y border-border">
       <div className="max-w-[1280px] mx-auto px-6">
-        <h2 className="text-[28px] font-semibold text-text-primary text-center mb-16">
+        <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary text-center mb-12 tracking-tight">
           Up and Running in 3 Steps
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {STEPS.map(({ num, Icon, iconCls, title, body, chip }, i) => (
-            <div key={title} className="relative flex flex-col gap-4">
-              {/* Connector arrow (between steps) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 relative">
+          {STEPS.map((step, i) => (
+            <div key={step.title} className="relative">
+              {/* dashed connector to next step */}
               {i < STEPS.length - 1 && (
-                <div className="hidden md:block absolute top-8 left-full w-8 flex items-center z-10">
-                  <div className="w-full h-px border-t-2 border-dashed border-border mx-auto" />
-                  <ChevronRight className="h-4 w-4 text-text-secondary absolute -right-2 top-1/2 -translate-y-1/2" />
+                <div className="hidden md:flex absolute top-10 -right-5 lg:-right-7 h-px w-10 lg:w-14 items-center pointer-events-none">
+                  <div className="flex-1 border-t-2 border-dashed border-border" />
+                  <ChevronRight className="h-3.5 w-3.5 text-text-disabled -ml-1" />
                 </div>
               )}
-              {/* Step number watermark */}
-              <div className="text-[72px] font-black leading-none select-none" style={{ color: 'rgba(0,102,255,0.08)' }}>
-                {num}
-              </div>
-              <div className="h-10 w-10 -mt-6">
-                <Icon className={cn('h-10 w-10', iconCls)} />
-              </div>
-              <h3 className="text-[20px] font-semibold text-text-primary">{title}</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">{body}</p>
-              {chip && (
-                <div className="inline-block bg-primary/10 border border-primary/20 rounded-md px-3 py-1.5 text-xs font-mono text-primary italic">
-                  {chip}
+              <div className="relative rounded-lg border border-border bg-page p-6 overflow-hidden h-full">
+                {/* huge translucent watermark */}
+                <span
+                  aria-hidden
+                  className="absolute -top-4 -right-2 text-[100px] font-black leading-none select-none pointer-events-none"
+                  style={{ color: 'rgba(0,102,255,0.06)' }}
+                >
+                  {step.num}
+                </span>
+                <div className="relative">
+                  <div
+                    className={cn(
+                      'h-10 w-10 rounded-lg flex items-center justify-center mb-4',
+                      step.accent === 'primary' ? 'bg-primary/15 border border-primary/30' : 'bg-success/15 border border-success/30',
+                    )}
+                  >
+                    <step.Icon className={cn('h-5 w-5', step.accent === 'primary' ? 'text-primary' : 'text-success')} />
+                  </div>
+                  <h3 className="text-[18px] font-semibold text-text-primary mb-2">{step.title}</h3>
+                  <p className="text-[13.5px] text-text-secondary leading-[1.6] mb-3">{step.body}</p>
+                  {step.chip && (
+                    <div className="inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-mono text-primary italic">
+                      {step.chip}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
@@ -399,38 +512,41 @@ function HowItWorksSection() {
   )
 }
 
-// ── Multi-Protocol Banner ─────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   6. PROTOCOL STRIP
+   ───────────────────────────────────────────────────────────────── */
 
 const PROTOCOLS = [
-  { name: 'Merchant Moe', symbol: 'MOE' },
-  { name: 'Agni Finance', symbol: 'AGNI' },
-  { name: 'Fluxion',      symbol: 'FLUX' },
+  { name: 'Merchant Moe', symbol: 'MOE',  color: '#F5C542' },
+  { name: 'Agni Finance', symbol: 'AGNI', color: '#22C55E' },
+  { name: 'Fluxion',      symbol: 'FLUX', color: '#00C2FF' },
 ]
 
-function ProtocolBanner() {
+function ProtocolStrip() {
   return (
-    <section className="py-16 bg-page">
-      <div className="max-w-[1280px] mx-auto px-6 text-center space-y-4">
-        <h2 className="text-[22px] font-semibold text-text-primary">
+    <section className="py-12 lg:py-14 bg-page border-b border-border">
+      <div className="max-w-[1280px] mx-auto px-6 text-center">
+        <h2 className="text-[22px] lg:text-[24px] font-bold text-text-primary mb-2 tracking-tight">
           Executes Across the Mantle Ecosystem
         </h2>
-        <p className="text-sm text-text-secondary">
+        <p className="text-[14px] text-text-secondary mb-8">
           MantleMandate routes trades to the best available liquidity — automatically.
         </p>
-        <div className="flex items-center justify-center gap-12 mt-8 flex-wrap">
-          {PROTOCOLS.map(({ name, symbol }) => (
-            <div key={name} className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-card border border-border flex items-center justify-center">
-                <span className="text-[10px] font-bold text-text-secondary">{symbol}</span>
+        <div className="flex items-center justify-center gap-8 lg:gap-14 flex-wrap">
+          {PROTOCOLS.map(({ name, symbol, color }) => (
+            <div key={name} className="flex items-center gap-2.5">
+              <div
+                className="h-9 w-9 rounded-full flex items-center justify-center font-mono text-[10px] font-bold border"
+                style={{ background: `${color}20`, borderColor: `${color}40`, color }}
+              >
+                {symbol.slice(0, 3)}
               </div>
-              <span className="text-sm font-medium text-text-secondary">{name}</span>
+              <span className="text-[14px] font-semibold text-text-primary">{name}</span>
             </div>
           ))}
-          <div className="flex flex-col items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-card border border-dashed border-border flex items-center justify-center">
-              <span className="text-text-disabled text-lg">+</span>
-            </div>
-            <span className="text-sm font-medium text-text-disabled">More protocols</span>
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-full bg-page border border-dashed border-border flex items-center justify-center text-text-disabled text-base">+</div>
+            <span className="text-[14px] font-medium text-text-disabled">+ more protocols</span>
           </div>
         </div>
       </div>
@@ -438,92 +554,118 @@ function ProtocolBanner() {
   )
 }
 
-// ── Pricing Section ───────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   7. PRICING
+   ───────────────────────────────────────────────────────────────── */
 
 const PLANS = [
   {
     name:     'Operator',
-    price:    29,
+    monthly:  29,
+    tagline:  'For solo traders getting started',
+    features: ['3 active AI agents', '10 mandates', 'Standard risk engine', 'Email alerts', '1-month audit history'],
     popular:  false,
-    features: ['3 AI agents', '10 mandates', 'Standard risk engine', 'Email alerts', '1 month audit history'],
   },
   {
     name:     'Strategist',
-    price:    99,
+    monthly:  99,
+    tagline:  'For active traders running multiple strategies',
+    features: ['15 active AI agents', 'Unlimited mandates', 'Advanced risk engine', 'Real-time alerts (Slack, webhook)', '12-month audit history', 'Priority support'],
     popular:  true,
-    features: ['15 AI agents', 'Unlimited mandates', 'Advanced risk engine', 'Real-time alerts', '12 month audit history', 'Priority support'],
   },
   {
     name:     'Institution',
-    price:    299,
-    popular:  false,
+    monthly:  299,
+    tagline:  'For funds, DAOs, and treasury teams',
     features: ['Unlimited agents', 'Unlimited mandates', 'Custom risk engine', 'All alert channels', 'Unlimited audit history', 'Dedicated support', 'SLA guarantee'],
+    popular:  false,
   },
 ]
 
 function PricingSection() {
   const [annual, setAnnual] = useState(false)
   return (
-    <section id="pricing" className="py-24 bg-card border-t border-border">
+    <section id="pricing" className="py-16 lg:py-20 bg-page">
       <div className="max-w-[1280px] mx-auto px-6">
-        <div className="text-center mb-10 space-y-3">
-          <h2 className="text-[28px] font-semibold text-text-primary">One Platform. Three Scales.</h2>
-          <p className="text-sm text-text-secondary">Start free for 14 days. No credit card. No wallet required.</p>
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <span className={cn('text-sm', !annual ? 'text-text-primary font-medium' : 'text-text-secondary')}>Monthly</span>
+        <div className="text-center mb-8">
+          <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight">
+            One Platform. Three Scales.
+          </h2>
+          <p className="text-[15px] text-text-secondary mt-2">
+            Start free for 14 days. No credit card. No wallet required.
+          </p>
+          <div className="inline-flex items-center gap-3 mt-5 p-1 rounded-md border border-border bg-card">
             <button
-              onClick={() => setAnnual((v) => !v)}
-              className={cn('w-11 h-6 rounded-full transition-colors relative', annual ? 'bg-primary' : 'bg-border')}
+              onClick={() => setAnnual(false)}
+              className={cn(
+                'h-8 px-4 rounded text-[13px] font-semibold transition-colors',
+                !annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary',
+              )}
             >
-              <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform', annual ? 'translate-x-5' : 'translate-x-0.5')} />
+              Monthly
             </button>
-            <span className={cn('text-sm', annual ? 'text-text-primary font-medium' : 'text-text-secondary')}>
-              Annual <span className="text-success text-xs font-semibold">(save 20%)</span>
-            </span>
+            <button
+              onClick={() => setAnnual(true)}
+              className={cn(
+                'h-8 px-4 rounded text-[13px] font-semibold transition-colors inline-flex items-center gap-1.5',
+                annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary',
+              )}
+            >
+              Annual
+              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', annual ? 'bg-white/20 text-white' : 'bg-success/15 text-success')}>
+                −20%
+              </span>
+            </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map(({ name, price, popular, features }) => {
-            const effectivePrice = annual ? Math.floor(price * 0.8) : price
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-[1080px] mx-auto">
+          {PLANS.map(({ name, monthly, tagline, features, popular }) => {
+            const price = annual ? Math.round(monthly * 0.8) : monthly
             return (
               <div
                 key={name}
                 className={cn(
-                  'rounded-lg p-6 flex flex-col gap-4 border',
+                  'relative rounded-lg p-6 flex flex-col gap-4 transition-colors',
                   popular
-                    ? 'border-primary bg-card relative'
-                    : 'border-border bg-page',
+                    ? 'border-2 border-primary bg-card'
+                    : 'border border-border bg-card hover:border-text-secondary',
                 )}
               >
                 {popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[11px] font-semibold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-primary text-white text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-[0.08em]">
+                    <Sparkles className="h-3 w-3" />
                     Most Popular
-                  </div>
+                  </span>
                 )}
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary">{name}</p>
-                  <p className="text-[40px] font-bold text-text-primary leading-tight mt-1">
-                    ${effectivePrice}<span className="text-sm text-text-secondary font-normal">/mo</span>
-                  </p>
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-text-secondary mb-1">{name}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[40px] font-bold text-text-primary leading-none">${price}</span>
+                    <span className="text-[13px] text-text-secondary">/month</span>
+                  </div>
+                  <p className="text-[12px] text-text-secondary mt-1.5">{tagline}</p>
                 </div>
-                <ul className="space-y-2.5 flex-1">
+
+                <ul className="space-y-2 flex-1">
                   {features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                      {f}
+                    <li key={f} className="flex items-start gap-2 text-[13px] text-text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+                      <span className="leading-snug">{f}</span>
                     </li>
                   ))}
                 </ul>
+
                 <Link
                   href="/signup"
                   className={cn(
-                    'mt-2 flex items-center justify-center h-10 rounded-md text-sm font-semibold transition-colors',
+                    'h-10 inline-flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors',
                     popular
                       ? 'bg-primary text-white hover:bg-primary-hover'
                       : 'border border-border text-text-primary hover:bg-surface',
                   )}
                 >
-                  Get started
+                  {popular ? 'Start Free Trial' : 'Get Started'}
                 </Link>
               </div>
             )
@@ -534,37 +676,52 @@ function PricingSection() {
   )
 }
 
-// ── Security Section ──────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   8. SECURITY
+   ───────────────────────────────────────────────────────────────── */
+
+const SECURITY_ITEMS = [
+  { Icon: KeyRound, title: 'Non-Custodial',     body: 'We never hold your funds. Your private keys never leave your wallet.' },
+  { Icon: Shield,   title: 'On-Chain Security', body: 'Every agent decision is hashed and recorded on Mantle Network permanently.' },
+  { Icon: Users,    title: 'Role-Based Access', body: 'Multisig signers, granular permissions, audit log on every change.' },
+  { Icon: Award,    title: 'SOC2-Ready',        body: 'Architecture and controls aligned with SOC2 Type II readiness.' },
+]
 
 function SecuritySection() {
-  const items = [
-    { title: 'Non-Custodial',     body: 'We never hold your funds. Your private keys never leave your wallet.' },
-    { title: 'On-Chain Audit',    body: 'Every agent decision is hashed and recorded on Mantle Network permanently.' },
-    { title: 'Multisig-Ready',    body: 'Supports multi-signature wallet protection for institutional use.' },
-    { title: 'Risk Hard Limits',  body: 'Smart contract enforced stop-loss and drawdown limits the AI cannot override.' },
-  ]
   return (
-    <section id="security" className="py-24 bg-page border-t border-border">
+    <section id="security" className="py-16 lg:py-20 bg-card border-y border-border">
       <div className="max-w-[1280px] mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-4">
-            <h2 className="text-[28px] font-semibold text-text-primary">Your Funds Stay Yours</h2>
-            <p className="text-base text-text-secondary leading-relaxed">
+        <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-10 lg:gap-16 items-start">
+          {/* Left text */}
+          <div>
+            <div className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary bg-primary/10 border border-primary/20 mb-4">
+              <Shield className="h-3 w-3" />
+              Security First
+            </div>
+            <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight mb-3">
+              Your Funds Stay Yours
+            </h2>
+            <p className="text-[15px] text-text-secondary leading-relaxed mb-6">
               MantleMandate never holds custody. Your wallets, your keys, your rules —
-              we only execute what you authorize.
+              we only execute what you authorize. Every decision is verifiable on-chain.
             </p>
-            <Link href="/signup" className="inline-flex items-center gap-2 text-sm font-semibold text-text-link hover:text-text-link-hover transition-colors mt-2">
-              Start for free <ChevronRight className="h-4 w-4" />
+            <Link href="/signup" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-text-link hover:text-text-link-hover transition-colors">
+              Read security docs
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {items.map(({ title, body }) => (
-              <div key={title} className="bg-card border border-border rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary shrink-0" />
-                  <p className="text-sm font-semibold text-text-primary">{title}</p>
+
+          {/* Right grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {SECURITY_ITEMS.map(({ Icon, title, body }) => (
+              <div key={title} className="rounded-lg border border-border bg-page p-4 hover:border-primary/30 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-7 w-7 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <p className="text-[14px] font-semibold text-text-primary">{title}</p>
                 </div>
-                <p className="text-xs text-text-secondary leading-relaxed">{body}</p>
+                <p className="text-[12.5px] text-text-secondary leading-[1.55]">{body}</p>
               </div>
             ))}
           </div>
@@ -574,34 +731,45 @@ function SecuritySection() {
   )
 }
 
-// ── Team Section ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   9. TEAM
+   ───────────────────────────────────────────────────────────────── */
 
 const TEAM = [
-  { name: 'Alex Chen',       role: 'CEO & Co-founder',      initials: 'AC', bio: 'Former quant at Citadel. 10 years in algorithmic trading.' },
-  { name: 'Sarah Kim',       role: 'CTO & Co-founder',      initials: 'SK', bio: 'Ex-Solidity engineer at Uniswap. Builder at heart.' },
-  { name: 'Marcus Williams', role: 'Head of AI',             initials: 'MW', bio: 'PhD ML from Stanford. Specializes in RL for trading systems.' },
-  { name: 'Priya Sharma',    role: 'Head of Risk',           initials: 'PS', bio: 'Former risk manager at Goldman Sachs DeFi desk.' },
+  { name: 'Alex Chen',       role: 'CEO & Co-founder', initials: 'AC', accent: 'from-[#0066FF] to-[#00C2FF]' },
+  { name: 'Sarah Kim',       role: 'CTO & Co-founder', initials: 'SK', accent: 'from-[#22C55E] to-[#00C2FF]' },
+  { name: 'Marcus Williams', role: 'Head of AI',       initials: 'MW', accent: 'from-[#F5C542] to-[#F97316]' },
+  { name: 'Priya Sharma',    role: 'Head of Risk',     initials: 'PS', accent: 'from-[#0066FF] to-[#9333EA]' },
 ]
 
 function TeamSection() {
   return (
-    <section id="team" className="py-24 bg-card border-t border-border">
+    <section id="team" className="py-16 lg:py-20 bg-page">
       <div className="max-w-[1280px] mx-auto px-6">
-        <div className="text-center mb-12 space-y-2">
-          <h2 className="text-[28px] font-semibold text-text-primary">Built by Traders. Built for the Future.</h2>
-          <p className="text-sm text-text-secondary">The MantleMandate team brings together expertise in quantitative finance, AI, and blockchain.</p>
+        <div className="text-center mb-10 max-w-[600px] mx-auto">
+          <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight">
+            Built by Traders. Built for the Future.
+          </h2>
+          <p className="text-[15px] text-text-secondary mt-2">
+            The MantleMandate team brings together quant trading, AI research, and on-chain engineering.
+          </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {TEAM.map(({ name, role, initials, bio }) => (
-            <div key={name} className="bg-page border border-border rounded-lg p-5 flex flex-col items-center text-center gap-3">
-              <div className="h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center">
-                <span className="text-primary font-bold text-base">{initials}</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-[1080px] mx-auto">
+          {TEAM.map(({ name, role, initials, accent }) => (
+            <div key={name} className="rounded-lg border border-border bg-card p-5 flex flex-col items-center text-center gap-3 hover:border-text-secondary transition-colors">
+              <div
+                className={cn(
+                  'h-16 w-16 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-black text-lg',
+                  accent,
+                )}
+                style={{ boxShadow: '0 8px 24px -8px rgba(0,102,255,0.4)' }}
+              >
+                {initials}
               </div>
               <div>
-                <p className="text-sm font-semibold text-text-primary">{name}</p>
-                <p className="text-xs text-primary mt-0.5">{role}</p>
+                <p className="text-[14px] font-semibold text-text-primary">{name}</p>
+                <p className="text-[11px] text-primary mt-0.5 font-medium uppercase tracking-wider">{role}</p>
               </div>
-              <p className="text-xs text-text-secondary leading-relaxed">{bio}</p>
             </div>
           ))}
         </div>
@@ -610,79 +778,107 @@ function TeamSection() {
   )
 }
 
-// ── CTA Banner ────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   10. CTA BANNER
+   ───────────────────────────────────────────────────────────────── */
 
 function CtaBanner() {
   return (
-    <section className="py-0 bg-primary">
-      <div className="max-w-[1280px] mx-auto px-6 py-16 flex flex-col items-center text-center gap-4">
-        <h2 className="text-[28px] font-semibold text-white">Ready to automate your strategy?</h2>
-        <p className="text-base text-white/80">Start your 14-day free trial. No wallet required. Cancel any time.</p>
-        <Link
-          href="/signup"
-          className="mt-2 h-[52px] px-8 inline-flex items-center text-base font-bold text-primary bg-white rounded-lg hover:bg-white/90 transition-colors"
-        >
-          Start Free — No Wallet Required
-        </Link>
+    <section className="relative overflow-hidden" style={{ background: '#0066FF' }}>
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse at top right, rgba(0,194,255,0.4) 0%, transparent 60%)',
+        }}
+      />
+      <div className="relative max-w-[1280px] mx-auto px-6 py-12 lg:py-14 flex flex-col items-center text-center gap-3">
+        <h2 className="text-[28px] lg:text-[32px] font-bold text-white tracking-tight">
+          Ready to automate your strategy?
+        </h2>
+        <p className="text-[15px] text-white/85 max-w-[560px]">
+          Start your 14-day free trial. No wallet required. Cancel any time.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-2">
+          <Link
+            href="/signup"
+            className="h-[48px] px-6 inline-flex items-center justify-center text-[14px] font-bold text-primary bg-white rounded-lg hover:bg-white/95 transition-colors"
+          >
+            Start Free — No Wallet Required
+          </Link>
+          <button className="h-[48px] px-5 inline-flex items-center justify-center gap-2 text-[14px] font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/30 rounded-lg transition-colors">
+            <Eye className="h-4 w-4" />
+            Live Demo
+          </button>
+        </div>
       </div>
     </section>
   )
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   11. FOOTER
+   ───────────────────────────────────────────────────────────────── */
 
 function Footer() {
+  const cols = [
+    {
+      title: 'Platform',
+      links: ['Dashboard', 'Mandate Editor', 'Agent Monitoring', 'Audit Viewer', 'Risk Engine'],
+    },
+    {
+      title: 'Resources',
+      links: ['Documentation', 'API Reference', 'Status', 'Changelog', 'Security'],
+    },
+    {
+      title: 'Company',
+      links: ['Team', 'Blog', 'Careers', 'Contact', 'Press Kit'],
+    },
+  ]
   return (
     <footer className="bg-page border-t border-border">
       <div className="max-w-[1280px] mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          {/* Col 1: Brand */}
+        <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-8 mb-10">
+          {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
-            <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
-            <p className="text-xs text-text-secondary leading-relaxed max-w-[160px]">
-              Your AI. Your Rules. On-Chain.
+            <div className="flex items-center gap-2.5">
+              <MMLogo size={28} />
+              <span className="text-[15px] font-bold tracking-tight text-text-primary">MantleMandate</span>
+            </div>
+            <p className="text-[12.5px] text-text-secondary leading-[1.6] max-w-[220px]">
+              Your AI. Your Rules. On-Chain.<br />
+              Plain-English mandates, deployed as autonomous trading agents on Mantle Network.
             </p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-primary text-sm">⬡</span>
-              <span className="text-[11px] text-text-secondary">Built on Mantle Network</span>
+            <div className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-primary bg-primary/10 border border-primary/20">
+              <MantleHex className="h-3 w-3" />
+              Built on Mantle
             </div>
           </div>
 
-          {/* Col 2: Platform */}
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-disabled">Platform</p>
-            {['Dashboard', 'Mandate Editor', 'Agent Monitoring', 'Audit Viewer'].map((l) => (
-              <Link key={l} href="/login" className="block text-sm text-text-secondary hover:text-text-primary transition-colors">{l}</Link>
-            ))}
-          </div>
-
-          {/* Col 3: Resources */}
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-disabled">Resources</p>
-            {['Docs', 'API Reference', 'Status', 'Changelog'].map((l) => (
-              <a key={l} href="#" className="block text-sm text-text-secondary hover:text-text-primary transition-colors">{l}</a>
-            ))}
-          </div>
-
-          {/* Col 4: Company */}
-          <div className="space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-disabled">Company</p>
-            {['Team', 'Blog', 'Careers', 'Contact'].map((l) => (
-              <a key={l} href="#" className="block text-sm text-text-secondary hover:text-text-primary transition-colors">{l}</a>
-            ))}
-          </div>
+          {cols.map(({ title, links }) => (
+            <div key={title} className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-disabled">{title}</p>
+              <ul className="space-y-2">
+                {links.map((l) => (
+                  <li key={l}>
+                    <a href="#" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors">{l}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-text-disabled">© 2026 MantleMandate · Turing Test Hackathon</p>
+        <div className="border-t border-border pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
+          <p className="text-[12px] text-text-disabled">© 2026 MantleMandate · Built for the Turing Test Hackathon</p>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-xs text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="text-xs text-text-secondary hover:text-text-primary transition-colors">Terms of Service</a>
-            <div className="flex items-center gap-1">
-              <span className="text-primary text-sm">⬡</span>
-              <span className="text-xs text-text-secondary">Built on Mantle Network</span>
-            </div>
+            <a href="#" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</a>
+            <a href="#" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Terms of Service</a>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+              <MantleHex className="h-3 w-3" />
+              Mantle Network
+            </span>
           </div>
         </div>
       </div>
@@ -690,7 +886,9 @@ function Footer() {
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────
+   PAGE
+   ───────────────────────────────────────────────────────────────── */
 
 export default function LandingPage() {
   return (
@@ -701,7 +899,7 @@ export default function LandingPage() {
         <TrustBar />
         <FeatureSection />
         <HowItWorksSection />
-        <ProtocolBanner />
+        <ProtocolStrip />
         <PricingSection />
         <SecuritySection />
         <TeamSection />
