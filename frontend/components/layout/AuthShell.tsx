@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import Image from 'next/image'
+import { Hexagon } from 'lucide-react'
 
 interface AuthShellProps {
   leftPanel: ReactNode
@@ -9,60 +10,249 @@ interface AuthShellProps {
 export function AuthShell({ leftPanel, children }: AuthShellProps) {
   return (
     <div className="flex min-h-screen bg-page">
-      {/* Left panel — 45% */}
-      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between bg-page border-r border-border px-16 py-20">
-        {leftPanel}
-      </div>
+      {/* ── Left panel — 45% (desktop only) ─────────────────────────────── */}
+      <aside
+        className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-page border-r border-border px-12 xl:px-16 py-14 overflow-hidden"
+      >
+        {/* Atmospheric blue glow — diffuse, behind everything */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-40 left-1/2 -translate-x-1/2 h-[520px] w-[760px] rounded-full"
+          style={{
+            background:
+              'radial-gradient(ellipse, rgba(0,102,255,0.22) 0%, rgba(0,102,255,0.08) 35%, transparent 70%)',
+            filter: 'blur(20px)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-[280px]"
+          style={{
+            background:
+              'linear-gradient(180deg, transparent 0%, rgba(0,102,255,0.04) 60%, rgba(0,102,255,0.10) 100%)',
+          }}
+        />
 
-      {/* Right form panel — 55% */}
-      <div className="flex flex-1 flex-col items-center justify-center bg-card px-8 py-16 lg:px-16">
-        <div className="w-full max-w-[400px]">
-          {/* Mobile logo */}
-          <div className="flex items-center mb-8 lg:hidden">
-            <Image src="/logo.png" alt="MantleMandate" width={160} height={160} className="h-40 w-40 object-contain" />
+        {/* Wireframe blueprint floor + cubes */}
+        <BlueprintBg />
+
+        <div className="relative z-10 flex flex-col h-full justify-between gap-10">
+          {leftPanel}
+        </div>
+      </aside>
+
+      {/* ── Right form panel — 55% ──────────────────────────────────────── */}
+      <main className="flex flex-1 flex-col items-center justify-center bg-card px-6 py-10 sm:px-10 lg:px-16">
+        <div className="w-full max-w-[420px]">
+          {/* Mobile logo (hidden on lg+) */}
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <Image src="/logo.png" alt="MantleMandate" width={36} height={36} className="h-9 w-9 object-contain shrink-0" />
+            <span className="text-[18px] font-bold tracking-tight text-text-primary">MantleMandate</span>
           </div>
           {children}
         </div>
-      </div>
+      </main>
     </div>
   )
 }
 
-// ── Shared sub-components ─────────────────────────────────────────────────────
+/* ─── Blueprint background (wireframe cubes + perspective grid) ───── */
 
-export function BrandLogo() {
+function WireframeCube({
+  x, y, size, opacity = 0.7, fill = 0.04, stroke = '#3B82F6', glow = false,
+}: {
+  x: number; y: number; size: number;
+  opacity?: number; fill?: number; stroke?: string; glow?: boolean
+}) {
+  // Isometric projection — 30° angles
+  const w = size           // half-width on the iso axis
+  const h = size * 0.55    // vertical compression
+  const d = size           // depth
+
+  // 8 vertices of an isometric cube around (x,y) anchored at the bottom-front
+  // top quad
+  const tA = [x - w, y - d - h]    // top-left
+  const tB = [x,     y - d - 2 * h] // top-back
+  const tC = [x + w, y - d - h]    // top-right
+  const tD = [x,     y - d]        // top-front
+  // bottom quad
+  const bA = [x - w, y - h]
+  const bC = [x + w, y - h]
+  const bD = [x,     y]
+
+  const sw = 1.1
+  const path = `M${tA} L${tB} L${tC} L${tD} Z`
+
   return (
-    <Image src="/logo.png" alt="MantleMandate" width={320} height={320} className="h-80 w-80 object-contain" />
+    <g style={{ opacity, filter: glow ? 'drop-shadow(0 0 8px rgba(0,194,255,0.55))' : undefined }}>
+      {/* Top face */}
+      <polygon
+        points={`${tA.join(',')} ${tB.join(',')} ${tC.join(',')} ${tD.join(',')}`}
+        fill={`rgba(0,194,255,${fill * 1.4})`}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="round"
+      />
+      {/* Left face */}
+      <polygon
+        points={`${tA.join(',')} ${tD.join(',')} ${bD.join(',')} ${bA.join(',')}`}
+        fill={`rgba(0,102,255,${fill})`}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="round"
+      />
+      {/* Right face */}
+      <polygon
+        points={`${tD.join(',')} ${tC.join(',')} ${bC.join(',')} ${bD.join(',')}`}
+        fill={`rgba(0,59,153,${fill * 1.6})`}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="round"
+      />
+      {/* Subtle hidden edges for depth (very thin) */}
+      <path d={path} fill="none" stroke={stroke} strokeWidth={sw * 0.6} opacity={0.4} />
+    </g>
   )
 }
 
+function BlueprintBg() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 720 420"
+      preserveAspectRatio="xMidYMax slice"
+      className="pointer-events-none absolute inset-x-0 bottom-0 w-full h-[60%]"
+    >
+      <defs>
+        {/* Grid line gradient — fades to nothing toward the top */}
+        <linearGradient id="gridFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#3B82F6" stopOpacity="0"   />
+          <stop offset="35%"  stopColor="#3B82F6" stopOpacity="0.05"/>
+          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.45"/>
+        </linearGradient>
+        {/* Vanishing-point radial behind cubes */}
+        <radialGradient id="halo" cx="50%" cy="85%" r="55%">
+          <stop offset="0%"   stopColor="#0066FF" stopOpacity="0.45" />
+          <stop offset="50%"  stopColor="#0066FF" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#0066FF" stopOpacity="0"    />
+        </radialGradient>
+        <filter id="softBlur" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="0.4" />
+        </filter>
+      </defs>
+
+      {/* Vanishing-point halo */}
+      <ellipse cx="360" cy="380" rx="320" ry="120" fill="url(#halo)" />
+
+      {/* Perspective floor — horizontal lines (parallel) */}
+      <g stroke="url(#gridFade)" strokeWidth="1" filter="url(#softBlur)">
+        {Array.from({ length: 14 }).map((_, i) => {
+          const t = i / 13
+          const y = 240 + t * 180
+          const opacity = 0.15 + t * 0.55
+          return (
+            <line
+              key={`h${i}`}
+              x1="0" x2="720"
+              y1={y} y2={y}
+              stroke="#3B82F6"
+              strokeOpacity={opacity}
+              strokeWidth={t < 0.5 ? 0.6 : 0.9}
+            />
+          )
+        })}
+        {/* Vanishing-point converging lines */}
+        {Array.from({ length: 22 }).map((_, i) => {
+          const t = (i - 10) / 11
+          const startX = 360 + t * 740
+          return (
+            <line
+              key={`v${i}`}
+              x1={startX} y1="420"
+              x2="360"    y2="240"
+              stroke="#3B82F6"
+              strokeOpacity={0.18 + Math.abs(t) * 0.05}
+              strokeWidth={0.7}
+            />
+          )
+        })}
+      </g>
+
+      {/* Wireframe cubes — sized & spaced like the reference */}
+      <WireframeCube x={130} y={335} size={26} opacity={0.55} fill={0.05}  />
+      <WireframeCube x={245} y={355} size={36} opacity={0.85} fill={0.10} glow />
+      <WireframeCube x={245} y={295} size={20} opacity={0.55} fill={0.06}  />
+      <WireframeCube x={415} y={345} size={30} opacity={0.7}  fill={0.07}  />
+      <WireframeCube x={555} y={330} size={22} opacity={0.55} fill={0.05}  />
+      <WireframeCube x={605} y={355} size={16} opacity={0.45} fill={0.04}  />
+
+      {/* Floating accent dots */}
+      <g fill="#00C2FF">
+        <circle cx="120" cy="245" r="1.4" opacity="0.55" />
+        <circle cx="350" cy="230" r="1.6" opacity="0.7"  />
+        <circle cx="540" cy="240" r="1.2" opacity="0.5"  />
+        <circle cx="640" cy="280" r="1"   opacity="0.55" />
+      </g>
+    </svg>
+  )
+}
+
+/* ─── Brand logo (preserves /logo.png) ─────────────────────────────── */
+
+export function BrandLogo() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Image
+        src="/logo.png"
+        alt="MantleMandate"
+        width={36}
+        height={36}
+        className="h-9 w-9 object-contain shrink-0"
+        priority
+      />
+      <span className="text-[19px] font-bold tracking-tight text-text-primary">
+        MantleMandate
+      </span>
+    </div>
+  )
+}
+
+/* ─── Mantle Network badge ─────────────────────────────────────────── */
+
 export function MantleBadge() {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-primary text-base leading-none">⬡</span>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+    <div
+      className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5"
+      style={{ boxShadow: '0 0 24px -8px rgba(0,102,255,0.6)' }}
+    >
+      <Hexagon className="h-3.5 w-3.5 text-primary" strokeWidth={2.2} />
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
         Deployed on Mantle Network
       </span>
     </div>
   )
 }
 
+/* ─── Or-divider ───────────────────────────────────────────────────── */
+
 export function OrDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 my-5">
       <div className="flex-1 h-px bg-border" />
-      <span className="text-xs text-text-disabled shrink-0">{label}</span>
+      <span className="text-[12px] text-text-disabled shrink-0">{label}</span>
       <div className="flex-1 h-px bg-border" />
     </div>
   )
 }
+
+/* ─── OAuth buttons ────────────────────────────────────────────────── */
 
 export function OAuthButtons() {
   return (
     <div className="grid grid-cols-2 gap-3">
       <button
         type="button"
-        className="flex items-center justify-center gap-2 h-10 rounded-md border border-border bg-card text-text-primary text-sm font-medium hover:bg-surface transition-colors"
+        className="flex items-center justify-center gap-2 h-11 rounded-md border border-border bg-page text-text-primary text-[13px] font-semibold hover:border-text-secondary hover:bg-card transition-colors"
         onClick={() => alert('Google OAuth — coming soon')}
       >
         <GoogleIcon />
@@ -70,7 +260,7 @@ export function OAuthButtons() {
       </button>
       <button
         type="button"
-        className="flex items-center justify-center gap-2 h-10 rounded-md border border-border bg-card text-text-primary text-sm font-medium hover:bg-surface transition-colors"
+        className="flex items-center justify-center gap-2 h-11 rounded-md border border-border bg-page text-text-primary text-[13px] font-semibold hover:border-text-secondary hover:bg-card transition-colors"
         onClick={() => alert('Microsoft OAuth — coming soon')}
       >
         <MicrosoftIcon />
