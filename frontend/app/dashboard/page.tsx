@@ -1,170 +1,141 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, TrendingDown, Bot, BarChart3, Zap, Plus,
+  Plus, ExternalLink, Wallet as WalletIcon, Bot, Zap, BarChart2,
+  ShieldCheck,
 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton'
-import { usePortfolioStats, usePortfolioHistory } from '@/hooks/usePortfolio'
-import { useRecentTrades } from '@/hooks/useTrades'
-import { useAgents } from '@/hooks/useAgents'
-import { formatCurrency, formatPercent } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-import type { BadgeVariant } from '@/components/ui/Badge'
-import { useState } from 'react'
 
-// ── KPI Cards ─────────────────────────────────────────────────────────────────
+import { PageHeader } from '@/components/ui/PageHeader'
+import { MetricCard } from '@/components/ui/MetricCard'
+import { InlineAlert } from '@/components/ui/InlineAlert'
+import { SectionCard } from '@/components/ui/SectionCard'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { PrimaryButton } from '@/components/ui/PrimaryButton'
 
-interface KpiCardProps {
-  label:       string
-  value:       string
-  sub?:        string
-  change?:     number
-  changeText?: string
-  isLoading?:  boolean
-  extra?:      React.ReactNode
-  valueCls?:   string
-  bgCls?:      string
-}
+import {
+  DASHBOARD_KPIS, DASHBOARD_PNL_30D, DASHBOARD_RECENT_TRADES,
+} from '@/mocks/dashboard'
+import { MOCK_AGENTS } from '@/mocks/agents'
+import { formatCurrency, cn } from '@/lib/utils'
 
-function KpiCard({ label, value, sub, change, changeText, isLoading, extra, valueCls, bgCls }: KpiCardProps) {
-  if (isLoading) return <SkeletonCard />
-  return (
-    <div className={cn('rounded-lg border border-border p-5 bg-card', bgCls)}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary mb-2">
-        {label}
-      </p>
-      <p className={cn('text-[28px] font-bold text-text-primary leading-tight', valueCls)}>
-        {value}
-      </p>
-      {sub && (
-        <p className="text-xs text-text-secondary mt-1">{sub}</p>
-      )}
-      {change !== undefined && (
-        <div className={cn('flex items-center gap-1 mt-1 text-xs font-medium',
-          change >= 0 ? 'text-success' : 'text-error',
-        )}>
-          {change >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-          {changeText ?? formatPercent(change)} (24h)
-        </div>
-      )}
-      {extra}
-    </div>
-  )
-}
-
-// ── KPI: Active Agents with ratio bar ─────────────────────────────────────────
-
-function ActiveAgentsCard({ isLoading }: { isLoading: boolean }) {
-  const { data: agents } = useAgents()
-  if (isLoading) return <SkeletonCard />
-
-  const total   = agents?.length ?? 0
-  const active  = agents?.filter((a) => a.status === 'active').length  ?? 0
-  const paused  = agents?.filter((a) => a.status === 'paused').length  ?? 0
-  const stopped = agents?.filter((a) => a.status === 'stopped' || a.status === 'inactive').length ?? 0
-
-  const pct = (n: number) => total > 0 ? (n / total) * 100 : 0
-
-  return (
-    <div className="rounded-lg border border-border p-5 bg-card">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary mb-2">
-        Active Agents
-      </p>
-      <p className="text-[28px] font-bold text-text-primary leading-tight">{active}</p>
-      <p className="text-xs text-text-secondary mt-1">of {total} total</p>
-      {/* Ratio bar */}
-      {total > 0 && (
-        <div className="flex h-1.5 rounded-full overflow-hidden mt-3 gap-px bg-border">
-          {active  > 0 && <div style={{ width: `${pct(active)}%`  }} className="bg-success rounded-full"  />}
-          {paused  > 0 && <div style={{ width: `${pct(paused)}%`  }} className="bg-warning rounded-full"  />}
-          {stopped > 0 && <div style={{ width: `${pct(stopped)}%` }} className="bg-text-disabled rounded-full" />}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── KPI: Max Drawdown with color coding ───────────────────────────────────────
-
-function MaxDrawdownCard({ drawdown, isLoading }: { drawdown?: number; isLoading: boolean }) {
-  if (isLoading) return <SkeletonCard />
-
-  const dd = drawdown ?? 0
-  const abs = Math.abs(dd)
-  const [valueCls, bgCls] = abs <= 5
-    ? ['text-success', 'bg-success/5']
-    : abs <= 15
-      ? ['text-warning', 'bg-warning/5']
-      : ['text-error',   'bg-error/5']
-
-  return (
-    <div className={cn('rounded-lg border border-border p-5', bgCls, 'bg-card')}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary mb-2">
-        Max Drawdown
-      </p>
-      <p className={cn('text-[28px] font-bold leading-tight', valueCls)}>
-        {dd > 0 ? '+' : ''}{dd.toFixed(2)}%
-      </p>
-      <p className="text-xs text-text-secondary mt-1">
-        {abs <= 5 ? 'Healthy' : abs <= 15 ? 'Warning' : 'Critical'}
-      </p>
-    </div>
-  )
-}
-
-// ── Portfolio Chart ───────────────────────────────────────────────────────────
-
-const TIME_TABS = ['1D', '1W', '1M', '3M', '1Y', 'All'] as const
+const TIME_TABS = ['7D', '30D', '90D', 'YTD', 'All'] as const
 type TimeTab = typeof TIME_TABS[number]
-const TAB_DAYS: Record<TimeTab, number> = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, '1Y': 365, 'All': 365 }
 
-function PortfolioChart() {
-  const [tab, setTab] = useState<TimeTab>('1M')
-  const { data, isLoading } = usePortfolioHistory(TAB_DAYS[tab])
+function formatLargeUsd(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n.toFixed(0)}`
+}
+
+export default function DashboardPage() {
+  const [tab, setTab] = useState<TimeTab>('30D')
+
+  const k = DASHBOARD_KPIS
+  const trades = DASHBOARD_RECENT_TRADES
+  const activeAgents = MOCK_AGENTS.filter((a) => a.status === 'active')
 
   return (
-    <Card padding="md">
-      <CardHeader>
-        <CardTitle>Portfolio Performance</CardTitle>
-        <div className="flex items-center gap-0.5">
-          {TIME_TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'px-2 py-0.5 text-xs font-medium transition-colors rounded',
-                tab === t
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-text-secondary hover:text-text-primary',
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-52 w-full" />
-        ) : !data || data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-52 gap-2">
-            <BarChart3 className="h-10 w-10 text-text-secondary opacity-40" />
-            <p className="text-sm text-text-secondary">No portfolio data yet</p>
-            <p className="text-xs text-text-secondary opacity-70">Deploy an agent to start tracking</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={208}>
-            <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+    <div className="px-6 pt-8 pb-10 space-y-6">
+      <PageHeader
+        breadcrumb="OPERATIONS"
+        title="Dashboard"
+        subtitle="Real-time overview of mandates, agents, executions, and policy posture across your Mantle deployment."
+        actions={
+          <>
+            <PrimaryButton variant="secondary" icon={<BarChart2 className="h-4 w-4" />}>
+              View Reports
+            </PrimaryButton>
+            <Link href="/dashboard/mandates/new">
+              <PrimaryButton variant="primary" icon={<Plus className="h-4 w-4" />}>
+                New Mandate
+              </PrimaryButton>
+            </Link>
+          </>
+        }
+      />
+
+      <InlineAlert
+        tone="success"
+        title="All systems operational — Policy Engine, Risk Engine, and 4 protocols are online."
+        description="12 active agents executed 412 trades in the last 24h with 99.8% uptime."
+        action={
+          <button className="text-xs font-semibold text-success hover:underline">
+            View status →
+          </button>
+        }
+      />
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <MetricCard
+          label="Portfolio Value"
+          value={formatLargeUsd(k.portfolioValue.value)}
+          delta={k.portfolioValue.deltaText}
+          deltaTone="positive"
+        />
+        <MetricCard
+          label="P&L (24h)"
+          value={`+${formatLargeUsd(k.pnl24h.value)}`}
+          delta={k.pnl24h.deltaText}
+          deltaTone="positive"
+        />
+        <MetricCard
+          label="Active Agents"
+          value={k.activeAgents.value.toString()}
+          delta={k.activeAgents.deltaText}
+          deltaTone="neutral"
+        />
+        <MetricCard
+          label="Total Trades"
+          value={k.totalTrades.value.toLocaleString()}
+          delta={k.totalTrades.deltaText}
+          deltaTone="positive"
+        />
+        <MetricCard
+          label="Max Drawdown"
+          value={`${k.drawdown.value.toFixed(2)}%`}
+          delta={k.drawdown.deltaText}
+          deltaTone="positive"
+        />
+      </div>
+
+      {/* Chart + Active Agents */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <SectionCard
+          className="lg:col-span-2"
+          title="Portfolio Value"
+          subtitle={`${tab} performance — net of fees and gas`}
+          action={
+            <div className="flex items-center gap-1 rounded-md border border-border bg-page p-0.5">
+              {TIME_TABS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={cn(
+                    'px-2.5 py-1 text-[11px] font-semibold rounded transition-colors',
+                    tab === t
+                      ? 'bg-primary text-white'
+                      : 'text-text-secondary hover:text-text-primary',
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          }
+          bodyClassName="px-2 py-2"
+        >
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={DASHBOARD_PNL_30D} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <defs>
-                <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#0066FF" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#0066FF" stopOpacity={0} />
+                <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"  stopColor="#0066FF" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#0066FF" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#21262D" vertical={false} />
@@ -179,8 +150,8 @@ function PortfolioChart() {
                 tickLine={false}
                 axisLine={false}
                 tick={{ fill: '#8B949E', fontSize: 11 }}
-                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                width={48}
+                tickFormatter={(v) => formatLargeUsd(Number(v))}
+                width={56}
               />
               <Tooltip
                 contentStyle={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, fontSize: 12 }}
@@ -193,200 +164,187 @@ function PortfolioChart() {
                 dataKey="value"
                 stroke="#0066FF"
                 strokeWidth={2}
-                fill="url(#portfolioGrad)"
+                fill="url(#pnlGrad)"
                 dot={false}
                 activeDot={{ r: 4, fill: '#0066FF' }}
               />
             </AreaChart>
           </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+        </SectionCard>
 
-// ── Recent Trades ─────────────────────────────────────────────────────────────
-
-const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  success: 'success',
-  failed:  'error',
-  pending: 'warning',
-}
-
-function RecentTrades() {
-  const { data, isLoading } = useRecentTrades(6)
-  const trades = data?.data ?? []
-
-  return (
-    <Card padding="md">
-      <CardHeader>
-        <CardTitle>Recent Trades</CardTitle>
-        <Link href="/dashboard/trades" className="text-[13px] text-text-link hover:text-text-link-hover transition-colors">
-          View all →
-        </Link>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
+        <SectionCard
+          title="Active Agents"
+          subtitle={`${activeAgents.length} running · ${MOCK_AGENTS.length - activeAgents.length} paused/stopped`}
+          action={
+            <Link href="/dashboard/agents" className="text-[12px] text-text-link hover:text-text-link-hover">
+              Manage →
+            </Link>
+          }
+          padding="none"
+        >
+          <div className="divide-y divide-border">
+            {activeAgents.slice(0, 5).map((a) => {
+              const positive = a.pnlPct >= 0
+              return (
+                <div key={a.id} className="px-4 py-3 hover:bg-surface transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex items-start gap-2.5">
+                      <div className="h-7 w-7 rounded-md bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                        <Bot className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-text-primary truncate">{a.name}</p>
+                        <p className="text-[11px] text-text-secondary truncate">
+                          {a.protocol} · {a.strategy}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={cn(
+                        'text-[12px] font-semibold tabular-nums',
+                        positive ? 'text-success' : 'text-error',
+                      )}>
+                        {positive ? '+' : ''}{a.pnlPct.toFixed(2)}%
+                      </p>
+                      <p className="text-[10px] text-text-disabled">{a.lastTradeAt}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        ) : trades.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <Zap className="h-8 w-8 text-text-secondary opacity-40" />
-            <p className="text-sm text-text-secondary">No trades yet</p>
-            <p className="text-xs text-text-secondary opacity-70">Deploy an agent to start trading</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto -mx-4">
+        </SectionCard>
+      </div>
+
+      {/* Recent trades + Risk posture */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <SectionCard
+          className="lg:col-span-2"
+          title="Recent Trades"
+          subtitle="Last 6 executions across all active agents"
+          action={
+            <Link href="/dashboard/trades" className="text-[12px] text-text-link hover:text-text-link-hover">
+              View all →
+            </Link>
+          }
+          padding="none"
+        >
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Asset</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Mandate</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Amount</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-widest text-text-secondary">P&amp;L</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Status</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Time</th>
+              <thead className="bg-page border-b border-border">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Pair</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Side</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Amount</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">P&amp;L</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Protocol</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Status</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">TX</th>
                 </tr>
               </thead>
               <tbody>
                 {trades.map((t) => (
-                  <tr key={t.id} className="border-b border-border/50 hover:bg-surface transition-colors h-[52px]">
-                    <td className="px-4 py-2">
-                      <div>
-                        <span className="font-medium text-text-primary">{t.assetPair}</span>
-                        <span className={cn('ml-2 text-xs font-medium', t.direction === 'buy' ? 'text-success' : 'text-error')}>
-                          {t.direction.toUpperCase()}
+                  <tr key={t.id} className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors">
+                    <td className="px-4 py-3 text-text-primary font-medium">{t.pair}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide',
+                        t.side === 'BUY' ? 'text-success' : 'text-error',
+                      )}>
+                        {t.side}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-text-primary font-medium tabular-nums">
+                      {formatCurrency(t.amountUsd)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {t.pnl == null ? (
+                        <span className="text-text-disabled">—</span>
+                      ) : (
+                        <span className={cn('font-medium', t.pnl >= 0 ? 'text-success' : 'text-error')}>
+                          {t.pnl >= 0 ? '+' : ''}{formatCurrency(t.pnl)}
                         </span>
-                      </div>
+                      )}
                     </td>
-                    <td className="px-4 py-2 text-text-secondary text-sm">
-                      {t.mandateName ?? '—'}
+                    <td className="px-4 py-3 text-text-secondary">{t.protocol}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={t.status === 'success' ? 'success' : t.status === 'pending' ? 'pending' : 'failed'} />
                     </td>
-                    <td className="px-4 py-2 text-right text-text-primary">{formatCurrency(t.amountUsd)}</td>
-                    <td className={cn('px-4 py-2 text-right font-medium',
-                      t.pnl == null ? 'text-text-secondary' :
-                      t.pnl >= 0   ? 'text-success' : 'text-error'
-                    )}>
-                      {t.pnl != null ? formatCurrency(t.pnl) : '—'}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge variant={STATUS_VARIANT[t.status]}>{t.status}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-text-secondary text-xs">
-                      {t.createdAt
-                        ? new Date(t.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                        : '—'}
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 font-mono text-[12px] text-text-link hover:text-text-link-hover cursor-pointer">
+                        {t.txHash}
+                        <ExternalLink className="h-3 w-3" />
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+        </SectionCard>
 
-// ── Empty State ───────────────────────────────────────────────────────────────
-
-function EmptyDashboard() {
-  return (
-    <div className="rounded-lg border border-border bg-card p-16 flex flex-col items-center justify-center gap-4 text-center">
-      <Bot className="h-12 w-12 text-primary" />
-      <div>
-        <p className="text-text-primary font-semibold text-lg">Your dashboard is waiting for your first trade</p>
-        <p className="text-text-secondary text-sm mt-1">Deploy an AI agent to see live portfolio data here.</p>
-      </div>
-      <Link
-        href="/dashboard/mandates/new"
-        className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary-hover transition-colors mt-2"
-      >
-        <Zap className="h-4 w-4" />
-        Create My First Mandate
-      </Link>
-    </div>
-  )
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = usePortfolioStats()
-  const hasData = !statsLoading && (stats?.totalTrades ?? 0) > 0
-
-  return (
-    <div className="p-6 space-y-5">
-      {/* Alert banner is rendered globally in layout.tsx */}
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-sm text-text-secondary mt-0.5">Real-time overview of your trading agents</p>
-        </div>
-        <Link
-          href="/dashboard/mandates/new"
-          className="inline-flex items-center gap-2 h-10 px-4 text-sm font-semibold rounded-md bg-primary text-white hover:bg-primary-hover transition-colors"
+        <SectionCard
+          title="Risk Posture"
+          subtitle="Current exposure across mandates"
+          action={<ShieldCheck className="h-4 w-4 text-success" />}
         >
-          <Plus className="h-4 w-4" />
-          New Mandate
-        </Link>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-bold text-success leading-none tabular-nums">23</span>
+                <span className="text-text-secondary text-xs">/ 100</span>
+                <StatusBadge status="active" label="Low Risk" className="ml-auto" />
+              </div>
+              <div className="h-2 rounded-full bg-page overflow-hidden">
+                <div className="h-full bg-success" style={{ width: '23%' }} />
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-border">
+              {[
+                { label: 'Concentration risk',    value: 'Low',     tone: 'text-success' },
+                { label: 'Liquidity depth',       value: 'Healthy', tone: 'text-success' },
+                { label: 'Volatility (30d)',      value: 'Normal',  tone: 'text-text-primary' },
+                { label: 'Counterparty exposure', value: 'Low',     tone: 'text-success' },
+              ].map((r) => (
+                <div key={r.label} className="flex items-center justify-between text-[12px]">
+                  <span className="text-text-secondary">{r.label}</span>
+                  <span className={cn('font-semibold', r.tone)}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <Link
+              href="/dashboard/risk"
+              className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
+            >
+              Open Risk Engine →
+            </Link>
+          </div>
+        </SectionCard>
       </div>
 
-      {/* KPI Cards or Empty State */}
-      {!hasData && !statsLoading ? (
-        <EmptyDashboard />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Card 1: Portfolio Value */}
-            <KpiCard
-              label="Portfolio Value"
-              value={stats ? formatCurrency(stats.totalValue) : '—'}
-              change={stats?.totalPnlPct}
-              changeText={stats ? `+${formatCurrency(stats.totalPnl24h)} (${stats.totalPnlPct.toFixed(2)}%) today` : undefined}
-              isLoading={statsLoading}
-            />
-
-            {/* Card 2: Total P&L */}
-            <KpiCard
-              label="Total P&L"
-              value={stats ? formatCurrency(stats.totalPnl24h) : '—'}
-              valueCls={stats ? (stats.totalPnl24h >= 0 ? 'text-success' : 'text-error') : undefined}
-              changeText={stats ? `${stats.totalPnlPct >= 0 ? '+' : ''}${stats.totalPnlPct.toFixed(1)}% all time` : undefined}
-              isLoading={statsLoading}
-            />
-
-            {/* Card 3: Active Agents — with ratio bar */}
-            <ActiveAgentsCard isLoading={statsLoading} />
-
-            {/* Card 4: Total Trades */}
-            <KpiCard
-              label="Total Trades"
-              value={stats ? stats.totalTrades.toLocaleString() : '—'}
-              sub="+152 today"
-              isLoading={statsLoading}
-            />
-
-            {/* Card 5: Max Drawdown */}
-            <MaxDrawdownCard drawdown={-(stats?.winRate ? (100 - stats.winRate) * 0.1 : 1.38)} isLoading={statsLoading} />
-          </div>
-
-          {/* 60/40 split: Chart | Trades */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            <div className="lg:col-span-3">
-              <PortfolioChart />
-            </div>
-            <div className="lg:col-span-2">
-              <RecentTrades />
-            </div>
-          </div>
-        </>
-      )}
+      {/* Quick actions row */}
+      <SectionCard title="Quick Actions" subtitle="Common operational shortcuts">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'Create Mandate',  Icon: Plus,         href: '/dashboard/mandates/new', desc: 'Plain-English strategy → on-chain policy' },
+            { label: 'Deploy Agent',    Icon: Bot,          href: '/dashboard/agents',       desc: 'Spin up a new AI execution agent' },
+            { label: 'Execute Trade',   Icon: Zap,          href: '/dashboard/trades',       desc: 'Manual override execution' },
+            { label: 'Connect Wallet',  Icon: WalletIcon,   href: '/dashboard/wallets',      desc: 'Add a multisig or EOA' },
+          ].map((q) => (
+            <Link
+              key={q.label}
+              href={q.href}
+              className="flex flex-col gap-1 rounded-md border border-border bg-page p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+            >
+              <q.Icon className="h-4 w-4 text-primary" />
+              <p className="text-[13px] font-semibold text-text-primary">{q.label}</p>
+              <p className="text-[11px] text-text-secondary leading-snug">{q.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </SectionCard>
     </div>
   )
 }
