@@ -71,7 +71,7 @@ function AgentCard({ agent }: { agent: Agent }) {
   const { mutate: resume, isPending: resuming } = useResumeAgent()
   const { mutate: stop,   isPending: stopping } = useStopAgent()
 
-  const sparkData  = useMemo(() => generateSparkline(agent), [agent.id])
+  const sparkData  = useMemo(() => generateSparkline(agent), [agent])
   const lineColor  = agent.totalPnl >= 0 ? '#22C55E' : '#EF4444'
   const drawColor  = agent.drawdownCurrent < 5 ? 'text-success' : agent.drawdownCurrent < 15 ? 'text-warning' : 'text-error'
 
