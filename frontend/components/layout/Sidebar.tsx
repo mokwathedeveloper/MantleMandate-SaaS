@@ -7,6 +7,7 @@ import {
   LayoutDashboard, FileText, TrendingUp, Zap, Shield,
   Bot, Gauge, Network, Code2,
   Bell, BarChart2, Settings, HelpCircle, CreditCard,
+  Users, Wallet,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -25,7 +26,7 @@ const MAIN: NavItem[] = [
   { href: '/dashboard/mandates',       label: 'Mandates',    Icon: FileText },
   { href: '/dashboard/portfolio',      label: 'Portfolio',   Icon: TrendingUp },
   { href: '/dashboard/trades',         label: 'Trades',      Icon: Zap },
-  { href: '/dashboard/audit',          label: 'Audit Trail', Icon: Shield },
+  { href: '/dashboard/audit',          label: 'On-Chain Audit', Icon: Shield },
 ]
 
 const AGENTS: NavItem[] = [
@@ -33,6 +34,11 @@ const AGENTS: NavItem[] = [
   { href: '/dashboard/risk',           label: 'Risk Engine', Icon: Gauge },
   { href: '/dashboard/protocols',      label: 'Protocols',   Icon: Network },
   { href: '/dashboard/api',            label: 'API',         Icon: Code2 },
+]
+
+const USER_MGMT: NavItem[] = [
+  { href: '/dashboard/users',          label: 'Users',       Icon: Users },
+  { href: '/dashboard/wallets',        label: 'Wallets',     Icon: Wallet },
 ]
 
 const ACCOUNT: NavItem[] = [
@@ -102,15 +108,20 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-60 flex-col bg-page border-r border-border">
       {/* Logo */}
-      <div className="flex h-[120px] items-center justify-center border-b border-border shrink-0">
-        <Image src="/logo.png" alt="MantleMandate" width={112} height={112} className="h-28 w-28 object-contain" />
+      <div className="flex h-[72px] items-center px-4 border-b border-border shrink-0 gap-2.5">
+        <Image src="/logo.png" alt="MantleMandate" width={36} height={36} className="h-9 w-9 object-contain shrink-0" />
+        <div className="leading-tight">
+          <p className="text-[14px] font-bold text-text-primary">MantleMandate</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary/80 font-semibold">Your AI · Your Rules</p>
+        </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-2 scrollbar-hidden">
-        <NavSection title="Main"    items={MAIN} />
-        <NavSection title="Agents"  items={AGENTS} />
-        <NavSection title="Account" items={ACCOUNT} alertCount={unreadCount} />
+        <NavSection title="Main"             items={MAIN} />
+        <NavSection title="Agents"           items={AGENTS} />
+        <NavSection title="User Management"  items={USER_MGMT} />
+        <NavSection title="Account"          items={ACCOUNT} alertCount={unreadCount} />
       </nav>
 
       {/* User info — pinned bottom */}
