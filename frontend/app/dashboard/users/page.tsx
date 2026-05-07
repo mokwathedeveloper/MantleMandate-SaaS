@@ -41,9 +41,9 @@ function riskTone(score: number) {
 }
 
 export default function UsersPage() {
-  const [search, setSearch]   = useState('')
-  const [status, setStatus]   = useState<'all' | UserStatus>('all')
-  const [planFilter, setPlan] = useState<'all' | string>('all')
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<'all' | UserStatus>('all')
+  const [planFilter]        = useState<'all' | string>('all')
 
   const filtered = useMemo(() => {
     return MOCK_USERS.filter((u) => {
