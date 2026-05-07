@@ -10,6 +10,7 @@ type StatusKind =
   | 'review'
   | 'connected'
   | 'beta'
+  | 'blocked'
 
 interface StatusBadgeProps {
   status:   StatusKind
@@ -27,6 +28,7 @@ const styles: Record<StatusKind, { bg: string; text: string; dot: string }> = {
   review:    { bg: 'bg-warning/15',  text: 'text-warning',  dot: 'bg-warning'  },
   beta:      { bg: 'bg-primary/15',  text: 'text-primary',  dot: 'bg-primary'  },
   failed:    { bg: 'bg-error/15',    text: 'text-error',    dot: 'bg-error'    },
+  blocked:   { bg: 'bg-error/15',    text: 'text-error',    dot: 'bg-error'    },
   inactive:  { bg: 'bg-surface',     text: 'text-text-secondary', dot: 'bg-text-disabled' },
 }
 
@@ -39,6 +41,7 @@ const LABELS: Record<StatusKind, string> = {
   review:    'Review',
   beta:      'Beta',
   failed:    'Failed',
+  blocked:   'Blocked',
   inactive:  'Inactive',
 }
 
