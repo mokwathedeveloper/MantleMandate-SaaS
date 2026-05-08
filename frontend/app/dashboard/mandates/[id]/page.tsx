@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Hash, Copy, CheckCircle2, ExternalLink, Sparkles, TriangleAlert,
@@ -118,8 +118,8 @@ function ParsePanel({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function MandateEditPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id }   = use(params)
+export default function MandateEditPage({ params }: { params: { id: string } }) {
+  const { id }   = params
   const router   = useRouter()
 
   const { data: mandate, isLoading } = useMandate(id)
