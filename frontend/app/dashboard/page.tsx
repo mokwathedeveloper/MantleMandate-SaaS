@@ -16,6 +16,7 @@ import { InlineAlert } from '@/components/ui/InlineAlert'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { PrimaryButton } from '@/components/ui/PrimaryButton'
+import { MarketTicker } from '@/components/ui/MarketTicker'
 
 import {
   DASHBOARD_KPIS, DASHBOARD_PNL_30D, DASHBOARD_RECENT_TRADES,
@@ -58,6 +59,9 @@ export default function DashboardPage() {
           </>
         }
       />
+
+      {/* Live market prices */}
+      <MarketTicker />
 
       <InlineAlert
         tone="success"
