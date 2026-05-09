@@ -129,7 +129,7 @@ function ParsePanel({
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-xs text-success font-medium mb-3">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Policy parsed by Claude Haiku
+        Policy parsed by Claude Sonnet
       </div>
       {rows.map(([key, value]) => (
         <div key={key} className="flex items-start justify-between gap-2 text-xs">
