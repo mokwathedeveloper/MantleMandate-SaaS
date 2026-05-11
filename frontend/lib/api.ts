@@ -1,8 +1,6 @@
 import axios, { AxiosError } from 'axios'
 
 // ── camelCase transformer ─────────────────────────────────────────────────────
-// Backend returns snake_case; frontend types are camelCase.
-// Transform every response body recursively so field accesses work correctly.
 
 function toCamel(s: string): string {
   return s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())
@@ -21,6 +19,24 @@ function camelizeKeys(obj: unknown): unknown {
   return obj
 }
 
+// ── In-memory token store (never touches localStorage / sessionStorage) ───────
+// Tokens live only in module scope — cleared on full page reload.
+// This prevents XSS scripts from reading tokens out of browser storage.
+
+const _mem: { access: string | null; refresh: string | null } = {
+  access:  null,
+  refresh: null,
+}
+
+export const tokenStore = {
+  getAccess:     () => _mem.access,
+  getRefresh:    () => _mem.refresh,
+  setAccess:     (t: string) => { _mem.access  = t },
+  setRefresh:    (t: string) => { _mem.refresh = t },
+  clearAccess:   () => { _mem.access  = null },
+  clearAll:      () => { _mem.access  = null; _mem.refresh = null },
+}
+
 // ── axios instance ────────────────────────────────────────────────────────────
 
 const api = axios.create({
@@ -31,10 +47,8 @@ const api = axios.create({
 // ── request: attach JWT ───────────────────────────────────────────────────────
 
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
-  }
+  const token = tokenStore.getAccess()
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
@@ -50,18 +64,15 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as typeof error.config & { _retry?: boolean }
 
-    // 401 with a refresh token available → try to refresh once
     if (
       error.response?.status === 401 &&
-      !original._retry &&
-      typeof window !== 'undefined'
+      !original._retry
     ) {
-      const refreshToken = localStorage.getItem('refresh_token')
+      const refreshToken = tokenStore.getRefresh()
       if (refreshToken) {
         original._retry = true
 
         try {
-          // Deduplicate concurrent 401s — only one refresh request at a time
           if (!refreshing) {
             refreshing = axios
               .post(`${api.defaults.baseURL}/auth/refresh`, null, {
@@ -72,19 +83,16 @@ api.interceptors.response.use(
           }
 
           const newToken = await refreshing
-          localStorage.setItem('access_token', newToken)
+          tokenStore.setAccess(newToken)
           original!.headers!.Authorization = `Bearer ${newToken}`
           return api(original!)
         } catch {
-          // Refresh failed — clear tokens and redirect to login
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          window.location.href = '/login'
+          tokenStore.clearAll()
+          if (typeof window !== 'undefined') window.location.href = '/login'
         }
       } else {
-        // No refresh token → straight to login
-        localStorage.removeItem('access_token')
-        window.location.href = '/login'
+        tokenStore.clearAll()
+        if (typeof window !== 'undefined') window.location.href = '/login'
       }
     }
 

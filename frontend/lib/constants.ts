@@ -1,6 +1,3 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5000'
-
 export const MANTLE_CHAIN_ID = Number(process.env.NEXT_PUBLIC_MANTLE_CHAIN_ID || 5000)
 export const MANTLE_TESTNET_CHAIN_ID = Number(process.env.NEXT_PUBLIC_MANTLE_TESTNET_CHAIN_ID || 5003)
 export const MANTLE_RPC_URL = process.env.NEXT_PUBLIC_MANTLE_RPC_URL || 'https://rpc.mantle.xyz'
