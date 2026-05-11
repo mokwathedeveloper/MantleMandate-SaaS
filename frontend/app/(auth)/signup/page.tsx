@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -122,7 +122,7 @@ function SignupLeftPanel() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function SignupPage() {
+function SignupPageInner() {
   const [showPassword, setShowPassword] = useState(false)
   const { mutate: signup, isPending, error } = useSignup()
 
@@ -280,5 +280,13 @@ export default function SignupPage() {
         ))}
       </div>
     </AuthShell>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupPageInner />
+    </Suspense>
   )
 }
