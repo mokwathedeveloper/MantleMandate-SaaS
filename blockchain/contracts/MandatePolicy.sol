@@ -20,8 +20,11 @@ contract MandatePolicy {
     // owner → list of submitted policies
     mapping(address => Policy[]) private _policies;
 
-    // Global lookup: hash → (owner, index) for O(1) verification
+    // Global lookup: hash → owner (O(1) ownership check)
     mapping(bytes32 => address) public policyOwner;
+
+    // hash → index in _policies[owner] — eliminates unbounded loops
+    mapping(bytes32 => uint256) private _policyIndex;
 
     event PolicySubmitted(
         address indexed owner,
@@ -52,41 +55,40 @@ contract MandatePolicy {
             timestamp: uint64(block.timestamp),
             active:    true
         }));
-        policyOwner[policyHash] = msg.sender;
+        policyOwner[policyHash]  = msg.sender;
+        _policyIndex[policyHash] = idx;
 
         emit PolicySubmitted(msg.sender, policyHash, idx, uint64(block.timestamp));
     }
 
     /**
      * @notice Revoke (deactivate) a policy — does NOT delete on-chain history.
+     *         O(1): uses the stored index instead of a loop.
      * @param policyHash  The hash to revoke.
      */
     function revokePolicy(bytes32 policyHash) external {
         require(policyOwner[policyHash] == msg.sender, "MandatePolicy: not owner");
 
-        Policy[] storage list = _policies[msg.sender];
-        for (uint256 i = 0; i < list.length; i++) {
-            if (list[i].hash == policyHash) {
-                list[i].active = false;
-                emit PolicyRevoked(msg.sender, policyHash);
-                return;
-            }
-        }
-        revert("MandatePolicy: hash not found");
+        uint256 idx = _policyIndex[policyHash];
+        Policy storage p = _policies[msg.sender][idx];
+        require(p.hash == policyHash, "MandatePolicy: index mismatch");
+        require(p.active, "MandatePolicy: already revoked");
+
+        p.active = false;
+        emit PolicyRevoked(msg.sender, policyHash);
     }
 
     // ── Read ──────────────────────────────────────────────────────────────────
 
     /**
      * @notice Verify that a hash is registered and still active.
+     *         O(1): direct index lookup, no loop.
      */
     function verifyPolicy(address owner, bytes32 policyHash) external view returns (bool) {
         if (policyOwner[policyHash] != owner) return false;
-        Policy[] storage list = _policies[owner];
-        for (uint256 i = 0; i < list.length; i++) {
-            if (list[i].hash == policyHash) return list[i].active;
-        }
-        return false;
+        uint256 idx = _policyIndex[policyHash];
+        Policy storage p = _policies[owner][idx];
+        return p.hash == policyHash && p.active;
     }
 
     /**

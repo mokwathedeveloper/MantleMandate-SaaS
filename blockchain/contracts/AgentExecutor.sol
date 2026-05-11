@@ -218,13 +218,39 @@ contract AgentExecutor {
         return _agents[agentId];
     }
 
-    function getExecutions(uint256 agentId)
+    /**
+     * @notice Paginated execution history — prevents unbounded array returns.
+     * @param agentId  The agent to query.
+     * @param offset   Start index (0-based).
+     * @param limit    Maximum records to return (capped at 100).
+     * @return page    Slice of execution records.
+     * @return total   Total number of executions for this agent.
+     */
+    function getExecutions(
+        uint256 agentId,
+        uint256 offset,
+        uint256 limit
+    )
         external
         view
         agentExists(agentId)
-        returns (ExecutionRecord[] memory)
+        returns (ExecutionRecord[] memory page, uint256 total)
     {
-        return _executions[agentId];
+        ExecutionRecord[] storage all = _executions[agentId];
+        total = all.length;
+
+        if (offset >= total || limit == 0) {
+            return (new ExecutionRecord[](0), total);
+        }
+
+        uint256 cap   = limit > 100 ? 100 : limit;
+        uint256 end   = offset + cap > total ? total : offset + cap;
+        uint256 count = end - offset;
+
+        page = new ExecutionRecord[](count);
+        for (uint256 i = 0; i < count; i++) {
+            page[i] = all[offset + i];
+        }
     }
 
     function getExecutionCount(uint256 agentId)

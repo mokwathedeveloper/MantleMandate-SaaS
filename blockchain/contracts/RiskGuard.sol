@@ -75,13 +75,24 @@ contract RiskGuard {
         require(initialCapital        >  0,      "RiskGuard: zero capital");
 
         AgentRiskState storage s = _state[agentId];
-        s.params          = params;
-        s.peakCapital     = initialCapital;
-        s.currentCapital  = initialCapital;
-        s.openPositions   = 0;
-        s.lastTradeAt     = 0;
-        s.initialized     = true;
-        _agentOwners[agentId] = msg.sender;
+
+        // If already initialised, only the existing owner may update params.
+        if (s.initialized) {
+            require(
+                _agentOwners[agentId] == msg.sender,
+                "RiskGuard: not owner"
+            );
+        } else {
+            // First-time initialisation — claim ownership.
+            _agentOwners[agentId] = msg.sender;
+            s.initialized         = true;
+        }
+
+        s.params         = params;
+        s.peakCapital    = initialCapital;
+        s.currentCapital = initialCapital;
+        s.openPositions  = 0;
+        s.lastTradeAt    = 0;
 
         emit RiskParamsSet(agentId, params);
     }
@@ -97,7 +108,7 @@ contract RiskGuard {
         uint256 agentId,
         uint256 orderValue,
         uint256 capitalBase
-    ) external initialized(agentId) {
+    ) external onlyAgentOwner(agentId) initialized(agentId) {
         AgentRiskState storage s = _state[agentId];
         RiskParams     storage p = s.params;
 
