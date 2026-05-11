@@ -45,14 +45,19 @@ export function useAgents() {
   return useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('agents')
-        .select('*, mandate:mandates(name)')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      const rows = (data ?? []).map(rowToAgent)
-      return rows.length > 0 ? rows : MOCK_AS_AGENTS
+      try {
+        const { data, error } = await supabase
+          .from('agents')
+          .select('*, mandate:mandates(name)')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        const rows = (data ?? []).map(rowToAgent)
+        return rows.length > 0 ? rows : MOCK_AS_AGENTS
+      } catch {
+        return MOCK_AS_AGENTS
+      }
     },
+    retry: false,
     enabled: !!session,
     refetchInterval: 15_000,
   })
