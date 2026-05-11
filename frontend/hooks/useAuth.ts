@@ -1,71 +1,89 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import api from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import type { User } from '@/types/user'
 
 interface LoginPayload  { email: string; password: string }
 interface SignupPayload { name: string; email: string; password: string; company?: string }
 
-interface AuthResponse {
-  data: {
-    accessToken:  string
-    refreshToken: string
-    user: { id: string; email: string; name: string; plan: string }
-  }
-  message: string
-}
-
 export function useLogin() {
-  const { setAccessToken, setUser } = useAuthStore()
+  const { setUser, setSession } = useAuthStore()
   const router = useRouter()
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
 
-  return useMutation({
-    mutationFn: (payload: LoginPayload) =>
-      api.post<AuthResponse>('/auth/login', payload).then((r) => r.data),
-    onSuccess: (res) => {
-      setAccessToken(res.data.accessToken)
-      localStorage.setItem('refresh_token', res.data.refreshToken)
-      setUser(res.data.user as User)
+  const mutate = async ({ email, password }: LoginPayload) => {
+    setIsPending(true)
+    setError(null)
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
+    setIsPending(false)
+
+    if (err) {
+      setError(err)
+      return
+    }
+
+    if (data.session && data.user) {
+      setSession(data.session)
+      setUser({
+        id:          data.user.id,
+        email:       data.user.email ?? '',
+        name:        data.user.user_metadata?.name ?? data.user.email?.split('@')[0] ?? '',
+        plan:        data.user.user_metadata?.plan ?? 'operator',
+        trialEndsAt: null,
+        ensName:     null,
+        createdAt:   data.user.created_at,
+      })
       router.push('/dashboard')
-    },
-  })
+    }
+  }
+
+  return { mutate, isPending, error }
 }
 
 export function useSignup() {
-  const { setAccessToken, setUser } = useAuthStore()
+  const { setUser, setSession } = useAuthStore()
   const router = useRouter()
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
 
-  return useMutation({
-    mutationFn: (payload: SignupPayload) =>
-      api.post<AuthResponse>('/auth/signup', payload).then((r) => r.data),
-    onSuccess: (res) => {
-      setAccessToken(res.data.accessToken)
-      localStorage.setItem('refresh_token', res.data.refreshToken)
-      setUser(res.data.user as User)
-      router.push('/onboarding')
-    },
-  })
-}
+  const mutate = async ({ name, email, password }: SignupPayload) => {
+    setIsPending(true)
+    setError(null)
+    const { data, error: err } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    })
+    setIsPending(false)
 
-export function useMe() {
-  const { accessToken, setUser } = useAuthStore()
+    if (err) {
+      setError(err)
+      return
+    }
 
-  const query = useQuery<User>({
-    queryKey: ['me'],
-    queryFn: () => api.get('/auth/me').then((r) => r.data.data),
-    enabled: !!accessToken,
-  })
+    if (data.session && data.user) {
+      setSession(data.session)
+      setUser({
+        id:          data.user.id,
+        email:       data.user.email ?? '',
+        name,
+        plan:        'operator',
+        trialEndsAt: null,
+        ensName:     null,
+        createdAt:   data.user.created_at,
+      })
+      router.push('/dashboard')
+    } else {
+      // Email confirmation required
+      router.push('/login?confirmed=1')
+    }
+  }
 
-  // Sync user into Zustand whenever the query resolves — replaces deprecated onSuccess
-  useEffect(() => {
-    if (query.data) setUser(query.data)
-  }, [query.data, setUser])
-
-  return query
+  return { mutate, isPending, error }
 }
 
 export function useLogout() {
@@ -73,10 +91,15 @@ export function useLogout() {
   const qc = useQueryClient()
   const router = useRouter()
 
-  return () => {
-    api.post('/auth/logout').catch(() => {})
+  return async () => {
+    await supabase.auth.signOut()
     logout()
     qc.clear()
     router.push('/login')
   }
+}
+
+export function useMe() {
+  const { user } = useAuthStore()
+  return { data: user, isLoading: false }
 }

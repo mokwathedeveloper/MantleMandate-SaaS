@@ -2,40 +2,67 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import api from '@/lib/api'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
 import { useAlertStore } from '@/store/alertStore'
 
-// Matches backend Alert.to_dict() after camelCase transform
 export interface Alert {
-  id: string
-  agentId: string | null
+  id:        string
+  agentId:   string | null
   alertType: string
-  severity: 'high' | 'medium' | 'low'
-  title: string
-  message: string
-  isRead: boolean
+  severity:  'high' | 'medium' | 'low'
+  title:     string
+  message:   string
+  isRead:    boolean
   createdAt: string
 }
 
 interface AlertsResponse {
-  data: Alert[]
-  total: number
+  data:        Alert[]
+  total:       number
   unreadCount: number
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToAlert(row: Record<string, any>): Alert {
+  return {
+    id:        row.id,
+    agentId:   row.agent_id ?? null,
+    alertType: row.type,
+    severity:  row.severity === 'critical' ? 'high' : row.severity === 'warning' ? 'medium' : 'low',
+    title:     row.title,
+    message:   row.message,
+    isRead:    row.is_read,
+    createdAt: row.created_at,
+  }
+}
+
 export function useAlerts() {
+  const { session } = useAuthStore()
   const { unreadCount } = useAlertStore()
 
   const query = useQuery<AlertsResponse>({
     queryKey: ['alerts'],
-    queryFn: () => api.get('/alerts').then((r) => r.data),
+    queryFn: async () => {
+      const { data, error, count } = await supabase
+        .from('alerts')
+        .select('*', { count: 'exact' })
+        .eq('user_id', session!.user.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      const alerts = (data ?? []).map(rowToAlert)
+      return {
+        data:        alerts,
+        total:       count ?? 0,
+        unreadCount: alerts.filter(a => !a.isRead).length,
+      }
+    },
+    enabled: !!session,
     refetchInterval: 10_000,
   })
 
-  // Keep store unreadCount in sync with server's authoritative value
   useEffect(() => {
     if (query.data?.unreadCount !== undefined) {
-      // Patch Zustand store's unreadCount without touching the alerts array
       useAlertStore.setState({ unreadCount: query.data.unreadCount })
     }
   }, [query.data?.unreadCount])
@@ -44,9 +71,17 @@ export function useAlerts() {
 }
 
 export function useMarkAllRead() {
+  const { session } = useAuthStore()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.post('/alerts/read-all').then((r) => r.data),
+    mutationFn: async () => {
+      if (!session) return
+      const { error } = await supabase
+        .from('alerts')
+        .update({ is_read: true })
+        .eq('user_id', session.user.id)
+      if (error) throw error
+    },
     onSuccess: () => {
       useAlertStore.setState({ unreadCount: 0 })
       qc.invalidateQueries({ queryKey: ['alerts'] })
@@ -57,7 +92,13 @@ export function useMarkAllRead() {
 export function useMarkRead() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => api.post(`/alerts/${id}/read`).then((r) => r.data),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('alerts')
+        .update({ is_read: true })
+        .eq('id', id)
+      if (error) throw error
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['alerts'] }),
   })
 }
