@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -75,17 +74,9 @@ function LoginLeftPanel() {
 
 /* ─── Page ─────────────────────────────────────────────────────────── */
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false)
-  const [demoError, setDemoError] = useState(false)
-  const searchParams = useSearchParams()
   const { mutate: login, isPending, error } = useLogin()
-
-  // ?demo_error=1 (or =true) renders the error banner — handy for design QA / screenshots
-  useEffect(() => {
-    const v = searchParams?.get('demo_error')
-    if (v === '1' || v === 'true') setDemoError(true)
-  }, [searchParams])
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -93,21 +84,13 @@ export default function LoginPage() {
   })
 
   const onSubmit = ({ email, password }: FormData) => {
-    // Demo trigger: any email containing "fail" simulates an auth error
-    if (email.includes('fail')) {
-      setDemoError(true)
-      return
-    }
-    setDemoError(false)
     login({ email, password })
   }
 
-  const apiError = (() => {
-    if (demoError) return 'Incorrect email or password. Please try again.'
-    if (!error) return null
-    return (error as { response?: { data?: { message?: string } } }).response?.data?.message
-      ?? 'Incorrect email or password. Please try again.'
-  })()
+  const apiError = error
+    ? ((error as { response?: { data?: { message?: string } } }).response?.data?.message
+        ?? 'Incorrect email or password. Please try again.')
+    : null
 
   return (
     <AuthShell leftPanel={<LoginLeftPanel />}>
@@ -239,4 +222,8 @@ export default function LoginPage() {
       </p>
     </AuthShell>
   )
+}
+
+export default function LoginPage() {
+  return <LoginPageInner />
 }
