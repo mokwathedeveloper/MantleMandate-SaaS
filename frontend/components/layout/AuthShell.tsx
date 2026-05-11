@@ -45,9 +45,8 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
       <main className="flex flex-1 flex-col items-center justify-center bg-card px-6 py-10 sm:px-10 lg:px-16">
         <div className="w-full max-w-[420px]">
           {/* Mobile logo (hidden on lg+) */}
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <Image src="/logo.png" alt="MantleMandate" width={36} height={36} className="h-9 w-9 object-contain shrink-0" />
-            <span className="text-[18px] font-bold tracking-tight text-text-primary">MantleMandate</span>
+          <div className="flex items-center mb-8 lg:hidden">
+            <Image src="/logo.png" alt="MantleMandate" width={88} height={88} className="h-[88px] w-[88px] object-contain" priority />
           </div>
           {children}
         </div>
@@ -201,19 +200,15 @@ function BlueprintBg() {
 
 export function BrandLogo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <Image
-        src="/logo.png"
-        alt="MantleMandate"
-        width={36}
-        height={36}
-        className="h-9 w-9 object-contain shrink-0"
-        priority
-      />
-      <span className="text-[19px] font-bold tracking-tight text-text-primary">
-        MantleMandate
-      </span>
-    </div>
+    <Image
+      src="/logo.png"
+      alt="MantleMandate"
+      width={88}
+      height={88}
+      className="h-[88px] w-[88px] object-contain"
+      style={{ filter: 'drop-shadow(0 0 8px rgba(0,102,255,0.35))' }}
+      priority
+    />
   )
 }
 
