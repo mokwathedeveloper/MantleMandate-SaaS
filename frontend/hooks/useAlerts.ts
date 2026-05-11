@@ -51,7 +51,7 @@ export function useAlerts() {
           .eq('user_id', session!.user.id)
           .order('created_at', { ascending: false })
         if (error) throw error
-        const alerts = (data ?? []).map(rowToAlert)
+        const alerts: Alert[] = (data ?? []).map(rowToAlert)
         return {
           data:        alerts,
           total:       count ?? 0,

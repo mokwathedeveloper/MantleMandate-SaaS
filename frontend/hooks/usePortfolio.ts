@@ -63,9 +63,9 @@ export function usePortfolioStats() {
             .order('date', { ascending: false }).limit(2),
         ])
 
-        const totalValue   = (wallets.data ?? []).reduce((s, w) => s + (w.balance_usd ?? 0), 0)
-        const activeAgents = (agents.data  ?? []).filter(a => a.status === 'active').length
-        const allTrades    = trades.data ?? []
+        const totalValue   = (wallets.data ?? []).reduce((s: number, w: { balance_usd?: number | null }) => s + (w.balance_usd ?? 0), 0)
+        const activeAgents = (agents.data  ?? []).filter((a: { status: string }) => a.status === 'active').length
+        const allTrades: { pnl?: number | null; status: string }[] = trades.data ?? []
         const totalTrades  = allTrades.length
         const wins         = allTrades.filter(t => t.status === 'success' && (t.pnl ?? 0) > 0).length
         const winRate      = totalTrades > 0 ? (wins / totalTrades) * 100 : 0
@@ -105,7 +105,7 @@ export function usePortfolioHistory(days = 30) {
           .gte('date', since.toISOString().split('T')[0])
           .order('date', { ascending: true })
         if (error || !data || data.length === 0) return generateMockHistory(days)
-        return data.map(r => ({ date: r.date, value: r.value, pnl: r.pnl }))
+        return (data as { date: string; value: number; pnl: number }[]).map(r => ({ date: r.date, value: r.value, pnl: r.pnl }))
       } catch {
         return generateMockHistory(days)
       }

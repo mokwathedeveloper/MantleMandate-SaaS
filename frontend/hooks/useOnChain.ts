@@ -269,7 +269,7 @@ export async function fetchOnChainAuditEvents(lookbackBlocks = 50_000): Promise<
     const latestBlock = await publicClient.getBlockNumber()
     const fromBlock   = latestBlock > BigInt(lookbackBlocks)
       ? latestBlock - BigInt(lookbackBlocks)
-      : 0n
+      : BigInt(0)
 
     const logs = await publicClient.getContractEvents({
       address:   AGENT_EXECUTOR_ADDRESS,

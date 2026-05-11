@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import type { User } from '@/types/user'
@@ -10,7 +11,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Restore session on page load — silently skip if Supabase is unreachable
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
         setSession(session)
         setUser(sessionToUser(session.user))
@@ -20,7 +21,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // Keep store in sync with Supabase auth state changes
     let subscription: { unsubscribe: () => void } | null = null
     try {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
         if (session) {
           setSession(session)
           setUser(sessionToUser(session.user))
