@@ -16,11 +16,33 @@ env/
 
 # Environment variables — never commit secrets
 .env
+.env.*
+!.env.example
+!.env.*.example
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.staging
+.env.staging.local
+.env.production
 .env.production.local
 backend/.env
+blockchain/.env
+blockchain/.env.*
+
+# Private keys and credential files
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+
+# Supabase CLI temp state (may contain local access tokens)
+supabase/.temp/
 
 # Next.js build output
 .next/
