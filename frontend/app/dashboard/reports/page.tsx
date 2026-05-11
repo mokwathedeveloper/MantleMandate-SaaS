@@ -10,7 +10,6 @@ import {
   BarChart, Bar, Cell,
   PieChart, Pie, Legend,
 } from 'recharts'
-import api from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -157,6 +156,79 @@ function EmptyState() {
   )
 }
 
+// ─── Report View Modal ────────────────────────────────────────────────────────
+
+function ReportViewModal({ report, onClose }: { report: Report; onClose: () => void }) {
+  const pnlPositive = report.totalPnl >= 0
+  const roiPositive = report.roi >= 0
+
+  const metrics = [
+    { label: 'Total P&L',    value: `${pnlPositive ? '+' : '-'}$${fmt(report.totalPnl)}`,    color: pnlPositive ? '#22C55E' : '#EF4444' },
+    { label: 'ROI',          value: `${roiPositive ? '+' : ''}${report.roi.toFixed(2)}%`,     color: roiPositive ? '#22C55E' : '#EF4444' },
+    { label: 'Max Drawdown', value: report.drawdown != null ? `-$${fmt(Math.abs(report.drawdown))}` : '—', color: '#EF4444' },
+    { label: 'Sharpe Ratio', value: report.sharpeRatio != null ? String(report.sharpeRatio) : '—', color: '' },
+  ]
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed z-50 w-[calc(100vw-2rem)] max-w-[520px] rounded-xl overflow-hidden shadow-2xl"
+        style={{ top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#161B22', border: '1px solid #21262D' }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 py-4" style={{ borderBottom: '1px solid #21262D' }}>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text-primary truncate">{report.name}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <TypeBadge type={report.type} />
+              <span className="text-xs text-text-secondary">{dateRange(report.dateFrom, report.dateTo)}</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors shrink-0 mt-0.5">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 gap-3 p-5">
+          {metrics.map(m => (
+            <div key={m.label} className="rounded-lg p-4" style={{ background: '#0D1117', border: '1px solid #21262D' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">{m.label}</p>
+              <p className="text-xl font-bold" style={{ color: m.color || 'var(--color-text-primary)' }}>{m.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Details */}
+        <div className="px-5 pb-5 space-y-2">
+          {[
+            ['Report Type',   report.type],
+            ['Period From',   report.dateFrom],
+            ['Period To',     report.dateTo],
+            ['Generated On',  new Date(report.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
+          ].map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+              <span className="text-xs text-text-secondary">{k}</span>
+              <span className="text-xs font-medium text-text-primary">{v}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 flex justify-end gap-2" style={{ borderTop: '1px solid #21262D' }}>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Export Modal ─────────────────────────────────────────────────────────────
 
 function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (msg: string) => void }) {
@@ -170,16 +242,105 @@ function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
-      const slug = reportType.replace(/\s+/g, '-')
-      onSuccess(`Report downloaded: ${slug}-${dateFrom.slice(0, 7)}.${format.toLowerCase()}`)
+      const slug     = reportType.replace(/\s+/g, '-')
+      const range    = `${dateFrom} to ${dateTo}`
+      const filename = `${slug}-${dateFrom.slice(0, 7)}`
+
+      if (format === 'CSV') {
+        const rows = [
+          ['Period', 'Metric', 'Value'],
+          [range, 'Total P&L',      '+$34,265.00'],
+          [range, 'Win Rate',       '67.3%'],
+          [range, 'Total Trades',   '847'],
+          [range, 'Sharpe Ratio',   '2.41'],
+          [range, 'Max Drawdown',   '-8.2%'],
+          ...PNL_TIMELINE.map(r => [r.d, 'Monthly P&L', `$${r.v.toLocaleString()}`]),
+          ...AGENT_PNL.map(r    => [range, `Agent P&L — ${r.name}`, `${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}`]),
+        ]
+        const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href = url; a.download = `${filename}.csv`; a.click()
+        URL.revokeObjectURL(url)
+
+      } else if (format === 'JSON') {
+        const payload = {
+          report:    reportType,
+          generated: new Date().toISOString(),
+          period:    { from: dateFrom, to: dateTo },
+          summary: { totalPnl: 34265, winRate: 67.3, trades: 847, sharpe: 2.41, maxDrawdown: -8.2 },
+          pnlTimeline:     PNL_TIMELINE,
+          agentBreakdown:  AGENT_PNL,
+          protocolVolume:  PROTOCOL_VOLUME,
+          winRates:        WIN_RATE,
+        }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href = url; a.download = `${filename}.json`; a.click()
+        URL.revokeObjectURL(url)
+
+      } else if (format === 'PDF') {
+        const win = window.open('', '_blank', 'width=900,height=700')
+        if (!win) return
+        win.document.write(`<!DOCTYPE html><html><head>
+          <title>${reportType} — ${range}</title>
+          <style>
+            body { font-family: -apple-system, sans-serif; padding: 40px; color: #111; }
+            h1   { font-size: 22px; margin-bottom: 4px; }
+            p.sub{ font-size: 13px; color: #555; margin-bottom: 32px; }
+            table{ width: 100%; border-collapse: collapse; font-size: 13px; }
+            th   { background: #f4f4f4; padding: 8px 12px; text-align: left; border-bottom: 2px solid #ddd; }
+            td   { padding: 7px 12px; border-bottom: 1px solid #eee; }
+            tr:nth-child(even) td { background: #fafafa; }
+            .kpi { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 32px; }
+            .kpi-card { padding: 16px; border: 1px solid #ddd; border-radius: 8px; }
+            .kpi-label { font-size: 11px; text-transform: uppercase; color: #777; }
+            .kpi-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+            h2   { font-size: 15px; margin: 24px 0 8px; }
+          </style>
+        </head><body>
+          <h1>MantleMandate — ${reportType}</h1>
+          <p class="sub">Period: ${range} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+          <div class="kpi">
+            <div class="kpi-card"><div class="kpi-label">Total P&amp;L</div><div class="kpi-value">+$34,265</div></div>
+            <div class="kpi-card"><div class="kpi-label">Win Rate</div><div class="kpi-value">67.3%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total Trades</div><div class="kpi-value">847</div></div>
+            <div class="kpi-card"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value">2.41</div></div>
+            <div class="kpi-card"><div class="kpi-label">Max Drawdown</div><div class="kpi-value">-8.2%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Avg Trade Size</div><div class="kpi-value">$4,850</div></div>
+          </div>
+          <h2>Monthly P&amp;L Timeline</h2>
+          <table><tr><th>Month</th><th>P&amp;L</th></tr>
+            ${PNL_TIMELINE.map(r => `<tr><td>${r.d}</td><td>$${r.v.toLocaleString()}</td></tr>`).join('')}
+          </table>
+          <h2>Agent Breakdown</h2>
+          <table><tr><th>Agent</th><th>P&amp;L</th></tr>
+            ${AGENT_PNL.map(r => `<tr><td>${r.name}</td><td>${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}</td></tr>`).join('')}
+          </table>
+          <h2>Protocol Volume</h2>
+          <table><tr><th>Protocol</th><th>Share</th></tr>
+            ${PROTOCOL_VOLUME.map(r => `<tr><td>${r.name}</td><td>${r.value}%</td></tr>`).join('')}
+          </table>
+          <h2>Win Rates by Mandate</h2>
+          <table><tr><th>Mandate</th><th>Win %</th><th>Loss %</th></tr>
+            ${WIN_RATE.map(r => `<tr><td>${r.mandate}</td><td>${r.win}%</td><td>${r.loss}%</td></tr>`).join('')}
+          </table>
+          <script>window.onload = function(){ window.print(); }</script>
+        </body></html>`)
+        win.document.close()
+      }
+
+      onSuccess(`${reportType} — ${format} downloaded`)
       onClose()
-    }, 1500)
+    }, 800)
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
-        className="w-[480px] p-6 space-y-5"
+        className="w-[calc(100vw-2rem)] max-w-[480px] p-5 sm:p-6 space-y-5"
         style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: '10px' }}
       >
         <div className="flex items-center justify-between">
@@ -432,23 +593,27 @@ export default function ReportsPage() {
   const [showExtra,    setShowExtra]    = useState(false)
   const [dateFrom,     setDateFrom]     = useState('2026-04-01')
   const [dateTo,       setDateTo]       = useState('2026-04-30')
+  const [viewReport,   setViewReport]   = useState<Report | null>(null)
 
   const { data, isLoading, isError } = useQuery<Report[]>({
     queryKey: ['reports'],
-    queryFn:  () => api.get('/reports').then(r => r.data.data),
+    queryFn:  () => fetch('/api/reports').then(r => r.json()),
+    staleTime: 60_000,
   })
 
   const reports = (!isLoading && !isError && data && data.length > 0) ? data : MOCK_REPORTS
   const isEmpty  = !isLoading && !isError && data && data.length === 0
 
-  const COLS_BASE  = ['24%', '10%', '16%', '12%', '10%', '14%']
-  const COLS_EXTRA = ['10%', '10%', '10%']
-  const cols = showExtra
-    ? [...COLS_BASE, ...COLS_EXTRA].join(' ')
-    : COLS_BASE.join(' ')
+  //                   Name   Type  DateRange  P&L   ROI   Actions
+  const COLS_BASE  = '220px 120px    160px    125px  85px  145px'
+  //                   GeneratedOn  Drawdown  Sharpe
+  const COLS_EXTRA = '120px         115px     70px'
+  const cols       = showExtra ? `${COLS_BASE} ${COLS_EXTRA}` : COLS_BASE
+  const tableMinW  = showExtra ? 1160 : 855
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
+      {viewReport && <ReportViewModal report={viewReport} onClose={() => setViewReport(null)} />}
       {showExport && (
         <ExportModal
           onClose={() => setExport(false)}
@@ -458,7 +623,7 @@ export default function ReportsPage() {
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-text-primary">Reports &amp; Exporting</h2>
           <p className="text-sm text-text-secondary mt-0.5">
@@ -467,7 +632,7 @@ export default function ReportsPage() {
         </div>
         <button
           onClick={() => setExport(true)}
-          className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-md transition-colors shrink-0"
+          className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-md transition-colors shrink-0 self-start"
         >
           <Download className="h-4 w-4" />
           Export Report
@@ -475,7 +640,7 @@ export default function ReportsPage() {
       </div>
 
       {/* ── KPI strip (5 cards) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {([
           { label: 'Total Reports', value: '1,248',          sub: 'Generated',     color: '' },
           { label: 'Total P&L',     value: '$24,580,439.21', sub: 'All time',      color: '' },
@@ -488,7 +653,7 @@ export default function ReportsPage() {
               {c.label}
             </p>
             <p
-              className="text-xl font-bold"
+              className="text-base sm:text-xl font-bold truncate"
               style={{ color: c.color || undefined }}
             >
               {c.value}
@@ -499,7 +664,7 @@ export default function ReportsPage() {
       </div>
 
       {/* ── View toggle + Filters ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Toggle */}
         <div className="flex items-center gap-4">
           {(['table', 'charts'] as const).map(v => (
@@ -519,7 +684,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={dateFrom}
@@ -546,7 +711,8 @@ export default function ReportsPage() {
 
       {/* ── Table View ── */}
       {view === 'table' && (
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto rounded-lg border border-[#21262D]">
+        <div style={{ minWidth: tableMinW }}>
           {/* Header row */}
           <div className="grid px-4 py-2.5 bg-page" style={{ gridTemplateColumns: cols }}>
             {['REPORT NAME', 'TYPE', 'DATE RANGE', 'TOTAL P&L', 'ROI', 'ACTIONS',
@@ -592,15 +758,18 @@ export default function ReportsPage() {
                 {r.name}
               </button>
               <TypeBadge type={r.type} />
-              <span className="text-xs text-text-secondary">{dateRange(r.dateFrom, r.dateTo)}</span>
-              <span className="text-sm font-medium" style={{ color: r.totalPnl >= 0 ? '#22C55E' : '#EF4444' }}>
+              <span className="text-xs text-text-secondary whitespace-nowrap">{dateRange(r.dateFrom, r.dateTo)}</span>
+              <span className="text-sm font-medium whitespace-nowrap" style={{ color: r.totalPnl >= 0 ? '#22C55E' : '#EF4444' }}>
                 {r.totalPnl >= 0 ? '+' : '-'}${fmt(r.totalPnl)}
               </span>
-              <span className="text-sm font-medium" style={{ color: r.roi >= 0 ? '#22C55E' : '#EF4444' }}>
+              <span className="text-sm font-medium whitespace-nowrap" style={{ color: r.roi >= 0 ? '#22C55E' : '#EF4444' }}>
                 {r.roi >= 0 ? '+' : ''}{r.roi.toFixed(2)}%
               </span>
               <div className="flex items-center gap-1.5">
-                <button className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">
+                <button
+                  onClick={() => setViewReport(r)}
+                  className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
+                >
                   <Eye className="h-3 w-3" /> View
                 </button>
                 <button
@@ -612,10 +781,10 @@ export default function ReportsPage() {
               </div>
               {showExtra && (
                 <>
-                  <span className="text-xs text-text-secondary">
+                  <span className="text-xs text-text-secondary whitespace-nowrap">
                     {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
-                  <span className="text-xs font-medium" style={{ color: '#EF4444' }}>
+                  <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#EF4444' }}>
                     {r.drawdown != null ? `-$${fmt(Math.abs(r.drawdown))}` : '—'}
                   </span>
                   <span className="text-xs text-text-secondary">
@@ -625,6 +794,7 @@ export default function ReportsPage() {
               )}
             </div>
           ))}
+        </div>
         </div>
       )}
 
