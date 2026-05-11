@@ -1,4 +1,5 @@
 import { createConfig, http } from 'wagmi'
+import { injected, coinbaseWallet, walletConnect } from 'wagmi/connectors'
 import { defineChain } from 'viem'
 
 export const mantleMainnet = defineChain({
@@ -26,10 +27,25 @@ export const mantleTestnet = defineChain({
   testnet: true,
 })
 
-export const wagmiConfig = createConfig({
-  chains: [mantleMainnet, mantleTestnet],
-  transports: {
-    [mantleMainnet.id]: http(),
-    [mantleTestnet.id]: http(),
-  },
-})
+// Singleton — created once, avoids WalletConnect duplicate-init warnings
+let _config: ReturnType<typeof createConfig> | null = null
+
+export function getWagmiConfig() {
+  if (_config) return _config
+  const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ''
+  const connectors = [
+    injected(),
+    coinbaseWallet({ appName: 'MantleMandate' }),
+    ...(projectId ? [walletConnect({ projectId })] : []),
+  ]
+  _config = createConfig({
+    chains:     [mantleTestnet, mantleMainnet],
+    connectors,
+    ssr:        true,
+    transports: {
+      [mantleMainnet.id]: http(),
+      [mantleTestnet.id]: http(),
+    },
+  })
+  return _config
+}

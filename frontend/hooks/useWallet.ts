@@ -1,50 +1,41 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
+import { useConnect, useDisconnect, useAccount } from 'wagmi'
 
-export interface WalletState {
-  address: string | null
-  chainId: number | null
-  isConnected: boolean
-  isConnecting: boolean
-  walletType: 'metamask' | 'walletconnect' | 'coinbase' | null
-}
+export type WalletType = 'metamask' | 'walletconnect' | 'coinbase'
 
 export function useWallet() {
-  const [state, setState] = useState<WalletState>({
-    address:      null,
-    chainId:      null,
-    isConnected:  false,
-    isConnecting: false,
-    walletType:   null,
-  })
+  const { address, isConnected, chainId } = useAccount()
+  const { connect, isPending, connectors } = useConnect()
+  const { disconnect }                     = useDisconnect()
 
-  const connect = useCallback(async (walletType: WalletState['walletType']) => {
-    setState(s => ({ ...s, isConnecting: true }))
-    try {
-      if (typeof window === 'undefined') return
-      const ethereum = (window as Window & { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum
-      if (!ethereum) throw new Error('No wallet detected')
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
-      setState({
-        address:      accounts[0] ?? null,
-        chainId:      5000,
-        isConnected:  true,
-        isConnecting: false,
-        walletType,
+  const connectWallet = useCallback(
+    (walletType: WalletType) => {
+      const connector = connectors.find(c => {
+        if (walletType === 'metamask')      return c.id === 'injected' || c.id === 'metaMask'
+        if (walletType === 'coinbase')      return c.id === 'coinbaseWalletSDK'
+        if (walletType === 'walletconnect') return c.id === 'walletConnect'
+        return false
       })
-    } catch {
-      setState(s => ({ ...s, isConnecting: false }))
-    }
-  }, [])
+      if (!connector) return
+      connect({ connector })
+    },
+    [connect, connectors],
+  )
 
-  const disconnect = useCallback(() => {
-    setState({ address: null, chainId: null, isConnected: false, isConnecting: false, walletType: null })
-  }, [])
-
-  const truncatedAddress = state.address
-    ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
+  const truncatedAddress = address
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : null
 
-  return { ...state, connect, disconnect, truncatedAddress }
+  return {
+    address:          address ?? null,
+    chainId:          chainId ?? null,
+    isConnected,
+    isConnecting:     isPending,
+    walletType:       null as WalletType | null,
+    connect:          connectWallet,
+    disconnect,
+    truncatedAddress,
+  }
 }
