@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -225,5 +225,9 @@ function LoginPageInner() {
 }
 
 export default function LoginPage() {
-  return <LoginPageInner />
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
+  )
 }
