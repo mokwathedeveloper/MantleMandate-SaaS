@@ -144,12 +144,12 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
         padding: 16,
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
         {/* Left: dot + content */}
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex items-start gap-2 sm:gap-3 min-w-0">
           <div
-            className="shrink-0 rounded-full mt-0.5"
-            style={{ width: 10, height: 10, background: dot, marginTop: 3 }}
+            className="shrink-0 rounded-full"
+            style={{ width: 10, height: 10, background: dot, marginTop: 3, flexShrink: 0 }}
           />
           <div className="min-w-0 flex-1">
             {/* Alert type */}
@@ -301,12 +301,20 @@ export default function AlertsPage() {
 
   const uniqueTypes = Array.from(new Set(displayAlerts.map(a => a.alertType)))
 
+  const [telegramSaved, setTelegramSaved] = useState(false)
+
   const testTelegram = () => {
     setTelegramStatus(telegramUrl.startsWith('https://') ? 'connected' : 'failed')
   }
 
+  const saveTelegram = () => {
+    if (!telegramUrl.trim()) return
+    setTelegramSaved(true)
+    setTimeout(() => setTelegramSaved(false), 2500)
+  }
+
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-4xl">
 
       {/* Header */}
       <div>
@@ -319,8 +327,8 @@ export default function AlertsPage() {
       {/* Filter bar */}
       <div className="space-y-3">
         {/* Severity tabs + actions */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-0.5">
             {TABS.map(t => (
               <button
                 key={t.key}
@@ -464,8 +472,12 @@ export default function AlertsPage() {
                 >
                   Test Connection
                 </button>
-                <button className="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs rounded-md transition-colors shrink-0">
-                  Save
+                <button
+                  onClick={saveTelegram}
+                  disabled={!telegramUrl.trim()}
+                  className="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {telegramSaved ? '✓ Saved' : 'Save'}
                 </button>
               </div>
               {telegramStatus === 'connected' && (

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { Download, Copy, CheckCircle2, ChevronDown, ExternalLink, TriangleAlert } from 'lucide-react'
+import { Download, Copy, CheckCircle2, ChevronDown, ExternalLink, TriangleAlert, Loader2, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 
@@ -194,6 +194,221 @@ function CardTab() {
   )
 }
 
+// ── BankTab ───────────────────────────────────────────────────────────────────
+
+type BankRegion = 'us' | 'uk' | 'eu' | 'other'
+
+const BANK_REGIONS: { key: BankRegion; label: string }[] = [
+  { key: 'us',    label: '🇺🇸 United States (ACH)' },
+  { key: 'uk',    label: '🇬🇧 United Kingdom (Faster Payments)' },
+  { key: 'eu',    label: '🇪🇺 European Union (SEPA)' },
+  { key: 'other', label: '🌍 International (SWIFT/IBAN)' },
+]
+
+function BankTab() {
+  const [region,       setRegion]       = useState<BankRegion>('us')
+  const [accountName,  setAccountName]  = useState('')
+  const [bankName,     setBankName]     = useState('')
+  const [accountNum,   setAccountNum]   = useState('')
+  const [routingNum,   setRoutingNum]   = useState('')
+  const [iban,         setIban]         = useState('')
+  const [bic,          setBic]          = useState('')
+  const [accountType,  setAccountType]  = useState<'checking' | 'savings'>('checking')
+  const [loading,      setLoading]      = useState(false)
+  const [linked,       setLinked]       = useState(false)
+  const [errors,       setErrors]       = useState<Record<string, string>>({})
+
+  const validate = () => {
+    const e: Record<string, string> = {}
+    if (!accountName.trim()) e.accountName = 'Required'
+    if (!bankName.trim())    e.bankName    = 'Required'
+    if (region === 'us' || region === 'uk') {
+      if (!accountNum.trim()) e.accountNum = 'Required'
+      if (region === 'us' && !routingNum.trim()) e.routingNum = 'Required'
+      if (region === 'uk' && routingNum.length !== 6) e.routingNum = 'Must be 6 digits'
+    }
+    if (region === 'eu' || region === 'other') {
+      if (!iban.trim())                      e.iban = 'Required'
+      if (region === 'other' && !bic.trim()) e.bic  = 'Required'
+    }
+    return e
+  }
+
+  const handleLink = async () => {
+    const e = validate()
+    if (Object.keys(e).length > 0) { setErrors(e); return }
+    setErrors({})
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 1800))
+    setLoading(false)
+    setLinked(true)
+  }
+
+  const fieldClass = (key: string) => cn(
+    'w-full bg-input border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled transition-colors',
+    errors[key] ? 'border-error' : 'border-border'
+  )
+
+  if (linked) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <div className="h-14 w-14 rounded-full bg-success/15 flex items-center justify-center">
+          <CheckCircle2 className="h-7 w-7 text-success" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-text-primary">Bank account linked!</p>
+          <p className="text-xs text-text-secondary mt-1 max-w-xs">
+            <span className="font-medium text-text-primary">{bankName}</span> account ending in{' '}
+            <span className="font-medium text-text-primary">
+              {(region === 'eu' || region === 'other') ? iban.slice(-4) : accountNum.slice(-4)}
+            </span>{' '}
+            has been added. Verification may take 1–2 business days.
+          </p>
+        </div>
+        <button
+          onClick={() => { setLinked(false); setAccountName(''); setBankName(''); setAccountNum(''); setRoutingNum(''); setIban(''); setBic('') }}
+          className="text-xs text-primary hover:underline mt-1"
+        >
+          + Add another account
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Region / payment system */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-text-secondary">Region / Payment System</label>
+        <div className="relative">
+          <select
+            value={region}
+            onChange={e => { setRegion(e.target.value as BankRegion); setErrors({}) }}
+            className="w-full appearance-none bg-input border border-border rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none focus:border-primary cursor-pointer"
+          >
+            {BANK_REGIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Account holder name */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-text-secondary">Account Holder Name <span className="text-error">*</span></label>
+        <input value={accountName} onChange={e => setAccountName(e.target.value)} placeholder="Full legal name on account" className={fieldClass('accountName')} />
+        {errors.accountName && <p className="text-[11px] text-error">{errors.accountName}</p>}
+      </div>
+
+      {/* Bank name */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-text-secondary">Bank Name <span className="text-error">*</span></label>
+        <input value={bankName} onChange={e => setBankName(e.target.value)} placeholder="e.g. Chase, Barclays, Deutsche Bank" className={fieldClass('bankName')} />
+        {errors.bankName && <p className="text-[11px] text-error">{errors.bankName}</p>}
+      </div>
+
+      {/* US / UK fields */}
+      {(region === 'us' || region === 'uk') && (
+        <>
+          {/* Account type — US only */}
+          {region === 'us' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-secondary">Account Type</label>
+              <div className="flex gap-2">
+                {(['checking', 'savings'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setAccountType(t)}
+                    className={cn(
+                      'flex-1 py-1.5 text-xs font-semibold rounded-md border transition-colors capitalize',
+                      accountType === t
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-text-secondary hover:border-primary/60'
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-secondary">
+                Account Number <span className="text-error">*</span>
+              </label>
+              <input
+                value={accountNum}
+                onChange={e => setAccountNum(e.target.value.replace(/\D/g, ''))}
+                placeholder={region === 'us' ? 'e.g. 123456789' : 'e.g. 12345678'}
+                className={fieldClass('accountNum')}
+              />
+              {errors.accountNum && <p className="text-[11px] text-error">{errors.accountNum}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-secondary">
+                {region === 'us' ? 'Routing Number' : 'Sort Code'} <span className="text-error">*</span>
+              </label>
+              <input
+                value={routingNum}
+                onChange={e => setRoutingNum(e.target.value.replace(/\D/g, '').slice(0, region === 'us' ? 9 : 6))}
+                placeholder={region === 'us' ? 'e.g. 021000021' : 'e.g. 20-00-00'}
+                className={fieldClass('routingNum')}
+              />
+              {errors.routingNum && <p className="text-[11px] text-error">{errors.routingNum}</p>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* EU / International IBAN + BIC */}
+      {(region === 'eu' || region === 'other') && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-secondary">IBAN <span className="text-error">*</span></label>
+            <input
+              value={iban}
+              onChange={e => setIban(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="e.g. DE89370400440532013000"
+              className={fieldClass('iban')}
+            />
+            {errors.iban && <p className="text-[11px] text-error">{errors.iban}</p>}
+          </div>
+          {region === 'other' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-secondary">BIC / SWIFT Code <span className="text-error">*</span></label>
+              <input
+                value={bic}
+                onChange={e => setBic(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
+                placeholder="e.g. DEUTDEDB"
+                className={fieldClass('bic')}
+              />
+              {errors.bic && <p className="text-[11px] text-error">{errors.bic}</p>}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Mandate text */}
+      <p className="text-[11px] text-text-disabled flex items-start gap-1.5 pt-1">
+        <Building2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        By linking your account you authorise MantleMandate to initiate debits for your subscription. Funds are collected via secure bank transfer.
+      </p>
+
+      <button
+        onClick={handleLink}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-md transition-colors"
+      >
+        {loading
+          ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>
+          : <><Building2 className="h-4 w-4" /> Link Bank Account</>
+        }
+      </button>
+    </div>
+  )
+}
+
 // ── CryptoTab ─────────────────────────────────────────────────────────────────
 
 function CryptoTab() {
@@ -364,7 +579,7 @@ export default function BillingPage() {
   const rows       = showAll ? BILLING_HISTORY : BILLING_HISTORY.slice(0, 6)
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-text-primary">Payment Methods &amp; Billing</h2>
@@ -374,7 +589,7 @@ export default function BillingPage() {
       </div>
 
       {/* Two-column layout */}
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
         {/* ── Left column 60% ───────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-5">
@@ -441,11 +656,7 @@ export default function BillingPage() {
             </div>
 
             {tab === 'card'   && <CardTab />}
-            {tab === 'bank'   && (
-              <div className="py-10 text-center">
-                <p className="text-sm text-text-secondary">Bank account linking coming soon.</p>
-              </div>
-            )}
+            {tab === 'bank'   && <BankTab />}
             {tab === 'crypto' && <CryptoTab />}
           </div>
 

@@ -180,7 +180,6 @@ const MOCK_ENTRIES: AuditEntry[] = [
 ]
 
 const TOTAL = 1248
-const PER_PAGE = 20
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -215,8 +214,8 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
   const [copiedTx,  setCopiedTx]  = useState(false)
   const [copiedDec, setCopiedDec] = useState(false)
 
-  const copyTx  = () => { navigator.clipboard.writeText(entry.txHash);       setCopiedTx(true);  setTimeout(() => setCopiedTx(false),  2000) }
-  const copyDec = () => { navigator.clipboard.writeText(entry.decisionHash); setCopiedDec(true); setTimeout(() => setCopiedDec(false), 2000) }
+  const copyTx  = async () => { try { await navigator.clipboard.writeText(entry.txHash);       setCopiedTx(true);  setTimeout(() => setCopiedTx(false),  2000) } catch {} }
+  const copyDec = async () => { try { await navigator.clipboard.writeText(entry.decisionHash); setCopiedDec(true); setTimeout(() => setCopiedDec(false), 2000) } catch {} }
 
   return (
     <div
@@ -226,7 +225,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
         borderBottom: '1px solid #21262D',
       }}
     >
-      <div className="px-6 py-4">
+      <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <p
             className="text-[10px] font-semibold uppercase tracking-wider"
@@ -239,9 +238,9 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-xs">
           {/* Full TX Hash */}
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <span className="block mb-1" style={{ color: '#484F58' }}>Full TX Hash</span>
             <div className="flex items-center gap-2">
               <span
@@ -270,7 +269,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </div>
 
           {/* Decision Hash */}
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <span className="block mb-1" style={{ color: '#484F58' }}>Decision Hash</span>
             <div className="flex items-center gap-2">
               <span
@@ -288,7 +287,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <span className="block mb-1" style={{ color: '#484F58' }}>Rule Applied</span>
             <span style={{ color: '#F0F6FC' }}>{entry.ruleApplied}</span>
           </div>
@@ -354,6 +353,7 @@ export default function AuditPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [search,   setSearch]   = useState('')
   const [page,     setPage]     = useState(1)
+  const [perPage,  setPerPage]  = useState(20)
   const [status,   setStatus]   = useState('All Status')
   const [agent,    setAgent]    = useState('All Agents')
   const [mandate,  setMandate]  = useState('All Mandates')
@@ -362,17 +362,18 @@ export default function AuditPage() {
   const [toast,    setToast]    = useState<string | null>(null)
   const [activeFilters, setActiveFilters] = useState<{ key: string; label: string }[]>([])
 
-  // Derive filtered entries (mock: all 8, filtered by search/status)
   const entries = MOCK_ENTRIES.filter(e => {
     if (search && !e.txHash.includes(search) && !e.from.includes(search) && !e.to.toLowerCase().includes(search.toLowerCase())) return false
     if (status !== 'All Status' && e.status !== status.toUpperCase()) return false
     if (mandate !== 'All Mandates' && e.mandate !== mandate) return false
+    if (dateFrom && e.timestamp.slice(0, 10) < dateFrom) return false
+    if (dateTo   && e.timestamp.slice(0, 10) > dateTo) return false
     return true
   })
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     const token = Math.random().toString(36).slice(2, 10)
-    navigator.clipboard.writeText(`${window.location.origin}/public/audit/${token}`)
+    try { await navigator.clipboard.writeText(`${window.location.origin}/public/audit/${token}`) } catch {}
     setToast('Public audit link copied to clipboard')
   }, [])
 
@@ -407,15 +408,15 @@ export default function AuditPage() {
     }
   }
 
-  const totalPages = Math.ceil(TOTAL / PER_PAGE)
+  const totalPages = Math.ceil(TOTAL / perPage)
   const visiblePages = [1, 2, 3]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: '#F0F6FC' }}>On-Chain Audit Viewer</h2>
           <p className="text-sm mt-0.5" style={{ color: '#8B949E' }}>
@@ -423,7 +424,7 @@ export default function AuditPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Public Audit Link */}
           <button
             onClick={handleShare}
@@ -465,7 +466,7 @@ export default function AuditPage() {
       </div>
 
       {/* ── Summary KPI cards ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {([
           { label: 'Total Transactions', value: '1,248',          sub: 'All time',          subColor: '#8B949E' },
           { label: 'Total Volume',       value: '$24,589,435.21', sub: 'Verified on-chain', subColor: '#8B949E' },
@@ -493,9 +494,9 @@ export default function AuditPage() {
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Date range */}
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: '#8B949E' }}>
+          <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#8B949E' }}>
             <span>Date:</span>
             <input
               type="date"
@@ -593,9 +594,10 @@ export default function AuditPage() {
 
       {/* ── Audit table ───────────────────────────────────────────────────────── */}
       <div
-        className="rounded-lg overflow-hidden"
+        className="rounded-lg overflow-x-auto"
         style={{ border: '1px solid #21262D' }}
       >
+        <div style={{ minWidth: 820 }}>
         {/* Table header */}
         <div
           className="grid px-4 py-2.5"
@@ -742,12 +744,13 @@ export default function AuditPage() {
             </div>
           ))
         )}
+        </div>{/* /minWidth */}
       </div>
 
       {/* ── Pagination ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm flex-wrap gap-3">
         <span style={{ color: '#8B949E' }}>
-          Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, TOTAL)} of {TOTAL.toLocaleString()} transactions
+          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, TOTAL)} of {TOTAL.toLocaleString()} transactions
         </span>
 
         <div className="flex items-center gap-1">
@@ -805,6 +808,8 @@ export default function AuditPage() {
         </div>
 
         <select
+          value={perPage}
+          onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
           className="rounded text-xs px-2 py-1.5 focus:outline-none cursor-pointer"
           style={{
             background: '#161B22',
@@ -812,9 +817,9 @@ export default function AuditPage() {
             color: '#8B949E',
           }}
         >
-          <option>20 per page</option>
-          <option>50 per page</option>
-          <option>100 per page</option>
+          <option value={20}>20 per page</option>
+          <option value={50}>50 per page</option>
+          <option value={100}>100 per page</option>
         </select>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -15,11 +16,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 import {
-  useAgents, usePauseAgent, useResumeAgent, useStopAgent,
+  useAgents, usePauseAgent, useResumeAgent, useStopAgent, useDeployAgent,
 } from '@/hooks/useAgents'
 import { useMandates } from '@/hooks/useMandates'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -51,7 +50,6 @@ type TabFilter = 'All' | 'Active' | 'Paused' | 'Failed'
 // ── sparkline generator ───────────────────────────────────────────────────────
 
 function generateSparkline(agent: Agent, points = 30) {
-  // Deterministic seed from agent id so it doesn't change on re-render
   let seed = agent.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
   const rand = () => {
     seed = (seed * 9301 + 49297) % 233280
@@ -83,7 +81,6 @@ function AgentCard({ agent }: { agent: Agent }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {/* Status dot */}
           <span className={cn('h-2 w-2 rounded-full shrink-0', STATUS_DOT[agent.status])} />
           <div className="min-w-0">
             <Link
@@ -105,7 +102,7 @@ function AgentCard({ agent }: { agent: Agent }) {
       </div>
 
       {/* 4-metric grid */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
           {
             label: 'P&L',
@@ -229,8 +226,8 @@ function AgentCard({ agent }: { agent: Agent }) {
 // ── Deploy Modal ───────────────────────────────────────────────────────────────
 
 function DeployModal({ onClose }: { onClose: () => void }) {
-  const router      = useRouter()
-  const qc          = useQueryClient()
+  const router = useRouter()
+  const qc     = useQueryClient()
   const { data: mandatesData } = useMandates()
   const mandates = (mandatesData?.data ?? []).filter(
     m => m.status === 'active' || m.status === 'draft',
@@ -240,25 +237,23 @@ function DeployModal({ onClose }: { onClose: () => void }) {
   const [capital,   setCapital]   = useState('5000')
   const [agentName, setAgentName] = useState('')
 
-  const { mutate: deploy, isPending } = useMutation({
-    mutationFn: async () => {
-      const agent = await api.post('/agents', {
-        name:        agentName || `Agent for ${mandates.find(m => m.id === mandateId)?.name ?? 'Mandate'}`,
-        mandate_id:  mandateId,
-        capital_cap: Number(capital) || undefined,
-      }).then(r => r.data.data)
-      await api.post(`/agents/${agent.id}/deploy`)
-      return agent
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['agents'] })
-      onClose()
-    },
-  })
+  const { mutate: deploy, isPending } = useDeployAgent()
+
+  const handleDeploy = () => {
+    if (!mandateId) return
+    deploy(
+      {
+        name:      agentName || `Agent for ${mandates.find(m => m.id === mandateId)?.name ?? 'Mandate'}`,
+        mandateId,
+        capitalCap: Number(capital) || undefined,
+      },
+      { onSuccess: () => { qc.invalidateQueries({ queryKey: ['agents'] }); onClose() } },
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-xl w-[440px] p-6 space-y-4">
+      <div className="bg-card border border-border rounded-xl w-[calc(100vw-2rem)] max-w-[440px] p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-text-primary">Deploy New Agent</h3>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
@@ -316,8 +311,8 @@ function DeployModal({ onClose }: { onClose: () => void }) {
           variant="primary"
           className="w-full flex items-center justify-center gap-2"
           loading={isPending}
-          disabled={!mandateId}
-          onClick={() => deploy()}
+          disabled={!mandateId || isPending}
+          onClick={handleDeploy}
         >
           <Zap className="h-4 w-4" />
           Deploy Agent
@@ -350,11 +345,10 @@ export default function AgentsPage() {
   const [sort,      setSort]    = useState<SortOption>('P&L')
   const [showDeploy, setDeploy] = useState(false)
 
-  // Counts
   const all    = agents?.length ?? 0
-  const active = agents?.filter(a => a.status === 'active').length  ?? 0
-  const paused = agents?.filter(a => a.status === 'paused').length  ?? 0
-  const failed = agents?.filter(a => a.status === 'failed').length  ?? 0
+  const active = agents?.filter(a => a.status === 'active').length ?? 0
+  const paused = agents?.filter(a => a.status === 'paused').length ?? 0
+  const failed = agents?.filter(a => a.status === 'failed' || a.status === 'stopped' || a.status === 'inactive').length ?? 0
 
   const TABS: { key: TabFilter; label: string; count: number }[] = [
     { key: 'All',    label: 'All',    count: all    },
@@ -367,12 +361,10 @@ export default function AgentsPage() {
     if (!agents) return []
     let list = [...agents]
 
-    // Tab filter
-    if (activeTab !== 'All') {
-      list = list.filter(a => a.status === activeTab.toLowerCase())
-    }
+    if (activeTab === 'Active') list = list.filter(a => a.status === 'active')
+    else if (activeTab === 'Paused') list = list.filter(a => a.status === 'paused')
+    else if (activeTab === 'Failed') list = list.filter(a => ['failed', 'stopped', 'inactive'].includes(a.status))
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(
@@ -380,7 +372,6 @@ export default function AgentsPage() {
       )
     }
 
-    // Sort
     switch (sort) {
       case 'P&L':           list.sort((a, b) => b.totalPnl     - a.totalPnl);     break
       case 'ROI':           list.sort((a, b) => b.totalRoi     - a.totalRoi);     break
@@ -398,7 +389,7 @@ export default function AgentsPage() {
       {showDeploy && <DeployModal onClose={() => setDeploy(false)} />}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-text-primary">AI Agents</h2>
           <p className="text-sm text-text-secondary mt-0.5">
@@ -407,7 +398,7 @@ export default function AgentsPage() {
         </div>
         <button
           onClick={() => setDeploy(true)}
-          className="flex items-center gap-2 h-10 px-4 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shrink-0"
+          className="flex items-center gap-2 h-10 px-4 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shrink-0 self-start"
         >
           <Zap className="h-4 w-4" />
           Deploy New Agent
@@ -415,7 +406,7 @@ export default function AgentsPage() {
       </div>
 
       {/* KPI strip */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total Agents', value: all,    color: 'text-text-primary' },
           { label: 'Active',       value: active, color: 'text-success'      },
@@ -430,9 +421,8 @@ export default function AgentsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Tabs */}
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1">
           {TABS.map(t => (
             <button
               key={t.key}
@@ -449,15 +439,14 @@ export default function AgentsPage() {
           ))}
         </div>
 
-        {/* Search + Sort */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search agents…"
-              className="w-60 bg-input border border-border rounded-md pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary"
+              className="w-full sm:w-52 bg-input border border-border rounded-md pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary">

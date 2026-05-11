@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ChevronLeft, Rocket, FileText } from 'lucide-react'
@@ -13,15 +13,14 @@ import { AlertBanner } from '@/components/ui/AlertBanner'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { useMandates } from '@/hooks/useMandates'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
+import { useDeployAgent } from '@/hooks/useAgents'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
 
 const schema = z.object({
-  name:        z.string().min(2, 'Name must be at least 2 characters').max(255),
-  mandate_id:  z.string().uuid('Select a mandate'),
-  capital_cap: z.number().min(10, 'Minimum $10').nullable(),
+  name:       z.string().min(2, 'Name must be at least 2 characters').max(255),
+  mandateId:  z.string().uuid('Select a mandate'),
+  capitalCap: z.number().min(10, 'Minimum $10').nullable(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -30,21 +29,6 @@ const MANDATE_STATUS_VARIANT: Record<string, BadgeVariant> = {
   active:   'success',
   paused:   'warning',
   archived: 'outline',
-}
-
-function useDeployAgent() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: FormData) =>
-      api.post('/agents', {
-        name:        data.name,
-        mandate_id:  data.mandate_id,
-        capital_cap: data.capital_cap,
-      }).then((r) => r.data.data),
-    onSuccess: (agent) =>
-      api.post(`/agents/${agent.id}/deploy`)
-        .then(() => qc.invalidateQueries({ queryKey: ['agents'] })),
-  })
 }
 
 export default function DeployAgentPage() {
@@ -58,18 +42,19 @@ export default function DeployAgentPage() {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', mandate_id: '', capital_cap: null },
+    defaultValues: { name: '', mandateId: '', capitalCap: null },
   })
 
-  const selectedMandateId = watch('mandate_id')
+  const selectedMandateId = watch('mandateId')
   const selectedMandate   = mandates.find((m) => m.id === selectedMandateId)
 
   const onSubmit = (data: FormData) =>
-    deploy(data, { onSuccess: () => router.push('/dashboard/agents') })
+    deploy(
+      { name: data.name, mandateId: data.mandateId, capitalCap: data.capitalCap ?? undefined },
+      { onSuccess: () => router.push('/dashboard/agents') }
+    )
 
-  const apiError = error
-    ? ((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Deployment failed')
-    : null
+  const apiError = error instanceof Error ? error.message : null
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -123,7 +108,7 @@ export default function DeployAgentPage() {
                   key={m.id}
                   type="button"
                   onClick={() => {
-                    setValue('mandate_id', m.id, { shouldValidate: true })
+                    setValue('mandateId', m.id, { shouldValidate: true })
                     if (!watch('name')) setValue('name', `${m.name} Agent`)
                   }}
                   className={cn(
@@ -139,7 +124,7 @@ export default function DeployAgentPage() {
                   </div>
                   <p className="text-xs text-text-secondary line-clamp-2">{m.mandateText}</p>
                   {m.policyHash && (
-                    <p className="font-mono-data text-[10px] text-text-secondary mt-2 truncate">
+                    <p className="font-mono text-[10px] text-text-secondary mt-2 truncate">
                       {m.policyHash.slice(0, 22)}…
                     </p>
                   )}
@@ -147,33 +132,26 @@ export default function DeployAgentPage() {
               ))}
             </div>
           )}
-          {errors.mandate_id && (
-            <p className="text-xs text-error mt-2">{errors.mandate_id.message}</p>
+          {errors.mandateId && (
+            <p className="text-xs text-error mt-2">{errors.mandateId.message}</p>
           )}
         </Card>
 
         {/* Capital */}
         <Card padding="md">
           <h3 className="text-sm font-semibold text-text-primary mb-4">Capital Limit</h3>
-          <Controller
-            name="capital_cap"
-            control={useForm<FormData>().control}
-            render={() => (
-              <Input
-                label="Maximum capital (USD)"
-                type="number"
-                placeholder="Leave blank for no limit"
-                hint="The agent will never deploy more than this amount"
-                error={errors.capital_cap?.message}
-                {...register('capital_cap', {
-                  setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
-                })}
-              />
-            )}
+          <Input
+            label="Maximum capital (USD)"
+            type="number"
+            placeholder="Leave blank for no limit"
+            hint="The agent will never deploy more than this amount"
+            error={errors.capitalCap?.message}
+            {...register('capitalCap', {
+              setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
+            })}
           />
         </Card>
 
-        {/* Policy hash warning */}
         {selectedMandate && !selectedMandate.policyHash && (
           <AlertBanner severity="warning" title="No policy hash">
             This mandate hasn&apos;t been parsed by AI yet. The agent will deploy but cannot
@@ -182,9 +160,8 @@ export default function DeployAgentPage() {
         )}
 
         <AlertBanner severity="info" title="How deployment works">
-          The agent runs a Celery loop that asks Claude Haiku to evaluate your mandate
-          against live Mantle DeFi market conditions every 5 minutes. It can only take
-          actions that satisfy your mandate policy and risk parameters.
+          The agent evaluates your mandate against live Mantle DeFi market conditions every
+          5 minutes. It can only take actions that satisfy your mandate policy and risk parameters.
         </AlertBanner>
 
         <div className="flex justify-end gap-3">
