@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: mantlemandate-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT run:app
+    plan: free
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mantlemandate-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: mantlemandate-redis
+          type: redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://mantle-mandate-saa-s.vercel.app,http://localhost:3000
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: BYBIT_API_KEY
+        sync: false
+      - key: BYBIT_API_SECRET
+        sync: false
+      - key: MANTLE_RPC_URL
+        value: https://rpc.mantle.xyz
+      - key: MANTLE_TESTNET_RPC_URL
+        value: https://rpc.sepolia.mantle.xyz
+      - key: MANTLE_PRIVATE_KEY
+        sync: false
+      - key: MANDATE_POLICY_CONTRACT
+        value: 0xee9FBcb6583B32d0ddC615882d0A03DA8714b952
+      - key: AGENT_EXECUTOR_CONTRACT
+        value: 0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7
+      - key: RISK_GUARD_CONTRACT
+        value: 0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258
+
+databases:
+  - name: mantlemandate-db
+    databaseName: mantlemandate
+    user: mantlemandate
+    plan: free
+
+  - name: mantlemandate-redis
+    plan: free
+    ipAllowList: []
