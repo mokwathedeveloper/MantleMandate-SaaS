@@ -44,19 +44,24 @@ export function useAlerts() {
   const query = useQuery<AlertsResponse>({
     queryKey: ['alerts'],
     queryFn: async () => {
-      const { data, error, count } = await supabase
-        .from('alerts')
-        .select('*', { count: 'exact' })
-        .eq('user_id', session!.user.id)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      const alerts = (data ?? []).map(rowToAlert)
-      return {
-        data:        alerts,
-        total:       count ?? 0,
-        unreadCount: alerts.filter(a => !a.isRead).length,
+      try {
+        const { data, error, count } = await supabase
+          .from('alerts')
+          .select('*', { count: 'exact' })
+          .eq('user_id', session!.user.id)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        const alerts = (data ?? []).map(rowToAlert)
+        return {
+          data:        alerts,
+          total:       count ?? 0,
+          unreadCount: alerts.filter(a => !a.isRead).length,
+        }
+      } catch {
+        return { data: [], total: 0, unreadCount: 0 }
       }
     },
+    retry: false,
     enabled: !!session,
     refetchInterval: 10_000,
   })
