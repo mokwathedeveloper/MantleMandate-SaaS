@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { useAuthStore } from '@/store/authStore'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -120,16 +119,14 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function PortfolioPage() {
   const [chartDays, setChartDays] = useState(30)
-  const { session } = useAuthStore()
-
-  const { data: snapshot, isLoading: loadingSnap, isError: errSnap } = useQuery<PortfolioSnapshot>({
+  const { data: snapshot, isLoading: loadingSnap } = useQuery<PortfolioSnapshot>({
     queryKey: ['portfolio', 'snapshot'],
     queryFn: () => fetch('/api/portfolio/snapshot').then(r => r.json()),
     staleTime: 30_000,
     refetchInterval: 60_000,
   })
 
-  const { data: positions, isLoading: loadingPos, isError: errPos } = useQuery<PositionRow[]>({
+  const { data: positions, isLoading: loadingPos } = useQuery<PositionRow[]>({
     queryKey: ['portfolio', 'positions'],
     queryFn: () => fetch('/api/portfolio/positions').then(r => r.json()),
     staleTime: 30_000,
