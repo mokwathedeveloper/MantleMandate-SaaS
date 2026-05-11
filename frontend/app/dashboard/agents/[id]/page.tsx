@@ -17,7 +17,6 @@ import { AlertBanner } from '@/components/ui/AlertBanner'
 import { useAgent, usePauseAgent, useResumeAgent, useStopAgent } from '@/hooks/useAgents'
 import { useMandate } from '@/hooks/useMandates'
 import { useQuery } from '@tanstack/react-query'
-import api from '@/lib/api'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -246,8 +245,9 @@ const TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
 function useAgentTrades(agentId: string) {
   return useQuery({
     queryKey: ['agent-trades', agentId],
-    queryFn: () => api.get(`/agents/${agentId}/trades?per_page=50`).then((r) => r.data),
+    queryFn: () => fetch(`/api/agents/${agentId}/trades`).then(r => r.json()),
     enabled: !!agentId,
+    staleTime: 15_000,
     refetchInterval: 15_000,
   })
 }
@@ -255,8 +255,9 @@ function useAgentTrades(agentId: string) {
 function useAgentLogs(agentId: string) {
   return useQuery({
     queryKey: ['agent-logs', agentId],
-    queryFn: () => api.get(`/agents/${agentId}/logs?per_page=50`).then((r) => r.data),
+    queryFn: () => fetch(`/api/agents/${agentId}/logs`).then(r => r.json()),
     enabled: !!agentId,
+    staleTime: 30_000,
     refetchInterval: 30_000,
   })
 }
@@ -281,7 +282,7 @@ function OverviewTab({
   return (
     <div className="space-y-5">
       {/* Extended KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: 'Lifetime P&L',   value: formatCurrency(agent.totalPnl),     color: agent.totalPnl >= 0 ? 'text-success' : 'text-error' },
           { label: 'Lifetime ROI',   value: formatPercent(agent.totalRoi),       color: agent.totalRoi >= 0 ? 'text-success' : 'text-error' },
@@ -789,10 +790,10 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   // ── loading ──
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-full max-w-md" />
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-64" />
@@ -801,23 +802,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Demo notice when using mock fallback */}
-      {isMock && (
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-xs"
-          style={{ background: '#1C2128', border: '1px solid #30363D', color: '#8B949E' }}
-        >
-          <span
-            className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ background: '#F5C542' }}
-          />
-          Demo data — backend not connected. Real agent data will appear once the API is running.
-        </div>
-      )}
-
+    <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/agents" className="text-text-secondary hover:text-text-primary transition-colors">
             <ChevronLeft className="h-5 w-5" />
@@ -826,21 +813,13 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-text-primary">{display.name}</h1>
               <Badge variant={STATUS_VARIANT[display.status]} dot>{display.status}</Badge>
-              {isMock && (
-                <span
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                  style={{ background: '#2A2000', color: '#F5C542', border: '1px solid rgba(245,197,66,0.3)' }}
-                >
-                  DEMO
-                </span>
-              )}
             </div>
             <p className="text-sm text-text-secondary mt-0.5">Running: {display.mandateName}</p>
           </div>
         </div>
 
         {/* Quick action buttons in header */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:shrink-0 self-start sm:self-auto">
           {display.status === 'active' && !isMock && (
             <>
               <Button variant="secondary" size="sm" loading={pausing} onClick={() => pause(id)}>
@@ -865,13 +844,13 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-0 border-b border-border">
+      <div className="flex items-center gap-0 border-b border-border overflow-x-auto">
         {TABS.map(({ id: tabId, label, icon: Icon }) => (
           <button
             key={tabId}
             onClick={() => setActiveTab(tabId)}
             className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap',
               activeTab === tabId
                 ? 'text-primary border-primary'
                 : 'text-text-secondary border-transparent hover:text-text-primary',
