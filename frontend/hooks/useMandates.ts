@@ -46,22 +46,26 @@ export function useMandates(params?: { page?: number; status?: string; enabled?:
   return useQuery<MandateListResponse>({
     queryKey: ['mandates', params],
     queryFn: async () => {
-      let q = supabase
-        .from('mandates')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+      try {
+        let q = supabase
+          .from('mandates')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1)
 
-      if (params?.status) q = q.eq('status', params.status)
+        if (params?.status) q = q.eq('status', params.status)
 
-      const { data, error, count } = await q
-      if (error) throw error
-      const total = count ?? 0
-      return {
-        data:        (data ?? []).map(rowToMandate),
-        total,
-        page,
-        total_pages: Math.ceil(total / pageSize),
+        const { data, error, count } = await q
+        if (error) throw error
+        const total = count ?? 0
+        return {
+          data:        (data ?? []).map(rowToMandate),
+          total,
+          page,
+          total_pages: Math.ceil(total / pageSize),
+        }
+      } catch {
+        return { data: [], total: 0, page, total_pages: 0 }
       }
     },
     retry: false,
@@ -74,14 +78,19 @@ export function useMandate(id: string) {
   return useQuery<Mandate>({
     queryKey: ['mandates', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mandates')
-        .select('*')
-        .eq('id', id)
-        .single()
-      if (error) throw error
-      return rowToMandate(data)
+      try {
+        const { data, error } = await supabase
+          .from('mandates')
+          .select('*')
+          .eq('id', id)
+          .single()
+        if (error) throw error
+        return rowToMandate(data)
+      } catch {
+        throw new Error('Mandate not found')
+      }
     },
+    retry: false,
     enabled: !!id && !!session,
   })
 }
