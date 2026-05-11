@@ -1,11 +1,12 @@
 'use client'
 
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ChevronLeft, Rocket, FileText } from 'lucide-react'
+import { ChevronLeft, Rocket, FileText, CheckCircle2, Loader2, ExternalLink, Network, Bot } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -14,6 +15,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { useMandates } from '@/hooks/useMandates'
 import { useDeployAgent } from '@/hooks/useAgents'
+import { useRegisterAgent } from '@/hooks/useOnChain'
+import { useAccount } from 'wagmi'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
 
@@ -48,13 +51,160 @@ export default function DeployAgentPage() {
   const selectedMandateId = watch('mandateId')
   const selectedMandate   = mandates.find((m) => m.id === selectedMandateId)
 
-  const onSubmit = (data: FormData) =>
+  // ── On-chain registration (Step 2) ────────────────────────────────────────
+  const { isConnected } = useAccount()
+  const {
+    registerAgent,
+    txHash:     regTxHash,
+    isPending:  registering,
+    confirming: confirmingReg,
+    confirmed:  regConfirmed,
+    writeError: regError,
+    reset:      resetReg,
+  } = useRegisterAgent()
+
+  const [deployedAgent, setDeployedAgent] = useState<{ id: string; name: string; mandate_id: string } | null>(null)
+  const [regDone, setRegDone] = useState(false)
+  const regTriggered = useRef(false)
+
+  useEffect(() => {
+    if (regConfirmed && !regTriggered.current) {
+      regTriggered.current = true
+      setRegDone(true)
+    }
+  }, [regConfirmed])
+
+  const handleRegisterOnChain = useCallback(async () => {
+    const mandate = mandates.find(m => m.id === deployedAgent?.mandate_id)
+    if (!mandate?.policyHash) return
+    regTriggered.current = false
+    try { await registerAgent(mandate.policyHash) } catch { /* writeError captures it */ }
+  }, [deployedAgent, mandates, registerAgent])
+
+  const onSubmit = (formData: FormData) =>
     deploy(
-      { name: data.name, mandateId: data.mandateId, capitalCap: data.capitalCap ?? undefined },
-      { onSuccess: () => router.push('/dashboard/agents') }
+      { name: formData.name, mandateId: formData.mandateId, capitalCap: formData.capitalCap ?? undefined },
+      {
+        onSuccess: (result) => {
+          const r = result as { id: string; mandate_id: string }
+          setDeployedAgent({ id: r.id, name: formData.name, mandate_id: formData.mandateId })
+        },
+      }
     )
 
   const apiError = error instanceof Error ? error.message : null
+
+  // ── Step 2: on-chain registration ──────────────────────────────────────────
+  if (deployedAgent) {
+    const regMandate = mandates.find(m => m.id === deployedAgent.mandate_id)
+    return (
+      <div className="p-6 max-w-2xl mx-auto space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="h-5 w-5 text-success" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-text-primary">Agent Deployed!</h1>
+            <p className="text-sm text-text-secondary mt-0.5">{deployedAgent.name} is running</p>
+          </div>
+        </div>
+
+        <Card padding="md">
+          <div className="rounded-lg bg-surface border border-border p-3 mb-4 space-y-1">
+            <p className="text-xs text-text-secondary">Agent ID</p>
+            <p className="font-mono text-xs text-text-primary break-all">{deployedAgent.id}</p>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-text-primary mb-1">Register on Mantle Network</h4>
+            <p className="text-xs text-text-secondary mb-4">
+              Anchor this agent on-chain to create an immutable record and enable
+              trustless execution against your mandate policy.
+            </p>
+
+            {regDone ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-success font-medium">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Agent registered on Mantle Sepolia
+                </div>
+                {regTxHash && (
+                  <a
+                    href={`https://explorer.sepolia.mantle.xyz/tx/${regTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:opacity-80 transition-opacity"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View registration TX on explorer
+                  </a>
+                )}
+              </div>
+            ) : registering ? (
+              <div className="flex items-center gap-2 text-sm text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sign in your wallet…
+              </div>
+            ) : confirmingReg ? (
+              <div className="flex items-center gap-2 text-sm text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Confirming on Mantle…
+                {regTxHash && (
+                  <a
+                    href={`https://explorer.sepolia.mantle.xyz/tx/${regTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary hover:opacity-80"
+                  >
+                    TX ↗
+                  </a>
+                )}
+              </div>
+            ) : !isConnected ? (
+              <p className="text-sm text-text-secondary italic">
+                Connect your wallet to register this agent on-chain.
+              </p>
+            ) : !regMandate?.policyHash ? (
+              <AlertBanner severity="warning">
+                The mandate has no policy hash — parse the mandate first to enable on-chain registration.
+              </AlertBanner>
+            ) : (
+              <button
+                onClick={handleRegisterOnChain}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
+              >
+                <Network className="h-4 w-4" />
+                Register on Mantle
+              </button>
+            )}
+
+            {regError && (
+              <p className="text-xs text-error mt-3 truncate" title={regError.message}>
+                {regError.message.slice(0, 100)}
+                <button onClick={resetReg} className="ml-2 underline">retry</button>
+              </p>
+            )}
+          </div>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => router.push('/dashboard/mandates')}
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2"
+          >
+            View Mandates
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/agents')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:opacity-90 transition-opacity"
+          >
+            <Bot className="h-4 w-4" />
+            View My Agents
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

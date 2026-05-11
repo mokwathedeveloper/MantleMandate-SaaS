@@ -27,18 +27,25 @@ export const mantleTestnet = defineChain({
   testnet: true,
 })
 
-// Singleton — created once, avoids WalletConnect duplicate-init warnings
-let _config: ReturnType<typeof createConfig> | null = null
+type WagmiConfig = ReturnType<typeof createConfig>
 
-export function getWagmiConfig() {
-  if (_config) return _config
+// Store on globalThis so the singleton survives Next.js Fast Refresh module
+// re-evaluations. A plain `let _config` resets to null on each HMR cycle,
+// causing WalletConnect to warn "Init() was called 2 times".
+declare global {
+  // eslint-disable-next-line no-var
+  var __wagmiConfig: WagmiConfig | undefined
+}
+
+export function getWagmiConfig(): WagmiConfig {
+  if (globalThis.__wagmiConfig) return globalThis.__wagmiConfig
   const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ''
   const connectors = [
     injected(),
     coinbaseWallet({ appName: 'MantleMandate' }),
     ...(projectId ? [walletConnect({ projectId })] : []),
   ]
-  _config = createConfig({
+  globalThis.__wagmiConfig = createConfig({
     chains:     [mantleTestnet, mantleMainnet],
     connectors,
     ssr:        true,
@@ -47,5 +54,5 @@ export function getWagmiConfig() {
       [mantleTestnet.id]: http(),
     },
   })
-  return _config
+  return globalThis.__wagmiConfig
 }

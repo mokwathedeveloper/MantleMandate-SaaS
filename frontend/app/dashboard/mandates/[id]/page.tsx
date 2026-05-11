@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Hash, Copy, CheckCircle2, ExternalLink,
   Edit2, Bot, Pause, Archive, Shield, Network,
   TrendingUp, RefreshCw, Layers, ArrowRightLeft, Rocket,
-  Calendar, DollarSign, Zap, Lock,
+  Calendar, DollarSign, Zap, Lock, Loader2,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/Badge'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useMandate, useUpdateMandate } from '@/hooks/useMandates'
+import { useSubmitPolicy } from '@/hooks/useOnChain'
+import { useAccount } from 'wagmi'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -92,9 +94,30 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
   const { id }   = params
   const router   = useRouter()
   const [copied, setCopied] = useState(false)
+  const [localOnChainTx, setLocalOnChainTx] = useState<string | null>(null)
 
   const { data: mandate, isLoading } = useMandate(id)
   const { mutate: update, isPending: updating } = useUpdateMandate(id)
+
+  const { isConnected } = useAccount()
+  const {
+    submitPolicy,
+    txHash:     policyTxHash,
+    isPending:  submitting,
+    confirming: confirmingPolicy,
+    confirmed:  policyConfirmed,
+    writeError: policyError,
+    reset:      resetPolicy,
+  } = useSubmitPolicy()
+
+  useEffect(() => {
+    if (policyConfirmed && policyTxHash) setLocalOnChainTx(policyTxHash)
+  }, [policyConfirmed, policyTxHash])
+
+  const handleSubmitOnChain = useCallback(async () => {
+    if (!mandate?.policyHash) return
+    try { await submitPolicy(mandate.policyHash) } catch { /* writeError captures it */ }
+  }, [mandate?.policyHash, submitPolicy])
 
   const copyHash = useCallback(() => {
     if (!mandate?.policyHash) return
@@ -348,7 +371,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                 {mandate.policyHash}
               </p>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={copyHash}
                   className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
@@ -359,9 +382,9 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                   }
                   {copied ? 'Copied!' : 'Copy hash'}
                 </button>
-                {mandate.onChainTx && (
+                {(localOnChainTx || mandate.onChainTx) && (
                   <a
-                    href={`https://explorer.sepolia.mantle.xyz/tx/${mandate.onChainTx}`}
+                    href={`https://explorer.sepolia.mantle.xyz/tx/${localOnChainTx || mandate.onChainTx}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
@@ -369,6 +392,54 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                     <ExternalLink className="h-3.5 w-3.5" />
                     View on Explorer
                   </a>
+                )}
+              </div>
+
+              {/* On-chain anchoring */}
+              <div className="pt-1 border-t border-border/40">
+                {localOnChainTx || mandate.onChainTx ? (
+                  <div className="flex items-center gap-1.5 text-xs text-success">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Policy anchored on Mantle Sepolia
+                  </div>
+                ) : submitting ? (
+                  <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Sign in your wallet…
+                  </div>
+                ) : confirmingPolicy ? (
+                  <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Confirming on Mantle…
+                    {policyTxHash && (
+                      <a
+                        href={`https://explorer.sepolia.mantle.xyz/tx/${policyTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline hover:text-primary"
+                      >
+                        TX ↗
+                      </a>
+                    )}
+                  </div>
+                ) : !isConnected ? (
+                  <p className="text-xs text-text-secondary italic">
+                    Connect wallet to anchor policy on-chain
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleSubmitOnChain}
+                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:opacity-80 transition-opacity"
+                  >
+                    <Network className="h-3.5 w-3.5" />
+                    Anchor Policy On-Chain
+                  </button>
+                )}
+                {policyError && (
+                  <p className="text-xs text-error mt-1 truncate" title={policyError.message}>
+                    {policyError.message.slice(0, 80)}
+                    <button onClick={resetPolicy} className="ml-2 underline">retry</button>
+                  </p>
                 )}
               </div>
             </div>

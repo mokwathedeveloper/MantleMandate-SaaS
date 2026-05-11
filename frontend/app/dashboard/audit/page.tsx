@@ -7,6 +7,7 @@ import {
   FileCode,
 } from 'lucide-react'
 import Link from 'next/link'
+import { fetchOnChainAuditEvents, type OnChainEvent } from '@/hooks/useOnChain'
 
 // ── Chain constants ───────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ interface AuditEntry {
   gasPrice: string
   decisionHash: string
   ruleApplied: string
+  isLive?:     boolean
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -189,6 +191,32 @@ const MOCK_ENTRIES: AuditEntry[] = [
     ruleApplied:  'Dip buy: ETH -3.1% from 7-day MA. Position within 40% cap.',
   },
 ]
+
+// ── On-chain event converter ──────────────────────────────────────────────────
+
+function onChainEventToEntry(e: OnChainEvent, idx: number): AuditEntry {
+  const d   = new Date(e.timestamp * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return {
+    id:           `live-${idx}`,
+    txHash:       e.txHash,
+    timestamp:    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`,
+    from:         `Agent #${e.agentId}`,
+    to:           'AgentExecutor',
+    mandate:      `Agent ${e.agentId.toString()}`,
+    mandateId:    '',
+    agentId:      e.agentId.toString(),
+    agent:        `Agent #${e.agentId}`,
+    amount:       `$${e.amountUsd.toFixed(2)}`,
+    status:       'SUCCESS' as TxStatus,
+    blockNumber:  Number(e.blockNumber),
+    gasUsed:      0,
+    gasPrice:     '—',
+    decisionHash: e.txHash,
+    ruleApplied:  `${e.isBuy ? 'BUY' : 'SELL'} ${e.asset} · exec #${e.execIndex}`,
+    isLive:       true,
+  }
+}
 
 const TOTAL = 1248
 
@@ -372,8 +400,19 @@ export default function AuditPage() {
   const [dateTo,   setDateTo]   = useState('2026-04-30')
   const [toast,    setToast]    = useState<string | null>(null)
   const [activeFilters, setActiveFilters] = useState<{ key: string; label: string }[]>([])
+  const [liveEntries,   setLiveEntries]   = useState<AuditEntry[]>([])
+  const [loadingLive,   setLoadingLive]   = useState(true)
 
-  const entries = MOCK_ENTRIES.filter(e => {
+  useEffect(() => {
+    fetchOnChainAuditEvents(50_000).then(events => {
+      setLiveEntries(events.map(onChainEventToEntry))
+      setLoadingLive(false)
+    })
+  }, [])
+
+  const sourceEntries = liveEntries.length > 0 ? liveEntries : MOCK_ENTRIES
+  const displayTotal  = liveEntries.length > 0 ? liveEntries.length : TOTAL
+  const entries = sourceEntries.filter(e => {
     if (search && !e.txHash.includes(search) && !e.from.includes(search) && !e.to.toLowerCase().includes(search.toLowerCase())) return false
     if (status !== 'All Status' && e.status !== status.toUpperCase()) return false
     if (mandate !== 'All Mandates' && e.mandate !== mandate) return false
@@ -419,7 +458,7 @@ export default function AuditPage() {
     }
   }
 
-  const totalPages = Math.ceil(TOTAL / perPage)
+  const totalPages = Math.ceil(displayTotal / perPage)
   const visiblePages = [1, 2, 3]
 
   return (
@@ -511,10 +550,32 @@ export default function AuditPage() {
       {/* ── Summary KPI cards ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {([
-          { label: 'Total Transactions', value: '1,248',          sub: 'All time',          subColor: '#8B949E' },
-          { label: 'Total Volume',       value: '$24,589,435.21', sub: 'Verified on-chain', subColor: '#8B949E' },
-          { label: 'Success Rate',       value: '98.74%',         sub: '',                  valColor: '#22C55E' },
-          { label: 'Last 7 Days',        value: '18 transactions',sub: '3 pending',         subColor: '#F5C542' },
+          {
+            label:    'Total Transactions',
+            value:    liveEntries.length > 0 ? liveEntries.length.toLocaleString() : '1,248',
+            sub:      liveEntries.length > 0 ? 'Live on-chain' : 'All time',
+            subColor: liveEntries.length > 0 ? '#22C55E' : '#8B949E',
+          },
+          {
+            label:    'Total Volume',
+            value:    liveEntries.length > 0
+              ? `$${liveEntries.reduce((s, e) => s + Number(e.amount.replace(/[^0-9.]/g, '')), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : '$24,589,435.21',
+            sub:      'Verified on-chain',
+            subColor: '#8B949E',
+          },
+          {
+            label:    'Success Rate',
+            value:    liveEntries.length > 0 ? '100%' : '98.74%',
+            sub:      '',
+            valColor: '#22C55E',
+          },
+          {
+            label:    'Last 7 Days',
+            value:    liveEntries.length > 0 ? `${liveEntries.length} transaction${liveEntries.length !== 1 ? 's' : ''}` : '18 transactions',
+            sub:      liveEntries.length > 0 ? 'Live data' : '3 pending',
+            subColor: liveEntries.length > 0 ? '#22C55E' : '#F5C542',
+          },
         ] as { label: string; value: string; sub: string; valColor?: string; subColor?: string }[]).map(c => (
           <div
             key={c.label}
@@ -635,6 +696,23 @@ export default function AuditPage() {
         )}
       </div>
 
+      {/* ── Live / demo indicator ───────────────────────────────────────────── */}
+      {!loadingLive && (
+        <div
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-xs"
+          style={{
+            background: liveEntries.length > 0 ? '#0D2818' : '#1C2128',
+            border:     `1px solid ${liveEntries.length > 0 ? '#22C55E44' : '#30363D'}`,
+            color:      liveEntries.length > 0 ? '#22C55E' : '#484F58',
+          }}
+        >
+          <span style={{ fontSize: 8 }}>●</span>
+          {liveEntries.length > 0
+            ? `${liveEntries.length} live on-chain transaction${liveEntries.length !== 1 ? 's' : ''} fetched from the AgentExecutor contract`
+            : 'Showing demo data — real transactions will appear here once agents execute trades on Mantle Network'}
+        </div>
+      )}
+
       {/* ── Audit table ───────────────────────────────────────────────────────── */}
       <div
         className="rounded-lg overflow-x-auto"
@@ -699,12 +777,14 @@ export default function AuditPage() {
                 {/* TX Hash */}
                 <span
                   title={entry.txHash}
+                  className="flex items-center gap-1"
                   style={{
                     color: '#58A6FF',
                     fontFamily: '"JetBrains Mono", monospace',
                     fontSize: 11,
                   }}
                 >
+                  {entry.isLive && <span style={{ color: '#22C55E', fontSize: 8, lineHeight: 1 }}>●</span>}
                   {truncateHash(entry.txHash)}
                 </span>
 
@@ -793,7 +873,7 @@ export default function AuditPage() {
       {/* ── Pagination ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm flex-wrap gap-3">
         <span style={{ color: '#8B949E' }}>
-          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, TOTAL)} of {TOTAL.toLocaleString()} transactions
+          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, displayTotal)} of {displayTotal.toLocaleString()} transactions
         </span>
 
         <div className="flex items-center gap-1">
