@@ -37,7 +37,7 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'check_same_thread': False}}
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=300)
     CELERY_TASK_ALWAYS_EAGER = True
-    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', 'test-key')
+    OPENROUTER_API_KEY = os.environ.get('ANTHROPIC_API_KEY', 'test-key')
     BYBIT_API_KEY = os.environ.get('BYBIT_API_KEY', 'test-key')
     BYBIT_SECRET = os.environ.get('BYBIT_SECRET', 'test-secret')
     MANTLE_RPC_URL = os.environ.get('MANTLE_RPC_URL', 'http://localhost:8545')
@@ -56,7 +56,7 @@ class LocalConfig(BaseConfig):
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_BROKER_URL = 'memory://'
     CELERY_RESULT_BACKEND = 'cache+memory://'
-    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+    OPENROUTER_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
     BYBIT_API_KEY = os.environ.get('BYBIT_API_KEY', '')
     BYBIT_SECRET = os.environ.get('BYBIT_SECRET', '')
 

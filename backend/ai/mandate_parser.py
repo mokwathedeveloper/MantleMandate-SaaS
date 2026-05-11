@@ -1,10 +1,8 @@
 import os
 import json
 import hashlib
+import urllib.request
 from typing import Optional
-import anthropic
-
-_client: Optional[anthropic.Anthropic] = None
 
 SYSTEM_PROMPT = """You are a quantitative trading policy compiler for a DeFi platform called MantleMandate.
 
@@ -40,41 +38,44 @@ Rules:
 """
 
 
-def _get_client() -> anthropic.Anthropic:
-    global _client
-    if _client is None:
-        api_key = os.environ.get('ANTHROPIC_API_KEY')
-        if not api_key:
-            raise RuntimeError('ANTHROPIC_API_KEY environment variable is not set')
-        _client = anthropic.Anthropic(api_key=api_key)
-    return _client
+def _openrouter_chat(messages: list, max_tokens: int = 1024) -> str:
+    api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not api_key:
+        raise RuntimeError('OPENROUTER_API_KEY environment variable is not set')
+
+    body = json.dumps({
+        'model': 'anthropic/claude-haiku-4-5',
+        'max_tokens': max_tokens,
+        'messages': messages,
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        'https://openrouter.ai/api/v1/chat/completions',
+        data=body,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+            'HTTP-Referer': 'https://mantlemandate.io',
+            'X-Title': 'MantleMandate',
+        },
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    return data['choices'][0]['message']['content'].strip()
 
 
 def parse_mandate(mandate_text: str) -> dict:
     """
     Parse a plain-English trading mandate into a structured policy dict.
-
-    Uses Claude to extract trading parameters from natural language.
-    Returns a policy dict guaranteed to have all required keys.
-    Raises MandateParseError if the response cannot be parsed as JSON.
+    Uses Claude via OpenRouter to extract trading parameters from natural language.
     """
-    client = _get_client()
+    raw = _openrouter_chat([
+        {'role': 'system', 'content': SYSTEM_PROMPT},
+        {'role': 'user',   'content': f'Parse this trading mandate:\n\n{mandate_text}'},
+    ])
 
-    message = client.messages.create(
-        model='claude-haiku-4-5-20251001',
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[
-            {
-                'role': 'user',
-                'content': f'Parse this trading mandate:\n\n{mandate_text}',
-            }
-        ],
-    )
-
-    raw = message.content[0].text.strip()
-
-    # Strip markdown code fences if Claude wraps the JSON
+    # Strip markdown code fences if model wraps the JSON
     if raw.startswith('```'):
         lines = raw.splitlines()
         raw = '\n'.join(lines[1:-1] if lines[-1] == '```' else lines[1:])
@@ -84,15 +85,11 @@ def parse_mandate(mandate_text: str) -> dict:
     except json.JSONDecodeError as exc:
         raise MandateParseError(f'Failed to parse LLM response as JSON: {exc}') from exc
 
-    policy = _apply_defaults(policy)
-    return policy
+    return _apply_defaults(policy)
 
 
 def hash_policy(policy: dict) -> str:
-    """
-    Produce a deterministic SHA-256 hex digest of the policy dict.
-    This is the value posted on-chain as the mandate policy hash.
-    """
+    """Deterministic SHA-256 hex digest of the policy dict — posted on-chain."""
     canonical = json.dumps(policy, sort_keys=True, separators=(',', ':'))
     return '0x' + hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 

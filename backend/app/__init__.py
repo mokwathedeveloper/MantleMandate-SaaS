@@ -13,6 +13,9 @@ def create_app(config_name: str = 'default') -> Flask:
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
+
+    from app.auth.routes import is_token_revoked
+    jwt.token_in_blocklist_loader(is_token_revoked)
     cors.init_app(app, origins=app.config['CORS_ORIGINS'])
     socketio.init_app(app)
     limiter.init_app(app)

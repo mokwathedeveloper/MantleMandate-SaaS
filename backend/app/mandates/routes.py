@@ -1,3 +1,4 @@
+import logging
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
@@ -6,6 +7,8 @@ from app.mandates.schemas import MandateCreateSchema, MandateUpdateSchema, Parse
 from app.extensions import db
 from app.models.mandate import Mandate
 from ai.mandate_parser import parse_mandate, hash_policy, MandateParseError
+
+logger = logging.getLogger(__name__)
 
 
 @mandates_bp.route('', methods=['GET'])
@@ -44,7 +47,8 @@ def create_mandate():
     try:
         parsed_policy = parse_mandate(data['mandate_text'])
         policy_hash = hash_policy(parsed_policy)
-    except Exception:
+    except (MandateParseError, Exception) as e:
+        logger.warning('Mandate parse failed on create: %s', e)
         parsed_policy = None
         policy_hash = None
 
@@ -96,8 +100,8 @@ def update_mandate(mandate_id):
         try:
             mandate.parsed_policy = parse_mandate(data['mandate_text'])
             mandate.policy_hash = hash_policy(mandate.parsed_policy)
-        except Exception:
-            pass
+        except (MandateParseError, Exception) as e:
+            logger.warning('Mandate parse failed on update %s: %s', mandate_id, e)
 
     db.session.commit()
     return jsonify(data=mandate.to_dict(), message='Mandate updated'), 200

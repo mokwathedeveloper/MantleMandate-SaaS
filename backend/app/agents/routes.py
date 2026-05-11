@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -10,6 +11,8 @@ from app.models.mandate import Mandate
 from app.models.alert import Alert
 from app.models.audit_log import AuditLog
 from app.models.trade import Trade
+
+logger = logging.getLogger(__name__)
 
 
 def _own_agent(agent_id, user_id):
@@ -129,8 +132,8 @@ def deploy_agent(agent_id):
         from ai.agent_loop import run_agent_loop
         result = run_agent_loop.apply_async(args=[str(agent.id)])
         agent.celery_task_id = result.id
-    except Exception:
-        pass  # Celery not available; still mark deployed for demo
+    except Exception as e:
+        logger.warning('Celery unavailable — agent %s deployed without task: %s', agent.id, e)
 
     agent.status      = 'active'
     agent.deployed_at = datetime.now(timezone.utc)

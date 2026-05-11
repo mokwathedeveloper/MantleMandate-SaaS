@@ -12,13 +12,16 @@ Each deployed agent runs this Celery task in a loop:
 
 import hashlib
 import json
+import logging
 import os
 import random
 import time
 from datetime import datetime, timezone
 from decimal import Decimal
 
-import anthropic
+import urllib.request
+
+logger = logging.getLogger(__name__)
 
 # Simulated price feeds — realistic mid-prices for Mantle DeFi assets
 BASE_PRICES: dict[str, float] = {
@@ -74,13 +77,28 @@ def _simulated_price(pair: str) -> dict:
 
 
 def _call_claude(prompt: str) -> dict:
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
-    msg = client.messages.create(
-        model='claude-haiku-4-5-20251001',
-        max_tokens=256,
-        messages=[{'role': 'user', 'content': prompt}],
+    api_key = os.environ.get('OPENROUTER_API_KEY')
+    if not api_key:
+        raise RuntimeError('OPENROUTER_API_KEY environment variable is not set')
+    body = json.dumps({
+        'model': 'anthropic/claude-haiku-4-5',
+        'max_tokens': 256,
+        'messages': [{'role': 'user', 'content': prompt}],
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://openrouter.ai/api/v1/chat/completions',
+        data=body,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+            'HTTP-Referer': 'https://mantlemandate.io',
+            'X-Title': 'MantleMandate',
+        },
+        method='POST',
     )
-    text = msg.content[0].text.strip()
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    text = data['choices'][0]['message']['content'].strip()
     return json.loads(text)
 
 
@@ -263,8 +281,8 @@ def run_agent_loop(agent_id: str, interval_seconds: int = 300):
             result = run_agent_once(agent_id)
             if result.get('skipped') and result.get('reason') == 'agent not active':
                 break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error('Agent %s loop iteration failed: %s', agent_id, e)
 
         time.sleep(interval_seconds)
 
@@ -273,5 +291,5 @@ def run_agent_loop(agent_id: str, interval_seconds: int = 300):
 try:
     from celery_worker import celery as _celery
     run_agent_loop = _celery.task(name='ai.agent_loop.run_agent_loop', bind=False)(run_agent_loop)
-except Exception:
-    pass
+except ImportError:
+    logger.debug('Celery not available — run_agent_loop will run synchronously')

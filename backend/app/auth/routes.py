@@ -1,16 +1,28 @@
+import logging
 from flask import request, jsonify
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity,
+    jwt_required, get_jwt_identity, get_jwt,
 )
 from marshmallow import ValidationError
 from app.auth import auth_bp
 from app.auth.schemas import SignupSchema, LoginSchema
-from app.extensions import db, bcrypt
+from app.extensions import db, bcrypt, limiter
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
+
+# JTI blocklist — in-process set for single-process deployments.
+# Swap for Redis SADD / SISMEMBER in a multi-process / multi-server setup.
+_blocklist: set[str] = set()
+
+
+def is_token_revoked(jwt_header, jwt_payload: dict) -> bool:  # noqa: ARG001
+    return jwt_payload.get('jti', '') in _blocklist
 
 
 @auth_bp.route('/signup', methods=['POST'])
+@limiter.limit('10 per minute')
 def signup():
     schema = SignupSchema()
     try:
@@ -29,11 +41,11 @@ def signup():
     db.session.add(user)
     db.session.commit()
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token  = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     return jsonify(
         data={
-            'access_token': access_token,
+            'access_token':  access_token,
             'refresh_token': refresh_token,
             'user': {'id': str(user.id), 'email': user.email, 'name': user.name, 'plan': user.plan},
         },
@@ -42,6 +54,7 @@ def signup():
 
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit('5 per minute')
 def login():
     schema = LoginSchema()
     try:
@@ -53,11 +66,11 @@ def login():
     if not user or not bcrypt.check_password_hash(user.password_hash, data['password']):
         return jsonify(error='Unauthorized', message='Incorrect email or password'), 401
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token  = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     return jsonify(
         data={
-            'access_token': access_token,
+            'access_token':  access_token,
             'refresh_token': refresh_token,
             'user': {'id': str(user.id), 'email': user.email, 'name': user.name, 'plan': user.plan},
         },
@@ -81,14 +94,19 @@ def me():
     if not user:
         return jsonify(error='Not found', message='User not found'), 404
     return jsonify(
-        data={'id': str(user.id), 'email': user.email, 'name': user.name, 'plan': user.plan,
-              'ens_name': user.ens_name, 'trial_ends_at': user.trial_ends_at.isoformat() if user.trial_ends_at else None},
+        data={
+            'id': str(user.id), 'email': user.email, 'name': user.name, 'plan': user.plan,
+            'ens_name': user.ens_name,
+            'trial_ends_at': user.trial_ends_at.isoformat() if user.trial_ends_at else None,
+        },
         message='OK',
     ), 200
 
 
 @auth_bp.route('/logout', methods=['POST'])
-@jwt_required()
+@jwt_required(verify_type=False)
 def logout():
-    # Token blocklist can be implemented here with Redis if needed
+    jti = get_jwt()['jti']
+    _blocklist.add(jti)
+    logger.info('Token %s revoked', jti)
     return jsonify(data=None, message='Logged out'), 200
