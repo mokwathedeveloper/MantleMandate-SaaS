@@ -71,6 +71,7 @@ function RangeSlider({
           }}
         />
         <input
+          name="risk-range"
           type="range"
           min={min}
           max={max}
@@ -343,6 +344,7 @@ export default function RiskPage() {
               <div className="flex items-center gap-2">
                 <span className="text-lg font-medium" style={{ color: '#484F58' }}>$</span>
                 <input
+                  name="max-daily-loss"
                   type="number"
                   value={maxDailyLoss}
                   onChange={e => mark(() => setMaxDailyLoss(e.target.value))}
@@ -440,6 +442,7 @@ export default function RiskPage() {
                         style={{ width: `${pct}%`, background: '#0066FF' }}
                       />
                       <input
+                        name={`alloc-${p.name}`}
                         type="range" min={0} max={100} value={pct}
                         onChange={e => mark(() => setAllocs(prev => ({ ...prev, [p.name]: Number(e.target.value) })))}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"

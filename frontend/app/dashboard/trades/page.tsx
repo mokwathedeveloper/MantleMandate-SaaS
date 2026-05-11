@@ -325,6 +325,7 @@ export default function TradesPage() {
         <div className="relative sm:ml-auto w-full sm:w-auto">
           <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#8B949E', pointerEvents: 'none' }} />
           <input
+            name="trade-search"
             placeholder="Search pair, mandate, tx…"
             value={filter.search ?? ''}
             onChange={e => setFilter(f => ({ ...f, search: e.target.value || undefined }))}
