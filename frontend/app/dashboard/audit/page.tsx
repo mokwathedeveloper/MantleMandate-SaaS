@@ -4,8 +4,19 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Shield, Download, ExternalLink, Copy, Link2,
   Search, ChevronDown, X, CheckCircle2, ChevronLeft, ChevronRight,
+  FileCode,
 } from 'lucide-react'
 import Link from 'next/link'
+
+// ── Chain constants ───────────────────────────────────────────────────────────
+
+const EXPLORER = 'https://explorer.sepolia.mantle.xyz'
+
+const CONTRACTS = {
+  MandatePolicy: process.env.NEXT_PUBLIC_MANDATE_POLICY_CONTRACT  || '0xee9FBcb6583B32d0ddC615882d0A03DA8714b952',
+  AgentExecutor: process.env.NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT  || '0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7',
+  RiskGuard:     process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT      || '0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258',
+} as const
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -305,7 +316,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
 
         {entry.txHash && entry.status !== 'PENDING' && (
           <a
-            href={`https://explorer.mantle.xyz/tx/${entry.txHash}`}
+            href={`${EXPLORER}/tx/${entry.txHash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 mt-4 text-xs transition-opacity hover:opacity-70"
@@ -451,7 +462,7 @@ export default function AuditPage() {
 
           {/* View on Explorer */}
           <a
-            href="https://explorer.mantle.xyz"
+            href={`${EXPLORER}/address/${CONTRACTS.AgentExecutor}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors"
@@ -465,8 +476,40 @@ export default function AuditPage() {
         </div>
       </div>
 
+      {/* ── Live contract links ──────────────────────────────────────────────── */}
+      <div
+        className="rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+        style={{ background: '#0D1117', border: '1px solid #21262D' }}
+      >
+        <div className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: '#484F58' }}>
+          <FileCode className="h-3.5 w-3.5" />
+          <span className="font-semibold uppercase tracking-wider">Live Contracts · Mantle Sepolia</span>
+        </div>
+        <div className="flex flex-wrap gap-2 ml-auto">
+          {(Object.entries(CONTRACTS) as [string, string][]).map(([name, addr]) => (
+            <a
+              key={name}
+              href={`${EXPLORER}/address/${addr}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-opacity hover:opacity-70"
+              style={{
+                background: '#161B22',
+                border: '1px solid #30363D',
+                color: '#58A6FF',
+                fontFamily: '"JetBrains Mono", monospace',
+              }}
+            >
+              {name}
+              <span style={{ color: '#484F58' }}>{addr.slice(0, 6)}…{addr.slice(-4)}</span>
+              <ExternalLink className="h-3 w-3 shrink-0" />
+            </a>
+          ))}
+        </div>
+      </div>
+
       {/* ── Summary KPI cards ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {([
           { label: 'Total Transactions', value: '1,248',          sub: 'All time',          subColor: '#8B949E' },
           { label: 'Total Volume',       value: '$24,589,435.21', sub: 'Verified on-chain', subColor: '#8B949E' },
@@ -484,7 +527,7 @@ export default function AuditPage() {
             >
               {c.label}
             </p>
-            <p className="text-xl font-bold" style={{ color: c.valColor ?? '#F0F6FC' }}>{c.value}</p>
+            <p className="text-lg font-bold truncate" style={{ color: c.valColor ?? '#F0F6FC' }}>{c.value}</p>
             {c.sub && (
               <p className="text-xs mt-0.5" style={{ color: c.subColor ?? '#8B949E' }}>{c.sub}</p>
             )}
@@ -726,7 +769,7 @@ export default function AuditPage() {
 
                 {/* Actions */}
                 <a
-                  href={entry.txHash ? `https://explorer.mantle.xyz/tx/${entry.txHash}` : '#'}
+                  href={entry.txHash ? `${EXPLORER}/tx/${entry.txHash}` : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
