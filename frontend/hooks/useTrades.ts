@@ -49,26 +49,30 @@ export function useTrades(params?: {
   return useQuery<TradesResponse>({
     queryKey: ['trades', params],
     queryFn: async () => {
-      let q = supabase
-        .from('trades')
-        .select('*, mandate:mandates(name)', { count: 'exact' })
-        .eq('user_id', session!.user.id)
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+      try {
+        let q = supabase
+          .from('trades')
+          .select('*, mandate:mandates(name)', { count: 'exact' })
+          .eq('user_id', session!.user.id)
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1)
 
-      if (params?.agent_id)  q = q.eq('agent_id', params.agent_id)
-      if (params?.status)    q = q.eq('status',   params.status)
-      if (params?.direction) q = q.eq('direction', params.direction)
+        if (params?.agent_id)  q = q.eq('agent_id', params.agent_id)
+        if (params?.status)    q = q.eq('status',   params.status)
+        if (params?.direction) q = q.eq('direction', params.direction)
 
-      const { data, error, count } = await q
-      if (error) throw error
-      const total = count ?? 0
-      return {
-        data:        (data ?? []).map(rowToTrade),
-        total,
-        page,
-        page_size:   pageSize,
-        total_pages: Math.ceil(total / pageSize),
+        const { data, error, count } = await q
+        if (error) throw error
+        const total = count ?? 0
+        return {
+          data:        (data ?? []).map(rowToTrade),
+          total,
+          page,
+          page_size:   pageSize,
+          total_pages: Math.ceil(total / pageSize),
+        }
+      } catch {
+        return { data: [], total: 0, page, page_size: pageSize, total_pages: 0 }
       }
     },
     retry: false,
