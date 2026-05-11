@@ -158,6 +158,152 @@ const TICKERS: TickerRow[] = [
   { sym: 'MANTUSDT', price: '$0.857',     chg: '+3.1%', up: true,  age: '3s ago' },
 ]
 
+// ── Add Integration Modal ─────────────────────────────────────────────────────
+
+const INTEGRATION_TYPES = [
+  { id: 'rest',       label: 'REST API',        description: 'HTTP endpoints (Bybit, Binance, custom)' },
+  { id: 'websocket',  label: 'WebSocket',        description: 'Real-time streaming data feed' },
+  { id: 'rpc',        label: 'EVM RPC',          description: 'On-chain data via JSON-RPC node' },
+  { id: 'subgraph',   label: 'Subgraph',         description: 'GraphQL endpoint (The Graph protocol)' },
+]
+
+function AddIntegrationModal({ onClose }: { onClose: () => void }) {
+  const [step,    setStep]    = useState<'type' | 'config' | 'done'>('type')
+  const [kind,    setKind]    = useState<string | null>(null)
+  const [name,    setName]    = useState('')
+  const [url,     setUrl]     = useState('')
+  const [apiKey,  setApiKey]  = useState('')
+  const [saving,  setSaving]  = useState(false)
+
+  const handleSave = async () => {
+    if (!name.trim() || !url.trim()) return
+    setSaving(true)
+    await new Promise(r => setTimeout(r, 900))
+    setSaving(false)
+    setStep('done')
+  }
+
+  const canSave = name.trim().length > 0 && url.trim().length > 0
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed z-50 w-[calc(100vw-2rem)] max-w-[480px] rounded-xl overflow-hidden shadow-2xl"
+        style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#161B22', border: '1px solid #21262D' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5" style={{ background: '#1C2128', borderBottom: '1px solid #21262D' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,102,255,0.15)' }}>
+              <Plus className="h-3.5 w-3.5" style={{ color: '#0066FF' }} />
+            </div>
+            <span className="text-[13px] font-semibold" style={{ color: '#F0F6FC' }}>Add New Integration</span>
+          </div>
+          <button onClick={onClose} style={{ color: '#8B949E', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            ✕
+          </button>
+        </div>
+
+        <div className="p-5">
+          {step === 'type' && (
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: '#8B949E' }}>Select the type of data source you want to add:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {INTEGRATION_TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setKind(t.id)}
+                    className="text-left p-3 rounded-lg transition-all"
+                    style={{
+                      background: kind === t.id ? 'rgba(0,102,255,0.12)' : '#0D1117',
+                      border: `1px solid ${kind === t.id ? '#0066FF' : '#21262D'}`,
+                    }}
+                  >
+                    <p className="text-xs font-semibold" style={{ color: '#F0F6FC' }}>{t.label}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: '#8B949E' }}>{t.description}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end pt-1">
+                <button
+                  disabled={!kind}
+                  onClick={() => setStep('config')}
+                  className="px-4 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  style={{ background: kind ? '#0066FF' : '#21262D', color: kind ? '#fff' : '#484F58', cursor: kind ? 'pointer' : 'not-allowed' }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'config' && (
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: '#8B949E' }}>
+                Configure your <span style={{ color: '#F0F6FC', fontWeight: 600 }}>{INTEGRATION_TYPES.find(t => t.id === kind)?.label}</span> integration:
+              </p>
+
+              {[
+                { label: 'Integration Name', value: name, set: setName, placeholder: 'e.g. Bybit Futures Feed', required: true },
+                { label: 'Endpoint URL',     value: url,  set: setUrl,  placeholder: 'https://api.example.com/v1', required: true },
+                { label: 'API Key (optional)', value: apiKey, set: setApiKey, placeholder: 'sk-…', required: false },
+              ].map(field => (
+                <div key={field.label}>
+                  <label className="block text-[11px] font-medium mb-1" style={{ color: '#8B949E' }}>
+                    {field.label}{field.required && <span style={{ color: '#EF4444' }}> *</span>}
+                  </label>
+                  <input
+                    value={field.value}
+                    onChange={e => field.set(e.target.value)}
+                    placeholder={field.placeholder}
+                    className="w-full rounded-md px-3 py-2 text-xs outline-none"
+                    style={{ background: '#0D1117', border: '1px solid #30363D', color: '#F0F6FC' }}
+                  />
+                </div>
+              ))}
+
+              <div className="flex gap-2 justify-end pt-1">
+                <button onClick={() => setStep('type')} className="px-3 py-1.5 rounded-md text-xs" style={{ color: '#8B949E', background: 'none', border: '1px solid #30363D', cursor: 'pointer' }}>
+                  Back
+                </button>
+                <button
+                  disabled={!canSave || saving}
+                  onClick={handleSave}
+                  className="px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5"
+                  style={{ background: canSave ? '#0066FF' : '#21262D', color: canSave ? '#fff' : '#484F58', cursor: canSave ? 'pointer' : 'not-allowed' }}
+                >
+                  {saving && <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {saving ? 'Saving…' : 'Save Integration'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(34,197,94,0.15)' }}>
+                <CheckCircle2 className="h-6 w-6" style={{ color: '#22C55E' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#F0F6FC' }}>{name} added</p>
+                <p className="text-xs mt-1" style={{ color: '#8B949E' }}>Integration saved. Data will begin flowing in shortly.</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="mt-2 px-6 py-1.5 rounded-md text-xs font-semibold"
+                style={{ background: '#0066FF', color: '#fff', cursor: 'pointer' }}
+              >
+                Done
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ApiPage() {
@@ -171,9 +317,10 @@ export default function ApiPage() {
   const [errors, setErrors]     = useState<LogLine[]>([
     { id: 100, ts: '14:22:53 UTC', level: 'ERROR', msg: 'Rate limit exceeded — Bybit endpoint /v5/market/tickers — Retrying in 60s' },
   ])
-  const [filterLevel, setFilterLevel] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL')
-  const [showFilter, setShowFilter]   = useState(false)
-  const [freshness, setFreshness]     = useState('2.3s ago')
+  const [filterLevel, setFilterLevel]   = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL')
+  const [showFilter, setShowFilter]     = useState(false)
+  const [freshness, setFreshness]       = useState('2.3s ago')
+  const [showAddModal, setShowAddModal] = useState(false)
   const logsRef   = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
 
@@ -253,10 +400,10 @@ export default function ApiPage() {
   const filteredLogs = filterLevel === 'ALL' ? logs : logs.filter(l => l.level === filterLevel)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: '#F0F6FC' }}>
             API Integration &amp; Data Ingestion
@@ -266,7 +413,7 @@ export default function ApiPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           {/* System operational badge */}
           <div
             className="flex items-center gap-2 px-3 py-1.5 rounded-md"
@@ -286,6 +433,7 @@ export default function ApiPage() {
 
           {/* Add Integration ghost button */}
           <button
+            onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors"
             style={{
               border: '1px solid #30363D',
@@ -308,7 +456,7 @@ export default function ApiPage() {
       </div>
 
       {/* ── Data source summary cards ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {([
           { label: 'Market Data',    value: 'Bybit API',   status: 'CONNECTED ✓', Icon: Wifi,    iconColor: '#22C55E' },
           { label: 'On-Chain State', value: 'Mantle RPC',  status: 'CONNECTED ✓', Icon: Cpu,     iconColor: '#22C55E' },
@@ -333,10 +481,10 @@ export default function ApiPage() {
       </div>
 
       {/* ── Three-panel layout ────────────────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-10 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-10 gap-4 items-start">
 
         {/* ── LEFT: Integration Settings (30%) ─────────────────────────────── */}
-        <div className="lg:col-span-3">
+        <div className="md:col-span-1 lg:col-span-3">
           <div
             className="rounded-lg p-5 space-y-4"
             style={{ background: '#161B22', border: '1px solid #21262D' }}
@@ -422,6 +570,7 @@ export default function ApiPage() {
 
             {/* Add new data source */}
             <button
+              onClick={() => setShowAddModal(true)}
               className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs transition-colors"
               style={{
                 border: '1px dashed #30363D',
@@ -444,7 +593,7 @@ export default function ApiPage() {
         </div>
 
         {/* ── CENTER: Response Preview (40%) ────────────────────────────────── */}
-        <div className="lg:col-span-4">
+        <div className="md:col-span-1 lg:col-span-4">
           <div
             className="rounded-lg p-5 space-y-4"
             style={{ background: '#161B22', border: '1px solid #21262D' }}
@@ -736,6 +885,7 @@ export default function ApiPage() {
             background: '#0D1117',
             maxHeight: 224,
             overflowY: 'auto',
+            overflowX: 'auto',
           }}
         >
           {filteredLogs.length === 0 ? (
@@ -749,19 +899,22 @@ export default function ApiPage() {
             filteredLogs.map(l => (
               <div
                 key={l.id}
-                className="flex gap-3 px-4 py-1.5 transition-colors"
-                style={{ fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: 12 }}
+                style={{
+                  display: 'flex', flexWrap: 'nowrap', alignItems: 'baseline',
+                  gap: 12, padding: '5px 16px',
+                  fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: 12,
+                  transition: 'background 0.1s',
+                }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#161B22' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
-                <span className="shrink-0 w-28" style={{ color: '#484F58' }}>{l.ts}</span>
-                <span
-                  className="shrink-0 font-semibold"
-                  style={{ color: levelColor(l.level), width: 52 }}
-                >
+                <span style={{ color: '#484F58', flexShrink: 0, whiteSpace: 'nowrap', width: 96 }}>{l.ts}</span>
+                <span style={{ color: levelColor(l.level), flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap', width: 56 }}>
                   [{l.level}]
                 </span>
-                <span style={{ color: msgColor(l.msg) }}>{l.msg}</span>
+                <span style={{ color: msgColor(l.msg), minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {l.msg}
+                </span>
               </div>
             ))
           )}
@@ -791,6 +944,9 @@ export default function ApiPage() {
           </span>
         </div>
       </div>
+
+      {/* ── Add Integration Modal ───────────────────────────────────────────── */}
+      {showAddModal && <AddIntegrationModal onClose={() => setShowAddModal(false)} />}
 
     </div>
   )

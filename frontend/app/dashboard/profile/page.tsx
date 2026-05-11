@@ -64,11 +64,11 @@ export default function ProfilePage() {
   const [deleteInput, setDel] = useState('')
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <nav className="text-xs text-text-disabled">Home &rsaquo; User Profile</nav>
       <h2 className="text-2xl font-bold text-text-primary">User Profile</h2>
 
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left (60%) */}
         <div className="lg:col-span-3 space-y-5">
           {/* Profile header */}

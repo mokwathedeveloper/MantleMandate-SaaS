@@ -208,15 +208,15 @@ export default function TradesPage() {
   const [page,   setPage]   = useState(1)
   const [filter, setFilter] = useState<Filter>({})
 
-  const { accessToken } = useAuthStore()
+  const { session } = useAuthStore()
   const { data: apiData, isLoading, isError } = useTrades({
     page,
     per_page: 25,
     status:   filter.status,
-    enabled:  !!accessToken,
+    enabled:  !!session,
   })
 
-  const isMock  = !accessToken || (!isLoading && !apiData?.data?.length) || isError
+  const isMock  = !session || (!isLoading && !apiData?.data?.length) || isError
   const raw     = isMock ? MOCK_RESPONSE : (apiData ?? MOCK_RESPONSE)
 
   const visibleTrades = useMemo(() => {
@@ -270,9 +270,9 @@ export default function TradesPage() {
   }
 
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="p-4 sm:p-6 flex flex-col gap-5">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>Trade History</h2>
           <p style={{ fontSize: 13, color: '#8B949E', margin: '4px 0 0' }}>
@@ -281,11 +281,13 @@ export default function TradesPage() {
         </div>
         <button
           onClick={handleExport}
+          className="self-start sm:self-auto"
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             height: 34, padding: '0 14px',
             border: '1px solid #30363D', borderRadius: 6,
             background: '#161B22', color: '#8B949E', fontSize: 12, cursor: 'pointer',
+            flexShrink: 0,
           }}
         >
           <Download style={{ width: 14, height: 14 }} />
@@ -293,21 +295,9 @@ export default function TradesPage() {
         </button>
       </div>
 
-      {/* Demo banner */}
-      {isMock && (
-        <div style={{
-          background: '#2A2000', border: '1px solid #F5C542', borderRadius: 8,
-          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#F5C542', letterSpacing: '0.08em' }}>DEMO</span>
-          <span style={{ fontSize: 12, color: '#8B949E' }}>
-            Showing sample data — connect backend to see live trades.
-          </span>
-        </div>
-      )}
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total Trades',  value: String(stats.total) },
           { label: 'Successful',    value: String(stats.success), color: '#22C55E' },
@@ -322,26 +312,27 @@ export default function TradesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <div className="flex flex-wrap items-center gap-2">
         <FilterButton label="All"     active={!filter.status && !filter.direction} onClick={() => setFilter({})} />
         <FilterButton label="Success" active={filter.status === 'success'} onClick={() => toggleStatus('success')} />
         <FilterButton label="Failed"  active={filter.status === 'failed'}  onClick={() => toggleStatus('failed')} />
         <FilterButton label="Pending" active={filter.status === 'pending'} onClick={() => toggleStatus('pending')} />
-        <div style={{ width: 1, height: 24, background: '#21262D', margin: '0 4px' }} />
+        <div style={{ width: 1, height: 24, background: '#21262D', margin: '0 2px' }} />
         <FilterButton label="Buys"  active={filter.direction === 'buy'}  onClick={() => toggleDir('buy')} />
         <FilterButton label="Sells" active={filter.direction === 'sell'} onClick={() => toggleDir('sell')} />
 
         {/* Search */}
-        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+        <div className="relative sm:ml-auto w-full sm:w-auto">
           <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#8B949E', pointerEvents: 'none' }} />
           <input
             placeholder="Search pair, mandate, tx…"
             value={filter.search ?? ''}
             onChange={e => setFilter(f => ({ ...f, search: e.target.value || undefined }))}
+            className="w-full sm:w-[220px]"
             style={{
               height: 30, paddingLeft: 30, paddingRight: 28, paddingTop: 0, paddingBottom: 0,
               borderRadius: 6, border: '1px solid #30363D', background: '#0D1117',
-              color: '#F0F6FC', fontSize: 12, outline: 'none', width: 220,
+              color: '#F0F6FC', fontSize: 12, outline: 'none',
             }}
           />
           {filter.search && (
@@ -356,7 +347,8 @@ export default function TradesPage() {
       </div>
 
       {/* Table */}
-      <div style={{ border: '1px solid #21262D', borderRadius: 8, overflow: 'hidden' }}>
+      <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #21262D' }}>
+      <div style={{ minWidth: 900 }}>
         {/* Header */}
         <div style={{
           display: 'grid',
@@ -461,11 +453,12 @@ export default function TradesPage() {
             )
           })
         )}
-      </div>
+      </div>{/* /minWidth */}
+      </div>{/* /overflow-x-auto */}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <span style={{ fontSize: 12, color: '#8B949E' }}>
             {visibleTrades.length} trades · Page {page} of {totalPages}
           </span>

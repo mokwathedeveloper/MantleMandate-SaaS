@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Download, UserPlus, Search, Filter, ChevronDown,
   TrendingUp, Users as UsersIcon, ShieldAlert, Timer,
-  ArrowUpRight,
+  ArrowUpRight, X, Loader2, CheckCircle2,
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -23,8 +23,189 @@ import { cn } from '@/lib/utils'
 
 import {
   MOCK_USERS, USER_KPIS, USER_ACTIVATION_TREND,
-  type MockUser, type UserStatus,
+  type MockUser, type UserStatus, type UserPlan,
 } from '@/mocks/users'
+
+// ── Add User Modal ─────────────────────────────────────────────────────────────
+
+interface AddUserFields {
+  name:       string
+  email:      string
+  walletAddr: string
+  plan:       UserPlan
+  role:       string
+}
+
+const PLAN_OPTIONS: UserPlan[] = ['Operator', 'Strategist', 'Institutional', 'Free']
+
+function AddUserModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u: MockUser) => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const [fields, setFields] = useState<AddUserFields>({
+    name: '', email: '', walletAddr: '', plan: 'Operator', role: 'Trader',
+  })
+  const [errors, setErrors]   = useState<Partial<AddUserFields>>({})
+  const [loading, setLoading] = useState(false)
+  const [done, setDone]       = useState(false)
+
+  function set(k: keyof AddUserFields, v: string) {
+    setFields((f) => ({ ...f, [k]: v }))
+    setErrors((e) => ({ ...e, [k]: undefined }))
+  }
+
+  function validate(): boolean {
+    const e: Partial<AddUserFields> = {}
+    if (!fields.name.trim())  e.name  = 'Name is required'
+    if (!fields.email.trim()) e.email = 'Email is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) e.email = 'Invalid email'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!validate()) return
+    setLoading(true)
+    await new Promise((r) => setTimeout(r, 900))
+    setLoading(false)
+    setDone(true)
+
+    const initials = fields.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    const colors   = ['bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600']
+    const color    = colors[Math.floor(Math.random() * colors.length)]
+
+    onAdded({
+      id:          `u_${Date.now()}`,
+      name:        fields.name.trim(),
+      email:       fields.email.trim(),
+      walletAddr:  fields.walletAddr.trim() || '0x—',
+      plan:        fields.plan,
+      status:      'pending',
+      agents:      0,
+      riskScore:   0,
+      lastLogin:   'Just now',
+      joinedAt:    new Date().toISOString().split('T')[0],
+      region:      '—',
+      initials,
+      avatarColor: color,
+    })
+
+    setTimeout(onClose, 1200)
+  }
+
+  return (
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onMouseDown={(e) => { if (e.target === overlayRef.current) onClose() }}
+    >
+      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-card shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 className="text-base font-semibold">Add User</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {done ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-12">
+            <CheckCircle2 className="h-12 w-12 text-emerald-400" />
+            <p className="text-sm font-semibold">Invitation sent to {fields.email}</p>
+            <p className="text-xs text-muted-foreground text-center">
+              {fields.name} will appear as <span className="text-amber-400 font-medium">Pending</span> until they accept.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="px-6 py-5 space-y-4">
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Full Name *</label>
+              <input
+                value={fields.name}
+                onChange={(e) => set('name', e.target.value)}
+                placeholder="e.g. Linah Khanali"
+                className={cn(
+                  'w-full rounded-lg border bg-page px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary transition-colors',
+                  errors.name ? 'border-red-500' : 'border-white/10 focus:border-primary/50',
+                )}
+              />
+              {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Email Address *</label>
+              <input
+                type="email"
+                value={fields.email}
+                onChange={(e) => set('email', e.target.value)}
+                placeholder="user@company.com"
+                className={cn(
+                  'w-full rounded-lg border bg-page px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary transition-colors',
+                  errors.email ? 'border-red-500' : 'border-white/10 focus:border-primary/50',
+                )}
+              />
+              {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
+            </div>
+
+            {/* Wallet */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Wallet Address <span className="text-muted-foreground/50">(optional)</span></label>
+              <input
+                value={fields.walletAddr}
+                onChange={(e) => set('walletAddr', e.target.value)}
+                placeholder="0x…"
+                className="w-full rounded-lg border border-white/10 bg-page px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              />
+            </div>
+
+            {/* Plan + Role row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Plan</label>
+                <select
+                  value={fields.plan}
+                  onChange={(e) => set('plan', e.target.value as UserPlan)}
+                  className="w-full rounded-lg border border-white/10 bg-page px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+                >
+                  {PLAN_OPTIONS.map((p) => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Role</label>
+                <select
+                  value={fields.role}
+                  onChange={(e) => set('role', e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-page px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+                >
+                  {['Trader', 'Analyst', 'Admin', 'Viewer'].map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
+              >
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : 'Send Invite'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const STATUS_FILTERS: Array<{ key: 'all' | UserStatus; label: string }> = [
   { key: 'all',     label: 'All' },
@@ -41,12 +222,16 @@ function riskTone(score: number) {
 }
 
 export default function UsersPage() {
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<'all' | UserStatus>('all')
-  const [planFilter]        = useState<'all' | string>('all')
+  const [search, setSearch]     = useState('')
+  const [status, setStatus]     = useState<'all' | UserStatus>('all')
+  const [planFilter]            = useState<'all' | string>('all')
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [extraUsers, setExtraUsers]   = useState<MockUser[]>([])
+
+  const allUsers = useMemo(() => [...extraUsers, ...MOCK_USERS], [extraUsers])
 
   const filtered = useMemo(() => {
-    return MOCK_USERS.filter((u) => {
+    return allUsers.filter((u) => {
       if (status !== 'all' && u.status !== status) return false
       if (planFilter !== 'all' && u.plan !== planFilter) return false
       if (search) {
@@ -59,7 +244,7 @@ export default function UsersPage() {
       }
       return true
     })
-  }, [search, status, planFilter])
+  }, [search, status, planFilter, allUsers])
 
   const columns: DataTableColumn<MockUser>[] = [
     {
@@ -147,7 +332,7 @@ export default function UsersPage() {
             <PrimaryButton variant="secondary" icon={<Download className="h-4 w-4" />}>
               Export
             </PrimaryButton>
-            <PrimaryButton variant="primary" icon={<UserPlus className="h-4 w-4" />}>
+            <PrimaryButton variant="primary" icon={<UserPlus className="h-4 w-4" />} onClick={() => setShowAddUser(true)}>
               Add User
             </PrimaryButton>
           </>
@@ -200,7 +385,7 @@ export default function UsersPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Total Users"
           value={USER_KPIS.totalUsers.value.toLocaleString()}
@@ -286,7 +471,7 @@ export default function UsersPage() {
       {/* Recent users table */}
       <SectionCard
         title="Recent Users"
-        subtitle={`${filtered.length} of ${MOCK_USERS.length} users matching filters`}
+        subtitle={`${filtered.length} of ${allUsers.length} users matching filters`}
         action={
           <button className="text-[12px] font-medium text-text-link hover:text-text-link-hover">
             View all →
@@ -308,6 +493,13 @@ export default function UsersPage() {
           />
         </div>
       </SectionCard>
+
+      {showAddUser && (
+        <AddUserModal
+          onClose={() => setShowAddUser(false)}
+          onAdded={(u) => setExtraUsers((prev) => [u, ...prev])}
+        />
+      )}
     </div>
   )
 }

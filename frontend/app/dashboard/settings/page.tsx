@@ -73,7 +73,7 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
   )
 }
 
-function SaveActions({ label = 'Save Changes', onSave }: { label?: string; onSave: () => void }) {
+function SaveActions({ label = 'Save Changes', onSave, onCancel }: { label?: string; onSave: () => void; onCancel?: () => void }) {
   return (
     <div className="flex gap-2 pt-4 border-t border-border mt-2">
       <button
@@ -82,7 +82,10 @@ function SaveActions({ label = 'Save Changes', onSave }: { label?: string; onSav
       >
         {label}
       </button>
-      <button className="border border-border text-text-secondary text-sm px-4 py-2 rounded-md hover:text-text-primary transition-colors">
+      <button
+        onClick={onCancel}
+        className="border border-border text-text-secondary text-sm px-4 py-2 rounded-md hover:text-text-primary transition-colors"
+      >
         Cancel
       </button>
     </div>
@@ -207,16 +210,16 @@ export default function SettingsPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
 
       <nav className="text-xs text-text-disabled">Home &rsaquo; Settings</nav>
       <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
 
-      <div className="flex gap-6 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-        {/* ── Sub-nav (200 px) ── */}
-        <aside className="w-[200px] shrink-0 space-y-4">
+        {/* ── Sub-nav ── */}
+        <aside className="w-full lg:w-[200px] shrink-0 space-y-4">
           {NAV_GROUPS.map(g => (
             <div key={g.group}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-disabled mb-1 px-2">
@@ -300,7 +303,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
-              <SaveActions onSave={() => save()} />
+              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
             </div>
           )}
 
@@ -330,7 +333,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
-              <SaveActions label="Update Password" onSave={() => save('Password updated')} />
+              <SaveActions label="Update Password" onSave={() => save('Password updated')} onCancel={() => setToast('Changes discarded')} />
             </div>
           )}
 
@@ -411,7 +414,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <SaveActions onSave={() => save()} />
+              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
             </div>
           )}
 
@@ -479,7 +482,7 @@ export default function SettingsPage() {
                 </div>
               ))}
 
-              <SaveActions onSave={() => save()} />
+              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
             </div>
           )}
 
@@ -499,7 +502,7 @@ export default function SettingsPage() {
                   ))}
                 </select>
               </div>
-              <SaveActions onSave={() => save()} />
+              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
             </div>
           )}
 
@@ -590,7 +593,8 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              <div className="overflow-hidden border border-border rounded-md">
+              <div className="overflow-x-auto border border-border rounded-md">
+              <div style={{ minWidth: 540 }}>
                 <div
                   className="grid px-4 py-2.5 bg-page"
                   style={{ gridTemplateColumns: '25% 18% 18% 20% auto' }}
@@ -622,7 +626,8 @@ export default function SettingsPage() {
                     No API keys yet.
                   </div>
                 )}
-              </div>
+              </div>{/* /minWidth */}
+              </div>{/* /overflow-x-auto */}
             </div>
           )}
 

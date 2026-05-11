@@ -8,6 +8,8 @@ import {
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
+import { ChatWidget } from '@/components/ui/ChatWidget'
+import { EmailWidget } from '@/components/ui/EmailWidget'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -288,7 +290,7 @@ export default function SupportPage() {
       )}
 
       {/* ── Contact Cards (4-up 2×2) ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {/* Email Support */}
         <div className="bg-card border border-border rounded-lg p-5 flex flex-col gap-3">
           <Mail className="h-8 w-8 text-primary shrink-0" />
@@ -298,9 +300,7 @@ export default function SupportPage() {
               Response within 4 hours for Strategist &amp; Institution plans.
             </p>
           </div>
-          <a href="mailto:support@mantlemandate.io" style={{ color: '#58A6FF' }} className="text-sm hover:underline underline-offset-2 w-fit">
-            Send Email →
-          </a>
+          <EmailWidget />
         </div>
 
         {/* Live Chat */}
@@ -317,9 +317,7 @@ export default function SupportPage() {
               Available Monday–Friday, 9am–6pm UTC. Instant responses.
             </p>
           </div>
-          <button className="w-fit bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors">
-            Start Chat →
-          </button>
+          <ChatWidget />
         </div>
 
         {/* Documentation */}
