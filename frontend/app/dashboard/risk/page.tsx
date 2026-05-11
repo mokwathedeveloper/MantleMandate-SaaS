@@ -192,11 +192,11 @@ export default function RiskPage() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {showToast && <Toast onDone={() => setShowToast(false)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: '#F0F6FC' }}>Risk Engine</h2>
           <p className="text-sm mt-0.5" style={{ color: '#8B949E' }}>
@@ -204,7 +204,7 @@ export default function RiskPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           {/* Load Template dropdown */}
           <div className="relative" ref={templateRef}>
             <button
@@ -372,6 +372,9 @@ export default function RiskPage() {
               </p>
             </div>
 
+            {/* Table — scrollable on small screens */}
+            <div className="overflow-x-auto">
+            <div style={{ minWidth: 560 }}>
             {/* Table header */}
             <div
               className="grid text-[10px] font-semibold uppercase tracking-wider px-3 py-2 rounded-md"
@@ -464,6 +467,9 @@ export default function RiskPage() {
               )
             })}
 
+            </div>{/* /minWidth */}
+            </div>{/* /overflow-x-auto */}
+
             {/* Allocation total */}
             <div
               className="flex items-center gap-1.5 text-xs font-semibold px-3"
@@ -494,7 +500,7 @@ export default function RiskPage() {
               { label: 'After trade failure',                      key: 'failure'  as const },
               { label: 'Between repeat trades (same asset)',       key: 'repeat'   as const },
             ]).map(row => (
-              <div key={row.key} className="flex items-center justify-between gap-4 py-1">
+              <div key={row.key} className="flex flex-wrap items-center justify-between gap-2 py-1">
                 <span className="text-sm" style={{ color: '#8B949E' }}>{row.label}</span>
                 <select
                   value={cooldowns[row.key]}
@@ -588,12 +594,12 @@ export default function RiskPage() {
             <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#8B949E' }}>
               Quick Presets
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(Object.keys(PRESETS) as PresetKey[]).map(k => (
                 <button
                   key={k}
                   onClick={() => applyPreset(k)}
-                  className="flex-1 text-xs py-2 rounded-md font-medium transition-all"
+                  className="flex-1 min-w-[80px] text-xs py-2 rounded-md font-medium transition-all"
                   style={{
                     border: `1px solid ${activePreset === k ? '#0066FF' : '#30363D'}`,
                     background: activePreset === k ? 'rgba(0,102,255,0.12)' : 'transparent',
@@ -633,7 +639,7 @@ export default function RiskPage() {
           onClick={() => !applying && setConfirm(false)}
         >
           <div
-            className="rounded-xl p-6 space-y-4 w-[440px]"
+            className="rounded-xl p-6 space-y-4 w-[calc(100vw-2rem)] max-w-[440px]"
             style={{
               background: '#161B22',
               border: '1px solid #21262D',

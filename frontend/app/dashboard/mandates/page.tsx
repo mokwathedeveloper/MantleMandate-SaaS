@@ -254,9 +254,9 @@ export default function MandatesPage() {
   }, {} as Record<string, number>)
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="p-4 sm:p-6 flex flex-col gap-5">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>Mandates</h2>
           <p style={{ fontSize: 13, color: '#8B949E', margin: '4px 0 0' }}>
@@ -265,6 +265,7 @@ export default function MandatesPage() {
         </div>
         <Link
           href="/dashboard/mandates/new"
+          className="self-start sm:self-auto"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             height: 38, padding: '0 16px',
@@ -278,23 +279,10 @@ export default function MandatesPage() {
         </Link>
       </div>
 
-      {/* Demo notice */}
-      {isMock && !isLoading && (
-        <div style={{
-          background: '#2A2000', border: '1px solid #F5C54266', borderRadius: 8,
-          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#F5C542', letterSpacing: '0.08em' }}>DEMO</span>
-          <span style={{ fontSize: 12, color: '#8B949E' }}>
-            Showing sample mandates — connect backend to see your live strategies.
-          </span>
-        </div>
-      )}
-
       {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-3">
         {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 4, background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: 4 }}>
+        <div className="flex flex-wrap gap-1" style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: 4 }}>
           {FILTER_TABS.map(({ key, label }) => {
             const count = key === 'all' ? allMandates.length : (counts[key] ?? 0)
             const active = statusFilter === key
@@ -328,16 +316,17 @@ export default function MandatesPage() {
         </div>
 
         {/* Search */}
-        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+        <div className="relative sm:ml-auto w-full sm:w-auto">
           <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#8B949E', pointerEvents: 'none' }} />
           <input
             placeholder="Search mandates…"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            className="w-full sm:w-[200px]"
             style={{
               height: 34, paddingLeft: 30, paddingRight: 12, paddingTop: 0, paddingBottom: 0,
               borderRadius: 6, border: '1px solid #30363D', background: '#0D1117',
-              color: '#F0F6FC', fontSize: 12, outline: 'none', width: 200,
+              color: '#F0F6FC', fontSize: 12, outline: 'none',
             }}
           />
         </div>
@@ -345,7 +334,7 @@ export default function MandatesPage() {
 
       {/* Grid */}
       {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ height: 200, borderRadius: 10, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
           ))}
@@ -379,20 +368,19 @@ export default function MandatesPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(m => <MandateCard key={m.id} mandate={m} />)}
         </div>
       )}
 
       {/* Bottom CTA strip */}
       {filtered.length > 0 && (
-        <div style={{
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style={{
           background: '#0D2818', border: '1px solid #22C55E33',
           borderRadius: 8, padding: '14px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Bot style={{ width: 18, height: 18, color: '#22C55E' }} />
+            <Bot style={{ width: 18, height: 18, color: '#22C55E', flexShrink: 0 }} />
             <div>
               <p style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 1px' }}>
                 {allMandates.filter(m => m.status === 'active').length} active mandate{allMandates.filter(m => m.status === 'active').length !== 1 ? 's' : ''} running
@@ -402,12 +390,13 @@ export default function MandatesPage() {
           </div>
           <Link
             href="/dashboard/agents"
+            className="self-start sm:self-auto"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               height: 32, padding: '0 14px',
               borderRadius: 6, border: '1px solid #22C55E66',
               color: '#22C55E', fontSize: 12, fontWeight: 600, textDecoration: 'none',
-              background: 'transparent',
+              background: 'transparent', flexShrink: 0,
             }}
           >
             View agents →

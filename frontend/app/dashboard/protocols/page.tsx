@@ -351,12 +351,16 @@ function ProtocolCard({
 
 function AddProtocolPanel({
   onClose,
+  onConnect,
 }: {
   onClose: () => void
+  onConnect: (id: string) => void
 }) {
   const [panelSearch, setPanelSearch] = useState('')
   const [selected, setSelected]       = useState<Protocol | null>(PROTOCOLS.find(p => p.id === 'moe') ?? null)
   const [copied, setCopied]           = useState(false)
+  const [connecting, setConnecting]   = useState(false)
+  const [connected, setConnected]     = useState(false)
 
   const allItems = [
     ...PROTOCOLS,
@@ -382,15 +386,13 @@ function AddProtocolPanel({
       onClick={onClose}
     >
       <div
-        className="ml-auto h-full flex"
-        style={{ width: 680 }}
+        className="ml-auto h-full flex w-full max-w-[680px]"
         onClick={e => e.stopPropagation()}
       >
         {/* Left: Browse */}
         <div
-          className="flex flex-col overflow-hidden"
+          className="flex flex-col overflow-hidden w-[280px] sm:w-[320px] shrink-0"
           style={{
-            width: 320,
             background: '#161B22',
             borderLeft: '1px solid #21262D',
           }}
@@ -628,10 +630,32 @@ function AddProtocolPanel({
               {/* Connect button */}
               <div className="px-5 py-4 shrink-0" style={{ borderTop: '1px solid #21262D' }}>
                 <button
-                  className="w-full py-2.5 rounded-md text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ background: '#0066FF' }}
+                  disabled={selected.status === 'ACTIVE' || connecting || connected}
+                  onClick={async () => {
+                    if (selected.status === 'ACTIVE' || connecting || connected) return
+                    setConnecting(true)
+                    await new Promise(r => setTimeout(r, 1400))
+                    setConnecting(false)
+                    setConnected(true)
+                    onConnect(selected.id)
+                    await new Promise(r => setTimeout(r, 800))
+                    onClose()
+                  }}
+                  className="w-full py-2.5 rounded-md text-sm font-semibold text-white transition-opacity flex items-center justify-center gap-2"
+                  style={{
+                    background: connected ? '#16a34a' : connecting ? '#0055cc' : '#0066FF',
+                    opacity: selected.status === 'ACTIVE' ? 0.5 : 1,
+                    cursor: selected.status === 'ACTIVE' ? 'default' : 'pointer',
+                  }}
                 >
-                  {selected.status === 'ACTIVE' ? 'Already Connected' : 'Connect Protocol'}
+                  {connecting && (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  )}
+                  {connected && <CheckCircle2 className="h-4 w-4" />}
+                  {connected ? 'Connected!' : connecting ? 'Connecting…' : selected.status === 'ACTIVE' ? 'Already Connected' : 'Connect Protocol'}
                 </button>
               </div>
             </>
@@ -669,9 +693,8 @@ function ConfigurePanel({ p, onClose }: { p: Protocol; onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="ml-auto h-full flex flex-col overflow-hidden"
+        className="ml-auto h-full flex flex-col overflow-hidden w-full max-w-[420px]"
         style={{
-          width: 420,
           background: '#161B22',
           borderLeft: '1px solid #21262D',
         }}
@@ -904,7 +927,14 @@ export default function ProtocolsPage() {
   const [configProtocol, setConfig] = useState<Protocol | null>(null)
   const [statusFilter, setStatus]   = useState('All Protocols')
   const [showStatusDd, setStatusDd] = useState(false)
+  const [protocols, setProtocols]   = useState<Protocol[]>(PROTOCOLS)
   const statusRef = useRef<HTMLDivElement>(null)
+
+  const handleConnect = (id: string) => {
+    setProtocols(prev =>
+      prev.map(p => p.id === id ? { ...p, status: 'ACTIVE' as const, lastSync: 'just now' } : p)
+    )
+  }
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -916,14 +946,14 @@ export default function ProtocolsPage() {
 
   const TABS: TabFilter[] = ['All', 'Active', 'Inactive', 'Mantle Native', 'Other']
   const COUNTS: Record<TabFilter, number> = {
-    'All':          PROTOCOLS.length,
-    'Active':       PROTOCOLS.filter(p => p.status === 'ACTIVE').length,
-    'Inactive':     PROTOCOLS.filter(p => p.status === 'INACTIVE').length,
+    'All':          protocols.length,
+    'Active':       protocols.filter(p => p.status === 'ACTIVE').length,
+    'Inactive':     protocols.filter(p => p.status === 'INACTIVE').length,
     'Mantle Native': MANTLE_NATIVE.length,
-    'Other':        PROTOCOLS.filter(p => !MANTLE_NATIVE.includes(p.id)).length,
+    'Other':        protocols.filter(p => !MANTLE_NATIVE.includes(p.id)).length,
   }
 
-  const filtered = PROTOCOLS.filter(p => {
+  const filtered = protocols.filter(p => {
     if (tab === 'Active')        return p.status === 'ACTIVE'
     if (tab === 'Inactive')      return p.status === 'INACTIVE'
     if (tab === 'Mantle Native') return MANTLE_NATIVE.includes(p.id)
@@ -939,12 +969,12 @@ export default function ProtocolsPage() {
   )
 
   return (
-    <div className="p-6 space-y-6">
-      {showAdd      && <AddProtocolPanel onClose={() => setShowAdd(false)} />}
+    <div className="p-4 sm:p-6 space-y-6">
+      {showAdd      && <AddProtocolPanel onClose={() => setShowAdd(false)} onConnect={handleConnect} />}
       {configProtocol && <ConfigurePanel p={configProtocol} onClose={() => setConfig(null)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: '#F0F6FC' }}>Multi-Protocol Integration</h2>
           <p className="text-sm mt-0.5" style={{ color: '#8B949E' }}>
@@ -952,7 +982,7 @@ export default function ProtocolsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           {/* Add Protocol */}
           <button
             onClick={() => setShowAdd(true)}
@@ -973,12 +1003,11 @@ export default function ProtocolsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search protocols..."
-              className="rounded-md pl-8 pr-3 py-2 text-sm focus:outline-none"
+              className="rounded-md pl-8 pr-3 py-2 text-sm focus:outline-none w-full sm:w-[180px]"
               style={{
                 background: '#161B22',
                 border: '1px solid #21262D',
                 color: '#F0F6FC',
-                width: 180,
               }}
             />
           </div>
@@ -1027,7 +1056,7 @@ export default function ProtocolsPage() {
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {([
           { label: 'Active Protocols',  value: '12',               sub: 'Connected' },
           { label: 'Active Monitoring', value: '8',                sub: 'Live tracking' },
@@ -1060,12 +1089,12 @@ export default function ProtocolsPage() {
       </div>
 
       {/* ── Filter tabs ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-0" style={{ borderBottom: '1px solid #21262D' }}>
+      <div className="flex flex-wrap items-center gap-0 overflow-x-auto" style={{ borderBottom: '1px solid #21262D' }}>
         {TABS.map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap"
+            className="px-3 sm:px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap"
             style={{
               color: tab === t ? '#F0F6FC' : '#8B949E',
               borderBottom: `2px solid ${tab === t ? '#0066FF' : 'transparent'}`,
@@ -1084,7 +1113,7 @@ export default function ProtocolsPage() {
           <p className="text-sm">No protocols match your filters</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map(p => (
             <ProtocolCard
               key={p.id}

@@ -267,6 +267,7 @@ export default function NewMandatePage() {
         base_currency: step1Data.base_currency,
         capital_cap:   capital_cap ?? undefined,
         risk_params: { maxDrawdown, maxPosition, stopLoss, maxPositions, cooldownHours },
+        status:        'active',
       },
       {
         onSuccess: (mandate) => router.push(`/dashboard/mandates/${mandate.id}`),

@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import api from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -121,24 +120,23 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function PortfolioPage() {
   const [chartDays, setChartDays] = useState(30)
-  const { accessToken } = useAuthStore()
+  const { session } = useAuthStore()
 
   const { data: snapshot, isLoading: loadingSnap, isError: errSnap } = useQuery<PortfolioSnapshot>({
     queryKey: ['portfolio', 'snapshot'],
-    queryFn: () => api.get('/portfolio/snapshot').then(r => r.data.data),
-    retry: false,
-    enabled: !!accessToken,
+    queryFn: () => fetch('/api/portfolio/snapshot').then(r => r.json()),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 
   const { data: positions, isLoading: loadingPos, isError: errPos } = useQuery<PositionRow[]>({
     queryKey: ['portfolio', 'positions'],
-    queryFn: () => api.get('/portfolio/positions').then(r => r.data.data),
-    retry: false,
-    enabled: !!accessToken,
+    queryFn: () => fetch('/api/portfolio/positions').then(r => r.json()),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 
   const isLoading = loadingSnap || loadingPos
-  const isMock    = !accessToken || (!isLoading && (!snapshot || !positions?.length)) || errSnap || errPos
   const snap      = snapshot ?? MOCK_SNAPSHOT
   const pos       = positions?.length ? positions : MOCK_POSITIONS
 
@@ -154,8 +152,8 @@ export default function PortfolioPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="p-4 sm:p-6 flex flex-col gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} style={{ height: 72, borderRadius: 8, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
           ))}
@@ -166,28 +164,19 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="p-4 sm:p-6 flex flex-col gap-5">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>Portfolio</h2>
           <p style={{ fontSize: 13, color: '#8B949E', margin: '4px 0 0' }}>
             Live view of all positions and performance across your agents
           </p>
         </div>
-        {isMock && (
-          <span style={{
-            fontSize: 11, fontWeight: 700, color: '#F5C542',
-            background: '#2A2000', border: '1px solid #F5C54266',
-            padding: '3px 10px', borderRadius: 4, letterSpacing: '0.08em',
-          }}>
-            DEMO DATA
-          </span>
-        )}
       </div>
 
       {/* Primary KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total Portfolio Value"
           value={`$${snap.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
@@ -213,7 +202,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Secondary KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Max Drawdown"
           value={`${snap.maxDrawdown.toFixed(2)}%`}
@@ -226,9 +215,9 @@ export default function PortfolioPage() {
 
       {/* PnL Chart */}
       <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="flex flex-wrap items-center justify-between gap-2" style={{ marginBottom: 16 }}>
           <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Portfolio Value</h4>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="flex flex-wrap gap-1">
             {[7, 14, 30].map(d => (
               <button
                 key={d}
@@ -273,8 +262,9 @@ export default function PortfolioPage() {
       </div>
 
       {/* Positions table */}
-      <div style={{ border: '1px solid #21262D', borderRadius: 8, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 16px', background: '#161B22', borderBottom: '1px solid #21262D', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #21262D' }}>
+      <div style={{ minWidth: 780 }}>
+        <div className="flex flex-wrap items-center justify-between gap-2" style={{ padding: '14px 16px', background: '#161B22', borderBottom: '1px solid #21262D' }}>
           <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Open Positions</h4>
           <span style={{ fontSize: 11, color: '#8B949E' }}>{openPositions.length} positions</span>
         </div>
@@ -362,17 +352,18 @@ export default function PortfolioPage() {
             )
           })
         )}
-      </div>
+      </div>{/* /minWidth */}
+      </div>{/* /overflow-x-auto */}
 
       {/* Bottom row: allocation + risk */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
         {/* Allocation by protocol */}
         <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '16px 20px' }}>
           <h4 style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 14px' }}>Allocation by Protocol</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {allocationByProtocol.map(({ protocol, pct }) => (
               <div key={protocol} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, color: '#8B949E', width: 110, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, color: '#8B949E', minWidth: 80, flexShrink: 0 }}>
                   {PROTOCOL_LABELS[protocol] ?? protocol}
                 </span>
                 <div style={{ flex: 1, height: 8, background: '#21262D', borderRadius: 999, overflow: 'hidden' }}>

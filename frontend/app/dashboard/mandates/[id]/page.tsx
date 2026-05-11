@@ -466,6 +466,15 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
           <p className="text-xs text-text-secondary hidden sm:block">
             Saving will regenerate the policy hash
           </p>
+          {mandate.status === 'draft' && (
+            <Button
+              variant="secondary"
+              onClick={() => update({ status: 'active' })}
+              loading={saving}
+            >
+              Activate
+            </Button>
+          )}
           <Button
             variant="primary"
             onClick={handleUpdate}
