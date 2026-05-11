@@ -1,19 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronLeft, Hash, Copy, CheckCircle2, ExternalLink, Sparkles, TriangleAlert,
+  ChevronLeft, Hash, Copy, CheckCircle2, ExternalLink,
+  Edit2, Bot, Pause, Archive, Shield, Network,
+  TrendingUp, RefreshCw, Layers, ArrowRightLeft, Rocket,
+  Calendar, DollarSign, Zap, Lock,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
+import { Badge } from '@/components/ui/Badge'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { Spinner } from '@/components/ui/Spinner'
-import { Badge } from '@/components/ui/Badge'
-import { useMandate, useUpdateMandate, useParsePreview } from '@/hooks/useMandates'
+import { useMandate, useUpdateMandate } from '@/hooks/useMandates'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -27,197 +28,86 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   archived: 'default',
 }
 
-// ── RiskSlider ────────────────────────────────────────────────────────────────
-
-function RiskSlider({
-  label, hint, min, max, step = 1, value, onChange, suffix = '%',
-}: {
-  label: string; hint: string; min: number; max: number
-  step?: number; value: number; onChange: (v: number) => void; suffix?: string
-}) {
-  const pct   = ((value - min) / (max - min)) * 100
-  const color = pct < 33 ? 'text-success' : pct < 66 ? 'text-warning' : 'text-error'
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-text-primary">{label}</label>
-        <span className={cn('text-sm font-bold tabular-nums', color)}>
-          {value}{suffix}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-border
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
-          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary
-          [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
-      />
-      <p className="text-xs text-text-secondary">{hint}</p>
-    </div>
-  )
+const STRATEGY_META: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
+  MEAN_REVERSION: { icon: TrendingUp,      color: 'text-blue-400',   bg: 'bg-blue-400/10',   label: 'Mean Reversion' },
+  YIELD:          { icon: RefreshCw,        color: 'text-green-400',  bg: 'bg-green-400/10',  label: 'Yield Farming'  },
+  DCA:            { icon: Layers,           color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'DCA'            },
+  ARBITRAGE:      { icon: ArrowRightLeft,   color: 'text-amber-400',  bg: 'bg-amber-400/10',  label: 'Arbitrage'      },
+  MOMENTUM:       { icon: Rocket,           color: 'text-pink-400',   bg: 'bg-pink-400/10',   label: 'Momentum'       },
 }
 
-// ── ParsePanel ────────────────────────────────────────────────────────────────
+const FIELD_COLORS: Record<string, string> = {
+  asset:          'bg-blue-400/10   text-blue-400   border-blue-400/30',
+  trigger:        'bg-purple-400/10 text-purple-400 border-purple-400/30',
+  venue:          'bg-green-400/10  text-green-400  border-green-400/30',
+  schedule:       'bg-amber-400/10  text-amber-400  border-amber-400/30',
+  risk_per_trade: 'bg-red-400/10    text-red-400    border-red-400/30',
+  take_profit:    'bg-emerald-400/10 text-emerald-400 border-emerald-400/30',
+  stop_loss:      'bg-orange-400/10 text-orange-400  border-orange-400/30',
+  strategy_type:  'bg-indigo-400/10 text-indigo-400  border-indigo-400/30',
+}
 
-function ParsePanel({
-  result, loading, error,
-}: {
-  result: Record<string, unknown> | null
-  loading: boolean
-  error: string | null
-}) {
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2.5 py-6 justify-center">
-        <Spinner size="sm" />
-        <span className="text-sm text-text-secondary">Parsing with Claude AI...</span>
-      </div>
-    )
-  }
+function riskLabel(maxDrawdown: number, stopLoss: number) {
+  const score = maxDrawdown + stopLoss * 2
+  if (score <= 20) return { label: 'Conservative', color: 'text-success', barColor: 'bg-success', width: 25 }
+  if (score <= 45) return { label: 'Moderate',     color: 'text-warning', barColor: 'bg-warning', width: 50 }
+  if (score <= 75) return { label: 'Aggressive',   color: 'text-orange-400', barColor: 'bg-orange-400', width: 75 }
+  return               { label: 'High Risk',     color: 'text-error',   barColor: 'bg-error',   width: 100 }
+}
 
-  if (error) {
-    return <AlertBanner severity="warning" className="text-xs">{error}</AlertBanner>
-  }
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 
-  if (!result) {
-    return (
-      <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
-        <Sparkles className="h-7 w-7 text-text-secondary opacity-40" />
-        <p className="text-sm text-text-secondary">Edit mandate text to see updated policy</p>
-      </div>
-    )
-  }
-
-  const rows = Object.entries(result).filter(([, v]) => v !== null && v !== undefined)
-
+function ViewSkeleton() {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-xs text-success font-medium mb-3">
-        <CheckCircle2 className="h-3.5 w-3.5" />
-        Policy parsed by Claude AI
-      </div>
-      {rows.map(([key, value]) => (
-        <div key={key} className="flex items-start justify-between gap-2 text-xs">
-          <span className="text-text-secondary font-medium shrink-0 capitalize">
-            {key.replace(/_/g, ' ')}
-          </span>
-          <span className="text-text-primary text-right break-all">
-            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-          </span>
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="h-4 w-40" />
         </div>
-      ))}
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-5">
+        <div className="space-y-4">
+          <Skeleton className="h-36" />
+          <Skeleton className="h-28" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
     </div>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function MandateEditPage({ params }: { params: { id: string } }) {
+export default function MandateViewPage({ params }: { params: { id: string } }) {
   const { id }   = params
   const router   = useRouter()
+  const [copied, setCopied] = useState(false)
 
   const { data: mandate, isLoading } = useMandate(id)
-  const { mutate: update, isPending: saving, error: updateError } = useUpdateMandate(id)
-  const { parse, result: liveResult, loading: parseLoading, error: parseError } = useParsePreview()
-
-  const [name,          setName]          = useState('')
-  const [mandateText,   setMandateText]   = useState('')
-  const [baseCurrency,  setBaseCurrency]  = useState<'USDC' | 'USDT' | 'ETH' | 'MNT'>('USDC')
-  const [maxDrawdown,   setMaxDrawdown]   = useState(15)
-  const [maxPosition,   setMaxPosition]   = useState(20)
-  const [stopLoss,      setStopLoss]      = useState(5)
-  const [maxPositions,  setMaxPositions]  = useState(5)
-  const [cooldownHours, setCooldownHours] = useState(1)
-  const [capitalCap,    setCapitalCap]    = useState('')
-
-  const [parseResult,   setParseResult]  = useState<Record<string, unknown> | null>(null)
-  const [policyHash,    setPolicyHash]   = useState<string | null>(null)
-  const [copied,        setCopied]       = useState(false)
-  const [initialized,   setInitialized]  = useState(false)
-
-  // Populate form from loaded mandate (once)
-  useEffect(() => {
-    if (mandate && !initialized) {
-      setName(mandate.name)
-      setMandateText(mandate.mandateText)
-      setBaseCurrency(mandate.baseCurrency as 'USDC' | 'USDT' | 'ETH' | 'MNT')
-      setMaxDrawdown(mandate.riskParams.maxDrawdown)
-      setMaxPosition(mandate.riskParams.maxPosition)
-      setStopLoss(mandate.riskParams.stopLoss)
-      setMaxPositions(mandate.riskParams.maxPositions)
-      setCooldownHours(mandate.riskParams.cooldownHours)
-      if (mandate.capitalCap) setCapitalCap(String(mandate.capitalCap))
-      setPolicyHash(mandate.policyHash)
-      setInitialized(true)
-    }
-  }, [mandate, initialized])
-
-  // Live parse as user edits mandate text
-  useEffect(() => {
-    if (initialized) parse(mandateText)
-  }, [mandateText, parse, initialized])
-
-  useEffect(() => {
-    if (liveResult) {
-      setParseResult(liveResult.parsed_policy as Record<string, unknown>)
-      setPolicyHash(liveResult.policy_hash)
-    }
-  }, [liveResult])
+  const { mutate: update, isPending: updating } = useUpdateMandate(id)
 
   const copyHash = useCallback(() => {
-    if (!policyHash) return
-    navigator.clipboard.writeText(policyHash)
+    if (!mandate?.policyHash) return
+    navigator.clipboard.writeText(mandate.policyHash)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [policyHash])
+  }, [mandate?.policyHash])
 
-  const handleUpdate = () => {
-    update(
-      {
-        name,
-        mandate_text: mandateText,
-        base_currency: baseCurrency,
-        capital_cap: capitalCap ? Number(capitalCap) : undefined,
-        risk_params: { maxDrawdown, maxPosition, stopLoss, maxPositions, cooldownHours },
-      },
-      { onSuccess: () => router.push('/dashboard/mandates') },
-    )
-  }
-
-  const apiError = updateError
-    ? ((updateError as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Update failed')
-    : null
-
-  // ── loading ──
-  if (isLoading) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-80" />
-        <Skeleton className="h-5 w-full max-w-lg" />
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr,340px] gap-5 mt-6">
-          <div className="space-y-4">
-            <Skeleton className="h-28" />
-            <Skeleton className="h-64" />
-            <Skeleton className="h-72" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-32" />
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return <ViewSkeleton />
 
   if (!mandate) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-5xl mx-auto">
         <AlertBanner severity="error" title="Mandate not found">
           This mandate does not exist or you don&apos;t have access to it.
         </AlertBanner>
@@ -225,264 +115,273 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
     )
   }
 
-  const deployedLabel = mandate.createdAt ? formatDate(mandate.createdAt) : null
+  const strategy = mandate.strategyType ? STRATEGY_META[mandate.strategyType] : null
+  const risk     = riskLabel(mandate.riskParams.maxDrawdown, mandate.riskParams.stopLoss)
+
+  const parsedRows = mandate.parsedPolicy
+    ? Object.entries(mandate.parsedPolicy).filter(([, v]) => v !== null && v !== undefined && v !== '')
+    : []
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
+      {/* ── Header ── */}
+      <div className="flex items-start gap-3">
         <button
-          onClick={() => router.back()}
-          className="text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1"
+          onClick={() => router.push('/dashboard/mandates')}
+          className="mt-1 p-1 -ml-1 text-text-secondary hover:text-text-primary transition-colors rounded"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl font-bold text-text-primary truncate">
-              Editing: {mandate.name}
-              {deployedLabel && (
-                <span className="text-text-secondary font-normal ml-2 text-base">
-                  — Deployed {deployedLabel}
-                </span>
-              )}
-            </h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-bold text-text-primary truncate">{mandate.name}</h1>
             <Badge variant={STATUS_VARIANT[mandate.status]}>{mandate.status}</Badge>
+            {strategy && (
+              <span className={cn(
+                'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full',
+                strategy.bg, strategy.color,
+              )}>
+                <strategy.icon className="h-3 w-3" />
+                {strategy.label}
+              </span>
+            )}
           </div>
-          <p className="text-sm text-text-secondary mt-0.5">Mandate ID: {mandate.id}</p>
+          <p className="text-xs text-text-secondary mt-1">
+            ID: <span className="font-mono">{mandate.id}</span>
+            {' · '}Created {formatDate(mandate.createdAt)}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {mandate.status === 'active' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'paused' as 'active' })}
+              loading={updating}
+            >
+              <Pause className="h-3.5 w-3.5" />
+              Pause
+            </Button>
+          )}
+          {mandate.status === 'paused' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'active' })}
+              loading={updating}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Activate
+            </Button>
+          )}
+          {mandate.status === 'draft' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'archived' as 'active' })}
+              loading={updating}
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
+            </Button>
+          )}
+          <Link href={`/dashboard/mandates/${id}/edit`}>
+            <Button variant="secondary" size="sm">
+              <Edit2 className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </Link>
+          <Link href={`/dashboard/agents/deploy?mandate=${id}`}>
+            <Button variant="primary" size="sm">
+              <Bot className="h-3.5 w-3.5" />
+              Deploy Agent
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Caution notice */}
-      <AlertBanner severity="warning">
-        <span className="font-semibold">Policy hash will regenerate.</span>{' '}
-        Changes will generate a new on-chain policy hash. Any agent running this mandate will briefly pause during the update.
-      </AlertBanner>
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          {
+            icon: DollarSign,
+            label: 'Base Currency',
+            value: mandate.baseCurrency,
+            color: 'text-primary',
+            bg: 'bg-primary/10',
+          },
+          {
+            icon: Lock,
+            label: 'Capital Cap',
+            value: mandate.capitalCap ? `$${mandate.capitalCap.toLocaleString()}` : 'Unlimited',
+            color: 'text-amber-400',
+            bg: 'bg-amber-400/10',
+          },
+          {
+            icon: Shield,
+            label: 'Risk Profile',
+            value: risk.label,
+            color: risk.color,
+            bg: risk.barColor.replace('bg-', 'bg-').replace('bg-', '') + '/10',
+          },
+          {
+            icon: Calendar,
+            label: 'Last Updated',
+            value: formatDate(mandate.updatedAt),
+            color: 'text-text-secondary',
+            bg: 'bg-surface',
+          },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-border bg-surface p-4">
+            <div className={cn('h-7 w-7 rounded-full flex items-center justify-center mb-2', stat.bg)}>
+              <stat.icon className={cn('h-3.5 w-3.5', stat.color)} />
+            </div>
+            <p className="text-xs text-text-secondary">{stat.label}</p>
+            <p className={cn('text-sm font-semibold mt-0.5', stat.color)}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr,340px] gap-5">
+      {/* ── Main two-col layout ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-5">
 
-        {/* ── Left: form ───────────────────────────────────────────────────── */}
+        {/* ── Left: strategy + parsed policy ── */}
         <div className="space-y-5">
 
-          {/* Mandate details */}
+          {/* Strategy text */}
           <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Mandate Details</h3>
-            <div className="space-y-4">
-              <Input
-                label="Mandate name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Conservative ETH Dip Buyer"
-              />
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-text-primary">Base currency</label>
-                <div className="flex gap-2">
-                  {(['USDC', 'USDT', 'ETH', 'MNT'] as const).map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setBaseCurrency(c)}
-                      className={cn(
-                        'flex-1 h-9 rounded-lg border text-sm font-medium transition-colors',
-                        baseCurrency === c
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border text-text-secondary hover:border-text-secondary',
-                      )}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <Input
-                label="Capital cap (USD)"
-                type="number"
-                value={capitalCap}
-                onChange={(e) => setCapitalCap(e.target.value)}
-                placeholder="Leave blank for no limit"
-              />
-            </div>
-          </Card>
-
-          {/* Hero textarea */}
-          <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-1">
-              Your Trading Mandate
-              <span className="ml-2 text-xs font-normal text-primary">— The Hero Field</span>
-            </h3>
-            <p className="text-xs text-text-secondary mb-4">
-              Edit your strategy in plain English. The AI will re-parse it in real time.
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Strategy</h3>
+            <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+              {mandate.mandateText}
             </p>
-            <Textarea
-              value={mandateText}
-              onChange={(e) => setMandateText(e.target.value)}
-              placeholder={`e.g. "Buy ETH on Mantle when the RSI drops below 30.\nNever risk more than 5% of my portfolio on a single trade.\nTake profit when I'm up 15%. Don't trade on weekends."`}
-              rows={12}
-              counter
-              maxLength={2000}
-              className="min-h-[280px] text-base leading-relaxed focus:ring-primary/20 focus:ring-[3px]"
-            />
           </Card>
 
-          {/* Risk params */}
-          <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-5">Risk Parameters</h3>
-            <div className="space-y-6">
-              <RiskSlider
-                label="Max Drawdown"
-                hint="Stop trading if portfolio drops by this much"
-                min={0} max={50}
-                value={maxDrawdown} onChange={setMaxDrawdown}
-              />
-              <RiskSlider
-                label="Max Position Size"
-                hint="Maximum % of capital in a single position"
-                min={0} max={100}
-                value={maxPosition} onChange={setMaxPosition}
-              />
-              <RiskSlider
-                label="Stop Loss"
-                hint="Exit position if it loses this much"
-                min={0} max={50}
-                value={stopLoss} onChange={setStopLoss}
-              />
-              <RiskSlider
-                label="Max Concurrent Positions"
-                hint="Maximum open positions at any time"
-                min={1} max={20} suffix=""
-                value={maxPositions} onChange={setMaxPositions}
-              />
-              <RiskSlider
-                label="Cooldown Period"
-                hint="Hours to wait after a stop-loss trigger"
-                min={0} max={72} suffix="h"
-                value={cooldownHours} onChange={setCooldownHours}
-              />
+          {/* Parsed policy badges */}
+          {parsedRows.length > 0 && (
+            <div className="rounded-xl border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-success">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  AI-extracted policy
+                </div>
+                <span className="text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
+                  Claude Sonnet
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {parsedRows.map(([key, value]) => {
+                  const colorClass = FIELD_COLORS[key] ?? 'bg-surface text-text-secondary border-border'
+                  return (
+                    <div key={key} className={cn('flex flex-col rounded-lg border px-3 py-2 text-xs', colorClass)}>
+                      <span className="font-medium opacity-70 capitalize text-[10px] uppercase tracking-wide">
+                        {key.replace(/_/g, ' ')}
+                      </span>
+                      <span className="font-semibold mt-0.5">
+                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </Card>
+          )}
         </div>
 
-        {/* ── Right: live parse + policy hash ──────────────────────────────── */}
+        {/* ── Right: risk + policy hash ── */}
         <div className="space-y-4 lg:sticky lg:top-6 self-start">
 
-          {/* Live AI Preview */}
+          {/* Risk parameters */}
           <Card padding="md">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">Live AI Preview</h3>
-              {parseLoading && <Spinner size="sm" className="ml-auto" />}
-            </div>
-            <ParsePanel
-              result={parseResult}
-              loading={parseLoading}
-              error={parseError}
-            />
-          </Card>
-
-          {/* On-Chain Policy Hash */}
-          <Card padding="md">
-            <div className="flex items-center gap-1.5 text-xs text-text-secondary mb-3">
-              <Hash className="h-3.5 w-3.5" />
-              <span className="font-medium">On-Chain Policy Hash</span>
-            </div>
-            {policyHash ? (
-              <div className="space-y-3">
-                <p className="font-mono-data text-[11px] text-text-primary break-all bg-surface rounded-md p-2.5">
-                  {policyHash}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={copyHash}
-                    className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                  >
-                    {copied
-                      ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                      : <Copy className="h-3.5 w-3.5" />
-                    }
-                    {copied ? 'Copied!' : 'Copy hash'}
-                  </button>
-                  {mandate.onChainTx && (
-                    <a
-                      href={`https://explorer.mantle.xyz/tx/${mandate.onChainTx}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Explorer
-                    </a>
-                  )}
-                </div>
-                {mandateText !== mandate.mandateText && (
-                  <p className="text-[10px] text-warning flex items-center gap-1">
-                    <TriangleAlert className="h-3 w-3" />
-                    Hash will change after saving
-                  </p>
-                )}
+              <div className={cn('h-6 w-6 rounded-full flex items-center justify-center', risk.barColor.replace('bg-', 'bg-') + '/10')}>
+                <Shield className={cn('h-3.5 w-3.5', risk.color)} />
               </div>
-            ) : (
-              <p className="text-xs text-text-secondary italic">
-                Will be generated on save
-                <br />
-                <span className="text-[10px] opacity-70">(computed from mandate content)</span>
-              </p>
-            )}
-          </Card>
+              <h3 className="text-sm font-semibold text-text-primary">Risk Parameters</h3>
+              <span className={cn('ml-auto text-xs font-bold', risk.color)}>{risk.label}</span>
+            </div>
 
-          {/* Risk summary */}
-          <Card padding="sm" className="text-xs">
-            <p className="font-semibold text-text-secondary uppercase tracking-wider text-[10px] mb-2">Risk Summary</p>
-            <div className="space-y-1.5">
+            {/* Risk bar */}
+            <div className="h-1.5 rounded-full bg-border mb-4 overflow-hidden">
+              <div
+                className={cn('h-full rounded-full transition-all', risk.barColor)}
+                style={{ width: `${risk.width}%` }}
+              />
+            </div>
+
+            <div className="space-y-2.5">
               {[
-                ['Max Drawdown',  `${maxDrawdown}%`],
-                ['Max Position',  `${maxPosition}%`],
-                ['Stop Loss',     `${stopLoss}%`],
-                ['Max Positions', String(maxPositions)],
-                ['Cooldown',      `${cooldownHours}h`],
+                ['Max Drawdown',        `${mandate.riskParams.maxDrawdown}%`],
+                ['Max Position Size',   `${mandate.riskParams.maxPosition}%`],
+                ['Stop Loss',           `${mandate.riskParams.stopLoss}%`],
+                ['Max Open Positions',  `${mandate.riskParams.maxPositions}`],
+                ['Cooldown After Loss', `${mandate.riskParams.cooldownHours}h`],
               ].map(([k, v]) => (
-                <div key={k} className="flex justify-between">
-                  <span className="text-text-secondary">{k}</span>
-                  <span className="text-text-primary font-medium">{v}</span>
+                <div key={k} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
+                  <span className="text-xs text-text-secondary">{k}</span>
+                  <span className="text-xs font-bold text-text-primary">{v}</span>
                 </div>
               ))}
             </div>
           </Card>
-        </div>
-      </div>
 
-      {/* Error */}
-      {apiError && (
-        <AlertBanner severity="error" title="Update failed">{apiError}</AlertBanner>
-      )}
+          {/* Policy hash */}
+          {mandate.policyHash && (
+            <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Hash className="h-3.5 w-3.5" />
+                  </div>
+                  Policy Hash
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
+                  <Network className="h-3 w-3" />
+                  Mantle Sepolia
+                </div>
+              </div>
 
-      {/* Action bar */}
-      <div className="flex items-center justify-between pt-5 border-t border-border">
-        <Button variant="ghost" onClick={() => router.back()}>
-          Cancel
-        </Button>
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-text-secondary hidden sm:block">
-            Saving will regenerate the policy hash
-          </p>
-          {mandate.status === 'draft' && (
-            <Button
-              variant="secondary"
-              onClick={() => update({ status: 'active' })}
-              loading={saving}
-            >
-              Activate
-            </Button>
+              <p className="font-mono text-[11px] text-text-primary break-all leading-relaxed bg-surface/50 rounded-lg p-2.5 border border-border/50">
+                {mandate.policyHash}
+              </p>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={copyHash}
+                  className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {copied
+                    ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    : <Copy className="h-3.5 w-3.5" />
+                  }
+                  {copied ? 'Copied!' : 'Copy hash'}
+                </button>
+                {mandate.onChainTx && (
+                  <a
+                    href={`https://explorer.sepolia.mantle.xyz/tx/${mandate.onChainTx}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View on Explorer
+                  </a>
+                )}
+              </div>
+            </div>
           )}
-          <Button
-            variant="primary"
-            onClick={handleUpdate}
-            loading={saving}
-            disabled={!mandateText.trim() || !name.trim()}
-          >
-            Update Mandate
-          </Button>
+
+          {/* On-chain tx (if no hash yet) */}
+          {!mandate.policyHash && (
+            <div className="rounded-xl border border-border bg-surface/50 p-4">
+              <p className="text-xs text-text-secondary italic">
+                No policy hash yet — edit the mandate to generate one.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
