@@ -41,22 +41,24 @@ export default function DashboardPage() {
   const activeAgents = MOCK_AGENTS.filter((a) => a.status === 'active')
 
   return (
-    <div className="px-6 pt-8 pb-10 space-y-6">
+    <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-10 space-y-6">
       <PageHeader
         breadcrumb="OPERATIONS"
         title="Dashboard"
         subtitle="Real-time overview of mandates, agents, executions, and policy posture across your Mantle deployment."
         actions={
-          <>
-            <PrimaryButton variant="secondary" icon={<BarChart2 className="h-4 w-4" />}>
-              View Reports
-            </PrimaryButton>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/reports">
+              <PrimaryButton variant="secondary" icon={<BarChart2 className="h-4 w-4" />}>
+                View Reports
+              </PrimaryButton>
+            </Link>
             <Link href="/dashboard/mandates/new">
               <PrimaryButton variant="primary" icon={<Plus className="h-4 w-4" />}>
                 New Mandate
               </PrimaryButton>
             </Link>
-          </>
+          </div>
         }
       />
 
@@ -68,14 +70,14 @@ export default function DashboardPage() {
         title="All systems operational — Policy Engine, Risk Engine, and 4 protocols are online."
         description="12 active agents executed 412 trades in the last 24h with 99.8% uptime."
         action={
-          <button className="text-xs font-semibold text-success hover:underline">
+          <Link href="/dashboard/agents" className="text-xs font-semibold text-success hover:underline">
             View status →
-          </button>
+          </Link>
         }
       />
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard
           label="Portfolio Value"
           value={formatLargeUsd(k.portfolioValue.value)}
@@ -115,7 +117,7 @@ export default function DashboardPage() {
           title="Portfolio Value"
           subtitle={`${tab} performance — net of fees and gas`}
           action={
-            <div className="flex items-center gap-1 rounded-md border border-border bg-page p-0.5">
+            <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border bg-page p-0.5">
               {TIME_TABS.map((t) => (
                 <button
                   key={t}
@@ -330,7 +332,7 @@ export default function DashboardPage() {
 
       {/* Quick actions row */}
       <SectionCard title="Quick Actions" subtitle="Common operational shortcuts">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
             { label: 'Create Mandate',  Icon: Plus,         href: '/dashboard/mandates/new', desc: 'Plain-English strategy → on-chain policy' },
             { label: 'Deploy Agent',    Icon: Bot,          href: '/dashboard/agents',       desc: 'Spin up a new AI execution agent' },

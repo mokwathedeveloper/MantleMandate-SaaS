@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
@@ -16,12 +17,15 @@ import { cn } from '@/lib/utils'
 
 function MMLogo({ size = 32 }: { size?: number }) {
   return (
-    <div
-      className="rounded-md bg-primary text-white font-black flex items-center justify-center shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.45, letterSpacing: '-0.02em' }}
-    >
-      MM
-    </div>
+    <Image
+      src="/logo.png"
+      alt="MantleMandate"
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+      priority
+    />
   )
 }
 
@@ -60,11 +64,8 @@ function Navbar() {
     )}>
       <div className="max-w-[1280px] mx-auto h-full px-6 flex items-center justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <MMLogo size={32} />
-          <span className="text-[17px] font-bold tracking-tight text-text-primary">
-            MantleMandate
-          </span>
+        <Link href="/" className="flex items-center shrink-0">
+          <MMLogo size={52} />
         </Link>
 
         {/* Center nav */}
@@ -148,6 +149,7 @@ function Navbar() {
 
 function HeroFlow() {
   return (
+    <>
     <div className="relative w-full h-full flex items-center justify-center py-4">
       {/* Background glow */}
       <div
@@ -159,7 +161,7 @@ function HeroFlow() {
         }}
       />
 
-      <div className="relative z-10 grid grid-cols-[170px_28px_140px_28px_170px] items-center gap-0 max-w-[600px] w-full">
+      <div className="relative z-10 hidden sm:grid grid-cols-[170px_28px_140px_28px_170px] items-center gap-0 max-w-[600px] w-full">
         {/* ── Card 1: Your Mandate ─────────────────── */}
         <div
           className="rounded-xl border border-border bg-card p-3.5 h-[210px] flex flex-col gap-2 relative"
@@ -262,6 +264,25 @@ function HeroFlow() {
         </div>
       </div>
     </div>
+
+    {/* Mobile fallback — simple 3-card stack */}
+    <div className="relative z-10 sm:hidden flex flex-col gap-3 w-full max-w-[320px]">
+      {[
+        { label: 'Your Mandate', desc: 'Buy ETH when RSI < 30 · Stop loss 2%' },
+        { label: 'AI Agent', desc: 'Parsing policy · Ready to deploy' },
+        { label: 'On-Chain', desc: 'Executed on Mantle · Immutable audit' },
+      ].map(c => (
+        <div
+          key={c.label}
+          className="rounded-xl border border-border bg-card px-4 py-3"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,0.08)' }}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-primary/80 mb-1">{c.label}</p>
+          <p className="text-xs text-text-secondary">{c.desc}</p>
+        </div>
+      ))}
+    </div>
+    </>
   )
 }
 
@@ -308,7 +329,10 @@ function HeroSection() {
               >
                 Start Free — No Wallet Required
               </Link>
-              <button className="inline-flex items-center justify-center gap-2 h-[48px] px-5 text-[14px] font-semibold text-text-primary bg-card border border-border hover:border-text-secondary transition-colors rounded-lg">
+              <button
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center justify-center gap-2 h-[48px] px-5 text-[14px] font-semibold text-text-primary bg-card border border-border hover:border-text-secondary transition-colors rounded-lg"
+              >
                 <Play className="h-4 w-4 text-primary fill-primary" />
                 Watch 2-Min Demo
               </button>
@@ -372,24 +396,28 @@ const FEATURES = [
     title: 'Write It. Deploy It. Done.',
     body:  'Write your mandate in plain English. The AI agent reads it, interprets it, and executes — no coding, no configuration, no PhD required.',
     link:  'See how it works',
+    href:  '/dashboard/mandates/new',
   },
   {
     Icon: Gauge,
     title: 'Rules the AI Cannot Break',
     body:  'Set hard caps: max drawdown, stop-loss, position limits. Your mandate is law. The AI executes within your boundaries — always.',
     link:  'View risk controls',
+    href:  '/dashboard/risk',
   },
   {
     Icon: Shield,
     title: 'Every Decision On-Chain',
     body:  'Every trade decision is hashed on Mantle Network. Share a public audit link with anyone. No trust required — verify it yourself.',
     link:  'Explore the audit viewer',
+    href:  '/dashboard/audit',
   },
   {
     Icon: Network,
     title: 'Best Price, Automatically',
     body:  'Executes across Merchant Moe, Agni Finance, and Fluxion — routes to best price automatically. You never need to choose.',
     link:  'See all protocols',
+    href:  '/dashboard/protocols',
   },
 ]
 
@@ -407,7 +435,7 @@ function FeatureSection() {
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[1080px] mx-auto">
-          {FEATURES.map(({ Icon, title, body, link }) => (
+          {FEATURES.map(({ Icon, title, body, link, href }) => (
             <div
               key={title}
               className="group rounded-lg border border-border bg-card p-6 transition-all duration-150 hover:border-primary/30 hover:bg-surface"
@@ -417,10 +445,10 @@ function FeatureSection() {
               </div>
               <h3 className="text-[18px] font-semibold text-text-primary mb-2">{title}</h3>
               <p className="text-[13.5px] text-text-secondary leading-[1.6] mb-3">{body}</p>
-              <a href="#" className="inline-flex items-center gap-1 text-[13px] font-medium text-text-link group-hover:text-text-link-hover transition-colors">
+              <Link href={href} className="inline-flex items-center gap-1 text-[13px] font-medium text-text-link group-hover:text-text-link-hover transition-colors">
                 {link}
                 <ArrowRight className="h-3.5 w-3.5" />
-              </a>
+              </Link>
             </div>
           ))}
         </div>
@@ -807,10 +835,13 @@ function CtaBanner() {
           >
             Start Free — No Wallet Required
           </Link>
-          <button className="h-[48px] px-5 inline-flex items-center justify-center gap-2 text-[14px] font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/30 rounded-lg transition-colors">
+          <Link
+            href="/dashboard"
+            className="h-[48px] px-5 inline-flex items-center justify-center gap-2 text-[14px] font-semibold text-white bg-white/10 hover:bg-white/15 border border-white/30 rounded-lg transition-colors"
+          >
             <Eye className="h-4 w-4" />
             Live Demo
-          </button>
+          </Link>
         </div>
       </div>
     </section>
@@ -825,15 +856,33 @@ function Footer() {
   const cols = [
     {
       title: 'Platform',
-      links: ['Dashboard', 'Mandate Editor', 'Agent Monitoring', 'Audit Viewer', 'Risk Engine'],
+      links: [
+        { label: 'Dashboard',        href: '/dashboard' },
+        { label: 'Mandate Editor',   href: '/dashboard/mandates/new' },
+        { label: 'Agent Monitoring', href: '/dashboard/agents' },
+        { label: 'Audit Viewer',     href: '/dashboard/audit' },
+        { label: 'Risk Engine',      href: '/dashboard/risk' },
+      ],
     },
     {
       title: 'Resources',
-      links: ['Documentation', 'API Reference', 'Status', 'Changelog', 'Security'],
+      links: [
+        { label: 'Documentation', href: '/dashboard/api' },
+        { label: 'API Reference', href: '/dashboard/api' },
+        { label: 'Status',        href: '/dashboard' },
+        { label: 'Changelog',     href: '/dashboard' },
+        { label: 'Security',      href: '/dashboard/audit' },
+      ],
     },
     {
       title: 'Company',
-      links: ['Team', 'Blog', 'Careers', 'Contact', 'Press Kit'],
+      links: [
+        { label: 'Team',      href: '/#features' },
+        { label: 'Blog',      href: '/#features' },
+        { label: 'Careers',   href: '/#features' },
+        { label: 'Contact',   href: '/#features' },
+        { label: 'Press Kit', href: '/#features' },
+      ],
     },
   ]
   return (
@@ -842,9 +891,8 @@ function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-8 mb-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-3">
-            <div className="flex items-center gap-2.5">
-              <MMLogo size={28} />
-              <span className="text-[15px] font-bold tracking-tight text-text-primary">MantleMandate</span>
+            <div className="flex items-center">
+              <MMLogo size={52} />
             </div>
             <p className="text-[12.5px] text-text-secondary leading-[1.6] max-w-[220px]">
               Your AI. Your Rules. On-Chain.<br />
@@ -860,9 +908,9 @@ function Footer() {
             <div key={title} className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-disabled">{title}</p>
               <ul className="space-y-2">
-                {links.map((l) => (
-                  <li key={l}>
-                    <a href="#" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors">{l}</a>
+                {links.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className="text-[13px] text-text-secondary hover:text-text-primary transition-colors">{label}</Link>
                   </li>
                 ))}
               </ul>
@@ -873,8 +921,8 @@ function Footer() {
         <div className="border-t border-border pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-[12px] text-text-disabled">© 2026 MantleMandate · Built for the Turing Test Hackathon</p>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Terms of Service</a>
+            <Link href="/dashboard" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/dashboard" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Terms of Service</Link>
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
               <MantleHex className="h-3 w-3" />
               Mantle Network
