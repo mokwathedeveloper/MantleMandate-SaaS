@@ -45,12 +45,13 @@ services:
       - key: RISK_GUARD_CONTRACT
         value: 0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258
 
+  - type: redis
+    name: mantlemandate-redis
+    plan: free
+    ipAllowList: []
+
 databases:
   - name: mantlemandate-db
     databaseName: mantlemandate
     user: mantlemandate
     plan: free
-
-  - name: mantlemandate-redis
-    plan: free
-    ipAllowList: []
