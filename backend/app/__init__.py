@@ -1,6 +1,7 @@
 from flask import Flask
+from flask_cors import CORS
 from dotenv import load_dotenv
-from app.extensions import db, jwt, migrate, cors, socketio, limiter, bcrypt
+from app.extensions import db, jwt, migrate, socketio, limiter, bcrypt
 from app.config import config
 
 load_dotenv()
@@ -16,7 +17,7 @@ def create_app(config_name: str = 'default') -> Flask:
 
     from app.auth.routes import is_token_revoked
     jwt.token_in_blocklist_loader(is_token_revoked)
-    cors.init_app(app, origins=app.config['CORS_ORIGINS'])
+    CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=True)
     socketio.init_app(app)
     limiter.init_app(app)
     bcrypt.init_app(app)
