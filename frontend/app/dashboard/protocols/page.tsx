@@ -196,7 +196,7 @@ function ProtocolCard({
 
   return (
     <div
-      className="relative rounded-lg p-5 flex flex-col gap-4 transition-all duration-150 cursor-default"
+      className="relative rounded-lg p-4 flex flex-col gap-3 transition-all duration-150 cursor-default"
       style={{
         background: '#161B22',
         border: `1px solid ${hovered ? 'rgba(0,102,255,0.5)' : '#21262D'}`,
@@ -1056,7 +1056,7 @@ export default function ProtocolsPage() {
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {([
           { label: 'Active Protocols',  value: '12',               sub: 'Connected' },
           { label: 'Active Monitoring', value: '8',                sub: 'Live tracking' },
@@ -1082,7 +1082,7 @@ export default function ProtocolsPage() {
             <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#8B949E' }}>
               {c.label}
             </p>
-            <p className="text-xl font-bold" style={{ color: '#F0F6FC' }}>{c.value}</p>
+            <p className="text-lg font-bold truncate" style={{ color: '#F0F6FC' }}>{c.value}</p>
             <p className="text-xs mt-0.5" style={{ color: '#8B949E' }}>{c.sub}</p>
           </button>
         ))}
@@ -1113,7 +1113,7 @@ export default function ProtocolsPage() {
           <p className="text-sm">No protocols match your filters</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map(p => (
             <ProtocolCard
               key={p.id}
@@ -1127,11 +1127,11 @@ export default function ProtocolsPage() {
 
       {/* ── Summary footer ────────────────────────────────────────────────────── */}
       <div
-        className="flex items-center justify-between pt-4 text-xs"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 text-xs"
         style={{ borderTop: '1px solid #21262D', color: '#8B949E' }}
       >
         <span>
-          Monitoring 12 active protocols&nbsp;&nbsp;·&nbsp;&nbsp;$24.5M total volume routed&nbsp;&nbsp;·&nbsp;&nbsp;Last sync: 2 minutes ago
+          Monitoring 12 active protocols · $24.5M total volume routed · Last sync: 2 min ago
         </span>
         <button
           className="flex items-center gap-1.5 transition-opacity hover:opacity-70"
