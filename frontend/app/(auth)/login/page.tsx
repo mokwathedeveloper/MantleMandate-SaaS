@@ -5,10 +5,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  Eye, EyeOff, AlertCircle, Shield, Zap, Building2,
-  Mail, Lock, ArrowRight, Loader2,
-} from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { useLogin } from '@/hooks/useAuth'
 import {
   AuthShell, BrandLogo, MantleBadge, OrDivider, OAuthButtons,
@@ -22,49 +19,52 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-/* ─── Trust item ───────────────────────────────────────────────────── */
+/* ─── Feature list item ─────────────────────────────────────────────── */
 
-function TrustItem({
-  Icon, title, body,
-}: { Icon: typeof Shield; title: string; body: string }) {
+function FeatureItem({ emoji, title, body }: { emoji: string; title: string; body: string }) {
   return (
-    <div className="flex items-start gap-3.5">
-      <div className="h-10 w-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-        <Icon className="h-[18px] w-[18px] text-primary" strokeWidth={2} />
+    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+      <span style={{ fontSize: '1.2rem', lineHeight: 1, flexShrink: 0, marginTop: '2px' }}>{emoji}</span>
+      <div>
+        <p style={{ fontSize: '13.5px', fontWeight: 600, color: '#F0F6FC', margin: 0 }}>{title}</p>
+        <p style={{ fontSize: '12.5px', color: '#6E7681', margin: '2px 0 0', lineHeight: 1.5 }}>{body}</p>
       </div>
-      <div className="pt-0.5">
-        <p className="text-[14px] font-semibold text-text-primary">{title}</p>
-        <p className="text-[13px] text-text-secondary mt-0.5">{body}</p>
-      </div>
-    </div>
+    </li>
   )
 }
 
-/* ─── Left panel ───────────────────────────────────────────────────── */
+/* ─── Left panel ────────────────────────────────────────────────────── */
 
 function LoginLeftPanel() {
   return (
     <>
       <BrandLogo />
 
-      <div className="space-y-9">
-        <div className="space-y-4 max-w-[420px]">
-          <h1 className="text-[40px] font-bold text-text-primary leading-[1.1] tracking-[-0.01em]">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        <div style={{ maxWidth: 400 }}>
+          <h1 style={{
+            fontSize: 'clamp(2rem, 3.5vw, 2.75rem)',
+            fontWeight: 800,
+            color: '#F0F6FC',
+            margin: '0 0 1rem',
+            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
+          }}>
             Your mandates are<br />
-            still <span className="text-primary">running.</span>
+            still <span style={{ color: '#0090D9' }}>running.</span>
           </h1>
-          <p className="text-[15px] text-text-secondary leading-[1.6]">
+          <p style={{ fontSize: '15px', color: '#6E7681', lineHeight: 1.7, margin: 0 }}>
             Sign in to check your AI agent performance,
             review your on-chain audit trail, and
             manage your active mandates.
           </p>
         </div>
 
-        <div className="space-y-5">
-          <TrustItem Icon={Shield}    title="Non-Custodial"        body="We never hold your funds" />
-          <TrustItem Icon={Zap}       title="Real-Time Execution"  body="Live P&L updated every block" />
-          <TrustItem Icon={Building2} title="Built for Institutions" body="Compliance-ready, multisig-protected" />
-        </div>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          <FeatureItem emoji="🛡️" title="Non-Custodial"         body="We never hold your funds" />
+          <FeatureItem emoji="⚡" title="Real-Time Execution"   body="Live P&L updated every block" />
+          <FeatureItem emoji="🏛️" title="Built for Institutions" body="Compliance-ready, multisig-protected" />
+        </ul>
       </div>
 
       <MantleBadge />
@@ -72,7 +72,14 @@ function LoginLeftPanel() {
   )
 }
 
-/* ─── Page ─────────────────────────────────────────────────────────── */
+/* ─── Shared input style helpers ────────────────────────────────────── */
+
+const inputBase: React.CSSProperties = {
+  background: '#070910',
+  boxShadow: 'inset 4px 4px 8px rgba(0,0,0,0.55), inset -2px -2px 6px rgba(255,255,255,0.03)',
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────── */
 
 function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false)
@@ -94,116 +101,134 @@ function LoginPageInner() {
 
   return (
     <AuthShell leftPanel={<LoginLeftPanel />}>
-      <div className="mb-7">
-        <h2 className="text-[28px] font-semibold text-text-primary leading-tight tracking-[-0.01em]">
+      {/* Heading */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h2 style={{
+          fontSize: '1.6rem', fontWeight: 700,
+          color: '#F0F6FC', margin: '0 0 0.25rem',
+          letterSpacing: '-0.01em',
+        }}>
           Welcome back
         </h2>
-        <p className="text-[14px] text-text-secondary mt-1">
+        <p style={{ fontSize: '13px', color: '#6E7681', margin: 0 }}>
           Sign in to your MantleMandate account
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} noValidate>
         {/* Email */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-[13px] font-medium text-text-secondary">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label htmlFor="email" style={{ fontSize: '12.5px', fontWeight: 500, color: '#8B949E' }}>
             Email address
           </label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-disabled pointer-events-none" />
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              className={cn(
-                'w-full h-12 rounded-md border bg-page pl-10 pr-3 text-[14px] text-text-primary placeholder:text-text-disabled transition-colors focus:outline-none',
-                errors.email
-                  ? 'border-error focus:border-error'
-                  : 'border-border focus:border-primary',
-              )}
-            />
-          </div>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            {...register('email')}
+            style={inputBase}
+            className={cn(
+              'w-full h-12 rounded-xl border pl-4 pr-4 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:outline-none',
+              errors.email ? 'border-error focus:border-error' : 'border-border focus:border-primary',
+            )}
+          />
           {errors.email && (
-            <p className="text-[12px] text-error">{errors.email.message}</p>
+            <p style={{ fontSize: '12px', color: '#EF4444', margin: 0 }}>{errors.email.message}</p>
           )}
         </div>
 
         {/* Password */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-[13px] font-medium text-text-secondary">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label htmlFor="password" style={{ fontSize: '12.5px', fontWeight: 500, color: '#8B949E' }}>
             Password
           </label>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-disabled pointer-events-none" />
+          <div style={{ position: 'relative' }}>
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Enter your password"
               {...register('password')}
+              style={inputBase}
               className={cn(
-                'w-full h-12 rounded-md border bg-page pl-10 pr-10 text-[14px] text-text-primary placeholder:text-text-disabled transition-colors focus:outline-none',
-                errors.password
-                  ? 'border-error focus:border-error'
-                  : 'border-border focus:border-primary',
+                'w-full h-12 rounded-xl border pl-4 pr-11 text-sm text-text-primary placeholder:text-text-disabled transition-colors focus:outline-none',
+                errors.password ? 'border-error focus:border-error' : 'border-border focus:border-primary',
               )}
             />
             <button
               type="button"
-              onClick={() => setShowPassword((v) => !v)}
+              onClick={() => setShowPassword(v => !v)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors"
+              style={{
+                position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#484F58', padding: 0, display: 'flex', alignItems: 'center',
+              }}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-[12px] text-error">{errors.password.message}</p>
+            <p style={{ fontSize: '12px', color: '#EF4444', margin: 0 }}>{errors.password.message}</p>
           )}
         </div>
 
         {/* Options row */}
-        <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
             <input
               type="checkbox"
               {...register('rememberMe')}
-              className="h-4 w-4 rounded border-border bg-page accent-primary focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+              className="h-4 w-4 rounded border-border bg-page accent-primary cursor-pointer"
             />
-            <span className="text-[13px] text-text-secondary">Remember me</span>
+            <span style={{ fontSize: '13px', color: '#8B949E' }}>Remember me</span>
           </label>
           <Link
             href="/forgot-password"
-            className="text-[13px] font-medium text-text-link hover:text-text-link-hover transition-colors"
+            style={{ fontSize: '13px', fontWeight: 500, color: '#0090D9', textDecoration: 'none' }}
           >
             Forgot password?
           </Link>
         </div>
 
-        {/* Submit */}
+        {/* Sign In button */}
         <button
           type="submit"
           disabled={isPending}
-          className={cn(
-            'w-full h-12 rounded-md bg-primary text-white text-[15px] font-semibold transition-colors',
-            'hover:bg-primary-hover disabled:bg-border disabled:text-text-disabled disabled:cursor-not-allowed',
-            'inline-flex items-center justify-center gap-2',
-          )}
+          style={{
+            width: '100%', height: '48px',
+            borderRadius: '12px',
+            background: isPending ? '#21262D' : '#0066FF',
+            color: isPending ? '#484F58' : '#ffffff',
+            fontSize: '15px', fontWeight: 700,
+            border: 'none', cursor: isPending ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+            boxShadow: isPending ? 'none' : '0 0 24px rgba(0,102,255,0.55)',
+            transition: 'all 0.2s',
+            marginTop: '0.25rem',
+          }}
+          onMouseEnter={e => {
+            if (!isPending) e.currentTarget.style.background = '#0052CC'
+          }}
+          onMouseLeave={e => {
+            if (!isPending) e.currentTarget.style.background = '#0066FF'
+          }}
         >
-          {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
+          {isPending ? <Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} /> : 'Sign In'}
         </button>
 
         {/* Error banner */}
         {apiError && (
-          <div
-            role="alert"
-            className="flex items-start gap-2.5 rounded-md border border-error px-3.5 py-3"
-            style={{ background: '#2D0F0F' }}
-          >
-            <AlertCircle className="h-4 w-4 text-error shrink-0 mt-0.5" />
-            <p className="text-[13px] text-error leading-relaxed">{apiError}</p>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+            padding: '0.75rem 1rem',
+            borderRadius: '10px',
+            border: '1px solid rgba(239,68,68,0.4)',
+            background: 'rgba(45,15,15,0.8)',
+          }}>
+            <AlertCircle style={{ width: 15, height: 15, color: '#EF4444', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: '13px', color: '#EF4444', margin: 0, lineHeight: 1.5 }}>{apiError}</p>
           </div>
         )}
       </form>
@@ -211,13 +236,13 @@ function LoginPageInner() {
       <OrDivider label="or continue with" />
       <OAuthButtons />
 
-      <p className="mt-6 text-center text-[13px] text-text-secondary">
+      <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '13px', color: '#6E7681' }}>
         Don&apos;t have an account?{' '}
         <Link
           href="/signup"
-          className="text-text-link hover:text-text-link-hover font-medium inline-flex items-center gap-0.5 transition-colors"
+          style={{ color: '#58A6FF', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
         >
-          Start for free <ArrowRight className="h-3.5 w-3.5 inline-block" />
+          Start for free <ArrowRight style={{ width: 13, height: 13, display: 'inline' }} />
         </Link>
       </p>
     </AuthShell>

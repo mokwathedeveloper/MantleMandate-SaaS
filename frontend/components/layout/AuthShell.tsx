@@ -7,47 +7,123 @@ interface AuthShellProps {
   children:  ReactNode
 }
 
+/* ─── Solid 3D cube field ────────────────────────────────────────────── */
+
+const CUBES = [
+  { size: 40, delay: '0s',    opacity: 0.90 },
+  { size: 26, delay: '0.45s', opacity: 0.65 },
+  { size: 54, delay: '0.85s', opacity: 0.95 },
+  { size: 22, delay: '0.2s',  opacity: 0.55 },
+  { size: 44, delay: '1.1s',  opacity: 0.80 },
+  { size: 30, delay: '0.65s', opacity: 0.70 },
+  { size: 20, delay: '1.4s',  opacity: 0.50 },
+  { size: 48, delay: '0.35s', opacity: 0.85 },
+  { size: 28, delay: '0.95s', opacity: 0.60 },
+  { size: 36, delay: '1.25s', opacity: 0.75 },
+]
+
+function CubeField() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute',
+        bottom: '1.75rem',
+        left: '2.5rem',
+        right: '2.5rem',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.85rem',
+        alignItems: 'flex-end',
+      }}
+    >
+      {CUBES.map((c, i) => (
+        <div
+          key={i}
+          className="auth-cube"
+          style={{
+            width:  c.size,
+            height: c.size,
+            flexShrink: 0,
+            background: 'linear-gradient(145deg, #0090D9 0%, #0060CC 55%, #002E80 100%)',
+            borderRadius: 5,
+            transform: 'rotateX(30deg) rotateY(42deg)',
+            boxShadow: '0 0 18px rgba(0,144,217,0.65), 0 0 40px rgba(0,96,204,0.28), inset 0 1px 0 rgba(255,255,255,0.18)',
+            opacity: c.opacity,
+            animationDelay: c.delay,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/* ─── Shell ──────────────────────────────────────────────────────────── */
+
 export function AuthShell({ leftPanel, children }: AuthShellProps) {
   return (
-    <div className="flex min-h-screen bg-page">
-      {/* ── Left panel — 45% (desktop only) ─────────────────────────────── */}
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#070910' }}>
+
+      {/* Left info panel — desktop only */}
       <aside
-        className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-page border-r border-border px-12 xl:px-16 py-14 overflow-hidden"
+        className="hidden lg:flex lg:w-[48%] flex-col"
+        style={{
+          position: 'relative',
+          padding: '3.5rem',
+          background: 'linear-gradient(175deg, #050508 0%, #080910 60%, #060D1A 100%)',
+          borderRight: '1px solid rgba(255,255,255,0.04)',
+          overflow: 'hidden',
+        }}
       >
-        {/* Atmospheric blue glow — diffuse, behind everything */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-40 left-1/2 -translate-x-1/2 h-[520px] w-[760px] rounded-full"
-          style={{
-            background:
-              'radial-gradient(ellipse, rgba(0,102,255,0.22) 0%, rgba(0,102,255,0.08) 35%, transparent 70%)',
-            filter: 'blur(20px)',
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-[280px]"
-          style={{
-            background:
-              'linear-gradient(180deg, transparent 0%, rgba(0,102,255,0.04) 60%, rgba(0,102,255,0.10) 100%)',
-          }}
-        />
+        {/* Bottom atmospheric glow */}
+        <div aria-hidden style={{
+          position: 'absolute', bottom: '-80px', left: '50%',
+          transform: 'translateX(-50%)',
+          width: '700px', height: '450px', borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(0,100,255,0.28) 0%, rgba(0,100,255,0.10) 40%, transparent 70%)',
+          filter: 'blur(32px)', pointerEvents: 'none',
+        }} />
+        {/* Top-right accent */}
+        <div aria-hidden style={{
+          position: 'absolute', top: '-100px', right: '-100px',
+          width: '380px', height: '380px', borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(0,194,255,0.06) 0%, transparent 70%)',
+          filter: 'blur(40px)', pointerEvents: 'none',
+        }} />
 
-        {/* Wireframe blueprint floor + cubes */}
-        <BlueprintBg />
+        <CubeField />
 
-        <div className="relative z-10 flex flex-col h-full justify-between gap-10">
+        <div style={{
+          position: 'relative', zIndex: 10,
+          display: 'flex', flexDirection: 'column',
+          height: '100%', justifyContent: 'space-between', gap: '2rem',
+        }}>
           {leftPanel}
         </div>
       </aside>
 
-      {/* ── Right form panel — 55% ──────────────────────────────────────── */}
-      <main className="flex flex-1 flex-col items-center justify-center bg-card px-6 py-10 sm:px-10 lg:px-16">
-        <div className="w-full max-w-[420px]">
-          {/* Mobile logo (hidden on lg+) */}
-          <div className="flex items-center mb-8 lg:hidden">
-            <Image src="/logo.png" alt="MantleMandate" width={88} height={88} className="h-[88px] w-[88px] object-contain" priority />
-          </div>
+      {/* Right form panel */}
+      <main
+        className="flex flex-1 flex-col items-center justify-center"
+        style={{ padding: '2.5rem 1.5rem', background: '#070910' }}
+      >
+        {/* Mobile logo */}
+        <div className="mb-8 lg:hidden">
+          <Image src="/logo.png" alt="MantleMandate" width={72} height={72}
+            className="h-[72px] w-[72px] object-contain" priority />
+        </div>
+
+        {/* Glassmorphic card */}
+        <div style={{
+          width: '100%', maxWidth: '420px',
+          background: 'rgba(11, 14, 22, 0.90)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '20px',
+          padding: '2.5rem',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,100,255,0.06)',
+        }}>
           {children}
         </div>
       </main>
@@ -55,212 +131,97 @@ export function AuthShell({ leftPanel, children }: AuthShellProps) {
   )
 }
 
-/* ─── Blueprint background (wireframe cubes + perspective grid) ───── */
-
-function WireframeCube({
-  x, y, size, opacity = 0.7, fill = 0.04, stroke = '#3B82F6', glow = false,
-}: {
-  x: number; y: number; size: number;
-  opacity?: number; fill?: number; stroke?: string; glow?: boolean
-}) {
-  // Isometric projection — 30° angles
-  const w = size           // half-width on the iso axis
-  const h = size * 0.55    // vertical compression
-  const d = size           // depth
-
-  // 8 vertices of an isometric cube around (x,y) anchored at the bottom-front
-  // top quad
-  const tA = [x - w, y - d - h]    // top-left
-  const tB = [x,     y - d - 2 * h] // top-back
-  const tC = [x + w, y - d - h]    // top-right
-  const tD = [x,     y - d]        // top-front
-  // bottom quad
-  const bA = [x - w, y - h]
-  const bC = [x + w, y - h]
-  const bD = [x,     y]
-
-  const sw = 1.1
-  const path = `M${tA} L${tB} L${tC} L${tD} Z`
-
-  return (
-    <g style={{ opacity, filter: glow ? 'drop-shadow(0 0 8px rgba(0,194,255,0.55))' : undefined }}>
-      {/* Top face */}
-      <polygon
-        points={`${tA.join(',')} ${tB.join(',')} ${tC.join(',')} ${tD.join(',')}`}
-        fill={`rgba(0,194,255,${fill * 1.4})`}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="round"
-      />
-      {/* Left face */}
-      <polygon
-        points={`${tA.join(',')} ${tD.join(',')} ${bD.join(',')} ${bA.join(',')}`}
-        fill={`rgba(0,102,255,${fill})`}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="round"
-      />
-      {/* Right face */}
-      <polygon
-        points={`${tD.join(',')} ${tC.join(',')} ${bC.join(',')} ${bD.join(',')}`}
-        fill={`rgba(0,59,153,${fill * 1.6})`}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="round"
-      />
-      {/* Subtle hidden edges for depth (very thin) */}
-      <path d={path} fill="none" stroke={stroke} strokeWidth={sw * 0.6} opacity={0.4} />
-    </g>
-  )
-}
-
-function BlueprintBg() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 720 420"
-      preserveAspectRatio="xMidYMax slice"
-      className="pointer-events-none absolute inset-x-0 bottom-0 w-full h-[60%]"
-    >
-      <defs>
-        {/* Grid line gradient — fades to nothing toward the top */}
-        <linearGradient id="gridFade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#3B82F6" stopOpacity="0"   />
-          <stop offset="35%"  stopColor="#3B82F6" stopOpacity="0.05"/>
-          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.45"/>
-        </linearGradient>
-        {/* Vanishing-point radial behind cubes */}
-        <radialGradient id="halo" cx="50%" cy="85%" r="55%">
-          <stop offset="0%"   stopColor="#0066FF" stopOpacity="0.45" />
-          <stop offset="50%"  stopColor="#0066FF" stopOpacity="0.12" />
-          <stop offset="100%" stopColor="#0066FF" stopOpacity="0"    />
-        </radialGradient>
-        <filter id="softBlur" x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur stdDeviation="0.4" />
-        </filter>
-      </defs>
-
-      {/* Vanishing-point halo */}
-      <ellipse cx="360" cy="380" rx="320" ry="120" fill="url(#halo)" />
-
-      {/* Perspective floor — horizontal lines (parallel) */}
-      <g stroke="url(#gridFade)" strokeWidth="1" filter="url(#softBlur)">
-        {Array.from({ length: 14 }).map((_, i) => {
-          const t = i / 13
-          const y = 240 + t * 180
-          const opacity = 0.15 + t * 0.55
-          return (
-            <line
-              key={`h${i}`}
-              x1="0" x2="720"
-              y1={y} y2={y}
-              stroke="#3B82F6"
-              strokeOpacity={opacity}
-              strokeWidth={t < 0.5 ? 0.6 : 0.9}
-            />
-          )
-        })}
-        {/* Vanishing-point converging lines */}
-        {Array.from({ length: 22 }).map((_, i) => {
-          const t = (i - 10) / 11
-          const startX = 360 + t * 740
-          return (
-            <line
-              key={`v${i}`}
-              x1={startX} y1="420"
-              x2="360"    y2="240"
-              stroke="#3B82F6"
-              strokeOpacity={0.18 + Math.abs(t) * 0.05}
-              strokeWidth={0.7}
-            />
-          )
-        })}
-      </g>
-
-      {/* Wireframe cubes — sized & spaced like the reference */}
-      <WireframeCube x={130} y={335} size={26} opacity={0.55} fill={0.05}  />
-      <WireframeCube x={245} y={355} size={36} opacity={0.85} fill={0.10} glow />
-      <WireframeCube x={245} y={295} size={20} opacity={0.55} fill={0.06}  />
-      <WireframeCube x={415} y={345} size={30} opacity={0.7}  fill={0.07}  />
-      <WireframeCube x={555} y={330} size={22} opacity={0.55} fill={0.05}  />
-      <WireframeCube x={605} y={355} size={16} opacity={0.45} fill={0.04}  />
-
-      {/* Floating accent dots */}
-      <g fill="#00C2FF">
-        <circle cx="120" cy="245" r="1.4" opacity="0.55" />
-        <circle cx="350" cy="230" r="1.6" opacity="0.7"  />
-        <circle cx="540" cy="240" r="1.2" opacity="0.5"  />
-        <circle cx="640" cy="280" r="1"   opacity="0.55" />
-      </g>
-    </svg>
-  )
-}
-
-/* ─── Brand logo (preserves /logo.png) ─────────────────────────────── */
+/* ─── Brand logo ─────────────────────────────────────────────────────── */
 
 export function BrandLogo() {
   return (
-    <Image
-      src="/logo.png"
-      alt="MantleMandate"
-      width={88}
-      height={88}
-      className="h-[88px] w-[88px] object-contain"
-      style={{ filter: 'drop-shadow(0 0 8px rgba(0,102,255,0.35))' }}
-      priority
-    />
-  )
-}
-
-/* ─── Mantle Network badge ─────────────────────────────────────────── */
-
-export function MantleBadge() {
-  return (
-    <div
-      className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5"
-      style={{ boxShadow: '0 0 24px -8px rgba(0,102,255,0.6)' }}
-    >
-      <Hexagon className="h-3.5 w-3.5 text-primary" strokeWidth={2.2} />
-      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-        Deployed on Mantle Network
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <Image
+        src="/logo.png"
+        alt="MantleMandate"
+        width={44}
+        height={44}
+        className="h-[44px] w-[44px] object-contain"
+        style={{ filter: 'drop-shadow(0 0 10px rgba(0,144,217,0.55))' }}
+        priority
+      />
+      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#F0F6FC', letterSpacing: '-0.02em' }}>
+        MantleMandate
       </span>
     </div>
   )
 }
 
-/* ─── Or-divider ───────────────────────────────────────────────────── */
+/* ─── Mantle badge ───────────────────────────────────────────────────── */
+
+export function MantleBadge() {
+  return (
+    <button
+      type="button"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+        padding: '0.5rem 1.25rem',
+        borderRadius: '999px',
+        border: '1px solid rgba(0,144,217,0.45)',
+        background: 'rgba(0,144,217,0.08)',
+        boxShadow: '0 0 24px -6px rgba(0,144,217,0.6)',
+        cursor: 'default',
+      }}
+    >
+      <Hexagon style={{ width: 13, height: 13, color: '#0090D9' }} strokeWidth={2.2} />
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#0090D9' }}>
+        Deployed on Mantle Network
+      </span>
+    </button>
+  )
+}
+
+/* ─── Or-divider ─────────────────────────────────────────────────────── */
 
 export function OrDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 my-5">
-      <div className="flex-1 h-px bg-border" />
-      <span className="text-[12px] text-text-disabled shrink-0">{label}</span>
-      <div className="flex-1 h-px bg-border" />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.25rem 0' }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+      <span style={{ fontSize: 11, color: '#484F58', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
     </div>
   )
 }
 
-/* ─── OAuth buttons ────────────────────────────────────────────────── */
+/* ─── OAuth buttons ──────────────────────────────────────────────────── */
 
 export function OAuthButtons() {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <button
-        type="button"
-        className="flex items-center justify-center gap-2 h-11 rounded-md border border-border bg-page text-text-primary text-[13px] font-semibold hover:border-text-secondary hover:bg-card transition-colors"
-        onClick={() => alert('Google OAuth — coming soon')}
-      >
-        <GoogleIcon />
-        Google
-      </button>
-      <button
-        type="button"
-        className="flex items-center justify-center gap-2 h-11 rounded-md border border-border bg-page text-text-primary text-[13px] font-semibold hover:border-text-secondary hover:bg-card transition-colors"
-        onClick={() => alert('Microsoft OAuth — coming soon')}
-      >
-        <MicrosoftIcon />
-        Microsoft
-      </button>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+      {([
+        { label: 'Google',    icon: <GoogleIcon /> },
+        { label: 'Microsoft', icon: <MicrosoftIcon /> },
+      ] as const).map(({ label, icon }) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => alert(`${label} OAuth — coming soon`)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+            height: '44px', borderRadius: '10px',
+            border: '1px solid rgba(255,255,255,0.09)',
+            background: 'rgba(255,255,255,0.04)',
+            color: '#C9D1D9', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'
+          }}
+        >
+          {icon}
+          {label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -279,9 +240,9 @@ function GoogleIcon() {
 function MicrosoftIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 21 21" fill="none">
-      <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-      <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-      <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+      <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+      <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+      <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
       <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
     </svg>
   )
