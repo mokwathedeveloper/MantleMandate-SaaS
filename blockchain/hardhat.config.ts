@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../backend/.env" });
@@ -28,6 +29,31 @@ const config: HardhatUserConfig = {
       accounts: [MANTLE_PRIVATE_KEY],
     },
   },
+  etherscan: {
+    apiKey: {
+      mantle_testnet: process.env.MANTLE_EXPLORER_API_KEY || "no-key-needed",
+      mantle_mainnet: process.env.MANTLE_EXPLORER_API_KEY || "no-key-needed",
+    },
+    customChains: [
+      {
+        network: "mantle_testnet",
+        chainId: 5003,
+        urls: {
+          apiURL:     "https://explorer.sepolia.mantle.xyz/api",
+          browserURL: "https://explorer.sepolia.mantle.xyz",
+        },
+      },
+      {
+        network: "mantle_mainnet",
+        chainId: 5000,
+        urls: {
+          apiURL:     "https://explorer.mantle.xyz/api",
+          browserURL: "https://explorer.mantle.xyz",
+        },
+      },
+    ],
+  },
+  sourcify: { enabled: false },
 };
 
 export default config;
