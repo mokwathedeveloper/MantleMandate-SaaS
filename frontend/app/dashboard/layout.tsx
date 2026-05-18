@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { RightRail } from '@/components/layout/RightRail'
 import { TopBar } from '@/components/layout/TopBar'
 import { AppAlertBanner } from '@/components/ui/AppAlertBanner'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -25,12 +26,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <AppAlertBanner />
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           {children}
         </div>
       </main>
 
       <RightRail />
+
+      {/* Mobile bottom navigation — replaces sidebar on small screens */}
+      <MobileBottomNav />
     </div>
   )
 }

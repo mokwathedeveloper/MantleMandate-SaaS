@@ -17,6 +17,7 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { PrimaryButton } from '@/components/ui/PrimaryButton'
 import { MarketTicker } from '@/components/ui/MarketTicker'
+import { GettingStartedBanner } from '@/components/dashboard/GettingStartedBanner'
 
 import {
   DASHBOARD_KPIS, DASHBOARD_PNL_30D, DASHBOARD_RECENT_TRADES,
@@ -61,6 +62,9 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      {/* Onboarding checklist — visible until user dismisses */}
+      <GettingStartedBanner />
 
       {/* Live market prices */}
       <MarketTicker />

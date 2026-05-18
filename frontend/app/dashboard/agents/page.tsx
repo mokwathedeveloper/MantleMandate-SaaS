@@ -167,7 +167,7 @@ function AgentCard({ agent }: { agent: Agent }) {
             <>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-warning hover:border-warning transition-colors"
-                title="Pause"
+                aria-label="Pause agent"
                 disabled={pausing}
                 onClick={() => pause(agent.id)}
               >
@@ -175,7 +175,7 @@ function AgentCard({ agent }: { agent: Agent }) {
               </button>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-error hover:border-error transition-colors"
-                title="Stop"
+                aria-label="Stop agent"
                 disabled={stopping}
                 onClick={() => stop(agent.id)}
               >
@@ -187,7 +187,7 @@ function AgentCard({ agent }: { agent: Agent }) {
             <>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-success hover:border-success transition-colors"
-                title="Resume"
+                aria-label="Resume agent"
                 disabled={resuming}
                 onClick={() => resume(agent.id)}
               >
@@ -195,7 +195,7 @@ function AgentCard({ agent }: { agent: Agent }) {
               </button>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-error hover:border-error transition-colors"
-                title="Stop"
+                aria-label="Stop agent"
                 disabled={stopping}
                 onClick={() => stop(agent.id)}
               >
@@ -206,14 +206,14 @@ function AgentCard({ agent }: { agent: Agent }) {
           <Link
             href={`/dashboard/agents/${agent.id}`}
             className="p-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
-            title="Settings"
+            aria-label="Agent settings"
           >
             <Settings className="h-3 w-3" />
           </Link>
           <Link
             href={`/dashboard/agents/${agent.id}`}
             className="p-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
-            title="View detail"
+            aria-label="View agent detail"
           >
             <ExternalLink className="h-3 w-3" />
           </Link>
