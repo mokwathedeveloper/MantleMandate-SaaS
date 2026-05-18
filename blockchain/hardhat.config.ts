@@ -1,6 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-verify";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../backend/.env" });
@@ -29,11 +28,11 @@ const config: HardhatUserConfig = {
       accounts: [MANTLE_PRIVATE_KEY],
     },
   },
+  // Sourcify is a decentralized verification service — works with Blockscout-based explorers
+  sourcify: { enabled: true },
+  // Etherscan-compatible config kept for reference (Mantle Explorer is Blockscout-based)
   etherscan: {
-    apiKey: {
-      mantle_testnet: process.env.MANTLE_EXPLORER_API_KEY || "no-key-needed",
-      mantle_mainnet: process.env.MANTLE_EXPLORER_API_KEY || "no-key-needed",
-    },
+    apiKey: { mantle_testnet: "no-key-needed", mantle_mainnet: "no-key-needed" },
     customChains: [
       {
         network: "mantle_testnet",
@@ -43,17 +42,8 @@ const config: HardhatUserConfig = {
           browserURL: "https://explorer.sepolia.mantle.xyz",
         },
       },
-      {
-        network: "mantle_mainnet",
-        chainId: 5000,
-        urls: {
-          apiURL:     "https://explorer.mantle.xyz/api",
-          browserURL: "https://explorer.mantle.xyz",
-        },
-      },
     ],
   },
-  sourcify: { enabled: false },
 };
 
 export default config;
