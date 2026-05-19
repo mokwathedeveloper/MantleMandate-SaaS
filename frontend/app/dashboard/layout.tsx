@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <AppAlertBanner />
-        <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+        <div className="flex-1 overflow-y-auto pb-nav-safe lg:pb-0">
           {children}
         </div>
       </main>
