@@ -340,7 +340,12 @@ export default function SupportPage() {
               Connect with other MantleMandate users. Share strategies.
             </p>
           </div>
-          <a href="#" className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1">
+          <a
+            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/discussions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1"
+          >
             Join Forum <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
