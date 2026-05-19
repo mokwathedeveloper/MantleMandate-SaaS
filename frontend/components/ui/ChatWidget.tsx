@@ -81,6 +81,8 @@ export function ChatWidget() {
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
+        aria-label="Open MantleMandate support chat"
+        aria-haspopup="dialog"
         className="w-fit bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors"
       >
         Start Chat →
