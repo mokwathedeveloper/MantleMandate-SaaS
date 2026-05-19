@@ -25,9 +25,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Upgrade npm to match local toolchain
-        run: npm install -g npm@11
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
