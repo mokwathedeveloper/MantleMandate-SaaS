@@ -2,6 +2,7 @@ import logging
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
+from sqlalchemy.exc import IntegrityError
 from app.mandates import mandates_bp
 from app.mandates.schemas import MandateCreateSchema, MandateUpdateSchema, ParsePreviewSchema
 from app.extensions import db
@@ -65,7 +66,12 @@ def create_mandate():
         status='draft',
     )
     db.session.add(mandate)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('mandate create failed')
+        return jsonify(error='Server error', message='Could not create mandate'), 500
     return jsonify(data=mandate.to_dict(), message='Mandate created'), 201
 
 
@@ -103,7 +109,12 @@ def update_mandate(mandate_id):
         except (MandateParseError, Exception) as e:
             logger.warning('Mandate parse failed on update %s: %s', mandate_id, e)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('mandate update failed')
+        return jsonify(error='Server error', message='Could not update mandate'), 500
     return jsonify(data=mandate.to_dict(), message='Mandate updated'), 200
 
 
@@ -115,7 +126,12 @@ def delete_mandate(mandate_id):
     if not mandate:
         return jsonify(error='Not found', message='Mandate not found'), 404
     db.session.delete(mandate)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('mandate delete failed')
+        return jsonify(error='Server error', message='Could not delete mandate'), 500
     return jsonify(data=None, message='Mandate deleted'), 200
 
 
