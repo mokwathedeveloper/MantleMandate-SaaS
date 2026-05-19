@@ -6,7 +6,7 @@ import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
-  CheckCircle2, Play, Star, ArrowRight, Sparkles,
+  CheckCircle2, Play, Star, ArrowRight, ArrowDown, Sparkles,
   KeyRound, Users, Eye, Award, Hexagon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -147,11 +147,109 @@ function Navbar() {
    2. HERO
    ───────────────────────────────────────────────────────────────── */
 
+/* ── Shared card sub-components ─────────────────────── */
+
+function MandateCard({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className="rounded-xl border border-border bg-card flex flex-col gap-2 relative w-full"
+      style={{
+        padding: compact ? '10px 12px' : '14px',
+        boxShadow: '0 0 0 1px rgba(0,102,255,0.08), 0 12px 30px -12px rgba(0,102,255,0.30)',
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-primary/80">Your Mandate</span>
+        <FileText className="h-3 w-3 text-primary" />
+      </div>
+      <div className="rounded-md bg-page border border-border px-2 py-2 space-y-1.5 flex-1">
+        <p className="text-[10px] text-text-primary leading-snug">Buy <span className="text-primary font-semibold">ETH</span> when RSI &lt; 30.</p>
+        <p className="text-[10px] text-text-primary leading-snug">Stop loss at <span className="text-error font-semibold">2%</span>.</p>
+        <p className="text-[10px] text-text-primary leading-snug">Max 5% per trade.</p>
+        <p className="text-[10px] text-text-primary leading-snug">Pause on drawdown &gt;<span className="text-warning font-semibold">10%</span>.</p>
+      </div>
+      <div className="flex items-center gap-1 pt-0.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
+        <span className="text-[9px] text-text-secondary font-medium">Verified</span>
+        <span className="ml-auto font-mono text-[8px] text-text-disabled">0x8f3a…b5c</span>
+      </div>
+    </div>
+  )
+}
+
+function AgentCard({ horizontal = false }: { horizontal?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border border-primary/30 bg-card relative overflow-hidden',
+        horizontal ? 'flex items-center gap-4 px-4 py-3' : 'flex flex-col items-center justify-center gap-2 p-3',
+      )}
+      style={{
+        height: horizontal ? 72 : 170,
+        boxShadow: '0 0 30px -8px rgba(0,102,255,0.4)',
+      }}
+    >
+      <div aria-hidden className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-xl">
+        <div className="h-20 w-20 rounded-full border border-primary/20 animate-pulse-slow" />
+        <div className="absolute h-14 w-14 rounded-full border border-primary/30" />
+      </div>
+      <div
+        className={cn('relative z-10 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center shrink-0',
+          horizontal ? 'h-9 w-9' : 'h-12 w-12',
+        )}
+        style={{ boxShadow: '0 0 20px rgba(0,102,255,0.5)' }}
+      >
+        <Bot className={cn('text-primary', horizontal ? 'h-5 w-5' : 'h-6 w-6')} />
+      </div>
+      <div className={cn('relative z-10 flex flex-col', horizontal ? 'items-start gap-1' : 'items-center gap-1.5 mt-1')}>
+        <p className="text-[10px] font-semibold text-text-primary">AI Agent</p>
+        <div className="flex items-center gap-0.5">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="h-1 w-1 rounded-full bg-primary animate-pulse-dot" style={{ animationDelay: `${i * 200}ms` }} />
+          ))}
+        </div>
+        <p className="text-[8px] text-text-secondary uppercase tracking-wider">Reading…</p>
+      </div>
+    </div>
+  )
+}
+
+function ExecutingCard() {
+  return (
+    <div
+      className="rounded-xl border border-success/40 bg-card p-3.5 flex flex-col gap-2 relative w-full"
+      style={{ boxShadow: '0 0 0 1px rgba(34,197,94,0.08), 0 12px 30px -12px rgba(34,197,94,0.30)' }}
+    >
+      <div className="flex items-center gap-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-success">Executing</span>
+      </div>
+      <div className="rounded-md bg-success-bg border border-success/30 p-2">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[9px] text-text-secondary">ETH/USDC</span>
+          <span className="text-[9px] font-bold text-success">+2.57%</span>
+        </div>
+        <p className="text-[14px] font-bold text-success mt-0.5">+$2,450</p>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Zap className="h-3 w-3 text-text-disabled" />
+        <span className="text-[8px] text-text-secondary">Merchant Moe</span>
+      </div>
+      <div className="rounded-md bg-page border border-border p-1.5 flex items-center gap-1.5">
+        <Link2 className="h-2.5 w-2.5 text-text-disabled shrink-0" />
+        <span className="font-mono text-[8px] text-text-link truncate">0x4f2a…b9e1</span>
+      </div>
+      <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-page border border-success/40 flex items-center justify-center">
+        <Hexagon className="h-3 w-3 text-success" />
+      </div>
+    </div>
+  )
+}
+
 function HeroFlow() {
   return (
-    <>
-    <div className="relative w-full h-full flex items-center justify-center py-4">
-      {/* Background glow */}
+    <div className="relative w-full flex items-center justify-center py-4">
+      {/* Radial background glow — visible on all sizes */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
@@ -161,128 +259,39 @@ function HeroFlow() {
         }}
       />
 
+      {/* ── DESKTOP / TABLET (≥ 640px): horizontal 3-card flow ── */}
       <div className="relative z-10 hidden sm:grid grid-cols-[170px_28px_140px_28px_170px] items-center gap-0 max-w-[600px] w-full">
-        {/* ── Card 1: Your Mandate ─────────────────── */}
-        <div
-          className="rounded-xl border border-border bg-card p-3.5 h-[210px] flex flex-col gap-2 relative"
-          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,0.08), 0 12px 30px -12px rgba(0,102,255,0.30)' }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-primary/80">Your Mandate</span>
-            <FileText className="h-3 w-3 text-primary" />
-          </div>
-          <div className="rounded-md bg-page border border-border px-2 py-2 space-y-1.5 flex-1">
-            <p className="text-[10px] text-text-primary leading-snug">
-              Buy <span className="text-primary font-semibold">ETH</span> when RSI &lt; 30.
-            </p>
-            <p className="text-[10px] text-text-primary leading-snug">
-              Stop loss at <span className="text-error font-semibold">2%</span>.
-            </p>
-            <p className="text-[10px] text-text-primary leading-snug">
-              Max 5% per trade.
-            </p>
-            <p className="text-[10px] text-text-primary leading-snug">
-              Pause on drawdown &gt;<span className="text-warning font-semibold">10%</span>.
-            </p>
-          </div>
-          <div className="flex items-center gap-1 pt-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
-            <span className="text-[9px] text-text-secondary font-medium">Verified</span>
-            <span className="ml-auto font-mono text-[8px] text-text-disabled">0x8f3a…b5c</span>
-          </div>
-        </div>
-
-        {/* arrow */}
+        <div style={{ height: 210 }}><MandateCard /></div>
         <ArrowRight className="h-3.5 w-3.5 text-text-disabled mx-auto" />
-
-        {/* ── Card 2: AI Agent ─────────────────────── */}
-        <div
-          className="rounded-xl border border-primary/30 bg-card p-3 h-[170px] flex flex-col items-center justify-center gap-2 relative"
-          style={{ boxShadow: '0 0 30px -8px rgba(0,102,255,0.4)' }}
-        >
-          {/* radial pulses */}
-          <div aria-hidden className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-xl">
-            <div className="h-20 w-20 rounded-full border border-primary/20 animate-pulse-slow" />
-            <div className="absolute h-16 w-16 rounded-full border border-primary/30" />
-          </div>
-          <div className="relative z-10 flex flex-col items-center gap-1.5">
-            <div
-              className="h-12 w-12 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center"
-              style={{ boxShadow: '0 0 20px rgba(0,102,255,0.5)' }}
-            >
-              <Bot className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-[10px] font-semibold text-text-primary mt-1">AI Agent</p>
-            <div className="flex items-center gap-0.5">
-              {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  className="h-1 w-1 rounded-full bg-primary animate-pulse-dot"
-                  style={{ animationDelay: `${i * 200}ms` }}
-                />
-              ))}
-            </div>
-            <p className="text-[8px] text-text-secondary uppercase tracking-wider">Reading…</p>
-          </div>
-        </div>
-
-        {/* arrow */}
+        <AgentCard />
         <ArrowRight className="h-3.5 w-3.5 text-text-disabled mx-auto" />
+        <div><ExecutingCard /></div>
+      </div>
 
-        {/* ── Card 3: On-Chain Execution ────────── */}
-        <div
-          className="rounded-xl border border-success/40 bg-card p-3.5 h-[210px] flex flex-col gap-2 relative"
-          style={{ boxShadow: '0 0 0 1px rgba(34,197,94,0.08), 0 12px 30px -12px rgba(34,197,94,0.30)' }}
-        >
-          <div className="flex items-center gap-1 mb-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-success">Executing</span>
-          </div>
+      {/* ── MOBILE (< 640px): vertical stacked cards with visual fidelity ── */}
+      <div className="relative z-10 sm:hidden flex flex-col items-center w-full max-w-[300px] gap-0">
+        {/* Card 1 — Mandate */}
+        <MandateCard compact />
 
-          <div className="rounded-md bg-success-bg border border-success/30 p-2 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[9px] text-text-secondary">ETH/USDC</span>
-              <span className="text-[9px] font-bold text-success">+2.57%</span>
-            </div>
-            <p className="text-[14px] font-bold text-success">+$2,450</p>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Zap className="h-3 w-3 text-text-disabled" />
-            <span className="text-[8px] text-text-secondary">Merchant Moe</span>
-          </div>
-
-          <div className="mt-auto rounded-md bg-page border border-border p-1.5 flex items-center gap-1.5">
-            <Link2 className="h-2.5 w-2.5 text-text-disabled shrink-0" />
-            <span className="font-mono text-[8px] text-text-link truncate">0x4f2a…b9e1</span>
-          </div>
-
-          {/* Mantle hex badge */}
-          <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-page border border-success/40 flex items-center justify-center">
-            <Hexagon className="h-3 w-3 text-success" />
-          </div>
+        {/* Arrow connector */}
+        <div className="flex flex-col items-center py-1">
+          <div className="w-px h-3 bg-border" />
+          <ArrowDown className="h-3 w-3 text-text-disabled" />
         </div>
+
+        {/* Card 2 — AI Agent (horizontal layout on mobile to save vertical space) */}
+        <AgentCard horizontal />
+
+        {/* Arrow connector */}
+        <div className="flex flex-col items-center py-1">
+          <div className="w-px h-3 bg-border" />
+          <ArrowDown className="h-3 w-3 text-text-disabled" />
+        </div>
+
+        {/* Card 3 — Executing */}
+        <ExecutingCard />
       </div>
     </div>
-
-    {/* Mobile fallback — simple 3-card stack */}
-    <div className="relative z-10 sm:hidden flex flex-col gap-3 w-full max-w-[320px]">
-      {[
-        { label: 'Your Mandate', desc: 'Buy ETH when RSI < 30 · Stop loss 2%' },
-        { label: 'AI Agent', desc: 'Parsing policy · Ready to deploy' },
-        { label: 'On-Chain', desc: 'Executed on Mantle · Immutable audit' },
-      ].map(c => (
-        <div
-          key={c.label}
-          className="rounded-xl border border-border bg-card px-4 py-3"
-          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,0.08)' }}
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-primary/80 mb-1">{c.label}</p>
-          <p className="text-xs text-text-secondary">{c.desc}</p>
-        </div>
-      ))}
-    </div>
-    </>
   )
 }
 
@@ -296,16 +305,16 @@ function HeroSection() {
           'radial-gradient(circle at 20% 30%, rgba(0,102,255,0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0,194,255,0.04) 0%, transparent 50%)',
       }}
     >
-      <div className="max-w-[1280px] mx-auto px-6 pt-28 pb-20 lg:pt-32 lg:pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_540px] gap-10 lg:gap-12 items-center">
-          {/* Left */}
-          <div className="space-y-6 max-w-[560px]">
+      <div className="max-w-[1280px] mx-auto px-6 pt-24 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_540px] gap-8 lg:gap-12 items-center">
+          {/* Left — headline + CTAs */}
+          <div className="space-y-5 sm:space-y-6 max-w-[560px] mx-auto lg:mx-0 text-center lg:text-left">
             <div className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary bg-primary/10 border border-primary/20">
               <MantleHex className="h-3 w-3" />
               Built on Mantle Network
             </div>
 
-            <h1 className="text-[44px] sm:text-[52px] lg:text-[60px] font-black text-text-primary leading-[1.05] tracking-[-0.025em]">
+            <h1 className="text-[38px] xs:text-[44px] sm:text-[52px] lg:text-[60px] font-black text-text-primary leading-[1.05] tracking-[-0.025em]">
               Your AI.<br />
               Your Rules.<br />
               <span
@@ -316,13 +325,13 @@ function HeroSection() {
               </span>
             </h1>
 
-            <p className="text-[16px] leading-[1.55] text-text-secondary max-w-[460px]">
+            <p className="text-[15px] sm:text-[16px] leading-[1.55] text-text-secondary max-w-[460px] mx-auto lg:mx-0">
               Write your trading strategy in plain English. MantleMandate deploys
               an AI agent to execute it — transparent, verifiable, and unstoppable
               on Mantle Network.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+            <div className="flex flex-col xs:flex-row gap-2.5 pt-1 justify-center lg:justify-start">
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center h-[48px] px-6 text-[14px] font-semibold text-white bg-primary hover:bg-primary-hover transition-colors rounded-lg"
@@ -338,7 +347,7 @@ function HeroSection() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-1 justify-center lg:justify-start">
               <div className="flex items-center gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-3.5 w-3.5 text-warning fill-warning" />
@@ -352,8 +361,8 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* Right — illustration */}
-          <div className="hidden lg:block">
+          {/* Right — flow illustration, visible on ALL screen sizes */}
+          <div className="w-full flex justify-center lg:block">
             <HeroFlow />
           </div>
         </div>
@@ -374,9 +383,10 @@ function TrustBar() {
   ]
   return (
     <section className="bg-card border-y border-border">
-      <div className="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-center gap-0 divide-x divide-border">
+      {/* Mobile: vertical stack | sm+: horizontal row with dividers */}
+      <div className="max-w-[1280px] mx-auto px-6 py-4 sm:py-0 sm:h-[64px] flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-0 sm:divide-x sm:divide-border">
         {items.map(({ Icon, text }) => (
-          <div key={text} className="flex items-center gap-2 px-6 lg:px-12 first:pl-0 last:pr-0">
+          <div key={text} className="flex items-center gap-2 sm:px-6 lg:px-12">
             <Icon className="h-[16px] w-[16px] text-primary shrink-0" />
             <span className="text-[13px] font-medium text-text-secondary whitespace-nowrap">{text}</span>
           </div>
