@@ -9,15 +9,12 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { fetchOnChainAuditEvents, type OnChainEvent } from '@/hooks/useOnChain'
-
-// ── Chain constants ───────────────────────────────────────────────────────────
-
-const EXPLORER = 'https://explorer.sepolia.mantle.xyz'
+import { MANTLE_TESTNET_EXPLORER as EXPLORER, CONTRACTS as _CONTRACTS } from '@/lib/constants'
 
 const CONTRACTS = {
-  MandatePolicy: process.env.NEXT_PUBLIC_MANDATE_POLICY_CONTRACT  || '0xee9FBcb6583B32d0ddC615882d0A03DA8714b952',
-  AgentExecutor: process.env.NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT  || '0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7',
-  RiskGuard:     process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT      || '0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258',
+  MandatePolicy: _CONTRACTS.MANDATE_POLICY,
+  AgentExecutor: _CONTRACTS.AGENT_EXECUTOR,
+  RiskGuard:     _CONTRACTS.RISK_GUARD,
 } as const
 
 // ── Types ─────────────────────────────────────────────────────────────────────
