@@ -1,17 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Merchant Moe token addresses on Mantle Mainnet (chain 5000)
-const TOKENS: Record<string, { address: string; decimals: number }> = {
-  MNT:  { address: '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8', decimals: 18 },
-  WMNT: { address: '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8', decimals: 18 },
-  USDC: { address: '0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9', decimals: 6  },
-  USDT: { address: '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE', decimals: 6  },
-  WETH: { address: '0xdEAddEaDdeadDEadDEADDEaddEADDEAddead1111', decimals: 18 },
-  WBTC: { address: '0x59889b7021243dB5B1e065385F918316cD90D46', decimals: 8  },
-}
-
-// Merchant Moe V2 subgraph on Mantle
-const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/44992/merchant-moe-lb-mantle/version/latest'
+import { MANTLE_TOKENS as TOKENS, MANTLE_SUBGRAPH_URL as SUBGRAPH_URL } from '@/lib/constants'
 
 export interface QuoteResult {
   tokenIn:       string
