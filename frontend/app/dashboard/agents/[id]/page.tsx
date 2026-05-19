@@ -399,7 +399,12 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
                         hour: '2-digit', minute: '2-digit',
                       })}
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-text-primary">{t.assetPair}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <TokenIcon symbol={t.assetPair.split('/')[0]} size="sm" />
+                        <span className="font-medium text-text-primary">{t.assetPair}</span>
+                      </div>
+                    </td>
                     <td className={cn('px-4 py-2.5 font-semibold uppercase',
                       t.direction === 'buy' ? 'text-success' : 'text-error'
                     )}>
