@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Badge } from '@/components/ui/Badge'
@@ -461,12 +462,13 @@ export default function NewMandatePage() {
                             type="button"
                             onClick={() => form1.setValue('base_currency', c)}
                             className={cn(
-                              'flex-1 h-10 rounded-lg border text-sm font-semibold transition-all duration-150',
+                              'flex-1 h-10 rounded-lg border text-sm font-semibold transition-all duration-150 flex items-center justify-center gap-1.5',
                               active
                                 ? 'border-primary bg-primary text-white shadow-sm shadow-primary/30'
                                 : 'border-border text-text-secondary hover:border-primary/50 hover:text-text-primary',
                             )}
                           >
+                            <TokenIcon symbol={c} size="sm" />
                             {c}
                           </button>
                         )
