@@ -77,18 +77,9 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="fixed z-50 w-[calc(100vw-2rem)] max-w-[400px] rounded-xl overflow-hidden shadow-2xl"
-        style={{
-          top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          background: '#161B22', border: '1px solid #21262D',
-        }}
-      >
+      <div className="fixed z-50 w-[calc(100vw-2rem)] max-w-[400px] rounded-xl overflow-hidden shadow-2xl bg-card border border-border top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ background: '#1C2128', borderBottom: '1px solid #21262D' }}
-        >
+        <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border">
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center">
               <Wallet className="h-3.5 w-3.5 text-primary" />
@@ -118,10 +109,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Address */}
-              <div
-                className="flex items-center justify-between gap-2 rounded-md px-3 py-2.5"
-                style={{ background: '#0D1117', border: '1px solid #30363D' }}
-              >
+              <div className="flex items-center justify-between gap-2 rounded-md px-3 py-2.5 bg-page border border-border">
                 <span className="font-mono text-[12px] text-text-primary">{truncatedAddress}</span>
                 <button
                   onClick={handleCopy}
@@ -151,10 +139,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             /* ── Wallet picker ── */
             <div className="space-y-3">
               {!hasEthereum && (
-                <div
-                  className="flex items-start gap-2 rounded-md p-3"
-                  style={{ background: 'rgba(245,199,66,0.08)', border: '1px solid rgba(245,199,66,0.3)' }}
-                >
+                <div className="flex items-start gap-2 rounded-md p-3 bg-warning/[0.08] border border-warning/30">
                   <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                   <p className="text-[11px] text-warning leading-relaxed">
                     No wallet extension detected. Install MetaMask or Coinbase Wallet to connect.
