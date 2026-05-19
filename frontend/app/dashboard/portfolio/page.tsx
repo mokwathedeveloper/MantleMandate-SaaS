@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
+import { cn } from '@/lib/utils'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -79,6 +80,7 @@ function generatePnlHistory(): PnlPoint[] {
 
 const MOCK_PNL_HISTORY = generatePnlHistory()
 
+// Protocol colors are brand-specific — kept as data to avoid arbitrary Tailwind
 const PROTOCOL_LABELS: Record<string, string> = {
   merchant_moe: 'Merchant Moe',
   agni:         'Agni Finance',
@@ -91,42 +93,64 @@ const PROTOCOL_COLORS: Record<string, string> = {
   fluxion:      '#58A6FF',
 }
 
-// ── sub-components ────────────────────────────────────────────────────────────
+// ── StatCard ──────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function StatCard({
+  label, value, sub, valueClass,
+}: {
+  label: string
+  value: string
+  sub?: string
+  valueClass?: string
+}) {
   return (
-    <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '14px 16px' }}>
-      <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8B949E', margin: '0 0 4px' }}>{label}</p>
-      <p style={{ fontSize: 20, fontWeight: 700, color: color ?? '#F0F6FC', margin: '0 0 2px' }}>{value}</p>
-      {sub && <p style={{ fontSize: 11, color: '#8B949E', margin: 0 }}>{sub}</p>}
+    <div className="bg-card border border-border rounded-lg p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary mb-1">
+        {label}
+      </p>
+      <p className={cn('text-xl font-bold mb-0.5', valueClass ?? 'text-text-primary')}>{value}</p>
+      {sub && <p className="text-[11px] text-text-secondary">{sub}</p>}
     </div>
   )
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+// ── CustomTooltip ─────────────────────────────────────────────────────────────
+
+function CustomTooltip({
+  active, payload, label,
+}: {
+  active?: boolean
+  payload?: { value: number }[]
+  label?: string
+}) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: '#1C2128', border: '1px solid #30363D', borderRadius: 6, padding: '8px 12px' }}>
-      <p style={{ fontSize: 11, color: '#8B949E', margin: '0 0 3px' }}>{label}</p>
-      <p style={{ fontSize: 13, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>
+    <div className="bg-surface border border-border rounded-md px-3 py-2 shadow-modal">
+      <p className="text-[11px] text-text-secondary mb-0.5">{label}</p>
+      <p className="text-[13px] font-bold text-text-primary">
         ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </p>
     </div>
   )
 }
 
-// ── page ──────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PortfolioPage() {
   const [chartDays, setChartDays] = useState(30)
-  const { data: snapshot, isLoading: loadingSnap } = useQuery<PortfolioSnapshot>({
+
+  const {
+    data: snapshot, isLoading: loadingSnap, isError: snapError,
+  } = useQuery<PortfolioSnapshot>({
     queryKey: ['portfolio', 'snapshot'],
     queryFn: () => fetch('/api/portfolio/snapshot').then(r => r.json()),
     staleTime: 30_000,
     refetchInterval: 60_000,
   })
 
-  const { data: positions, isLoading: loadingPos } = useQuery<PositionRow[]>({
+  const {
+    data: positions, isLoading: loadingPos, isError: posError,
+  } = useQuery<PositionRow[]>({
     queryKey: ['portfolio', 'positions'],
     queryFn: () => fetch('/api/portfolio/positions').then(r => r.json()),
     staleTime: 30_000,
@@ -134,6 +158,7 @@ export default function PortfolioPage() {
   })
 
   const isLoading = loadingSnap || loadingPos
+  const hasError  = snapError || posError
   const snap      = snapshot ?? MOCK_SNAPSHOT
   const pos       = positions?.length ? positions : MOCK_POSITIONS
 
@@ -144,7 +169,9 @@ export default function PortfolioPage() {
     const totals: Record<string, number> = {}
     openPositions.forEach(p => { totals[p.protocol] = (totals[p.protocol] ?? 0) + p.size })
     const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0)
-    return Object.entries(totals).map(([k, v]) => ({ protocol: k, pct: Math.round((v / grandTotal) * 100) }))
+    return Object.entries(totals).map(([k, v]) => ({
+      protocol: k, pct: Math.round((v / grandTotal) * 100),
+    }))
   }, [openPositions])
 
   if (isLoading) {
@@ -152,24 +179,33 @@ export default function PortfolioPage() {
       <div className="p-4 sm:p-6 flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} style={{ height: 72, borderRadius: 8, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
+            <div key={i} className="h-[72px] rounded-lg bg-card border border-border animate-pulse" />
           ))}
         </div>
-        <div style={{ height: 260, borderRadius: 8, background: '#161B22', animation: 'pulse 1.5s infinite' }} />
+        <div className="h-[260px] rounded-lg bg-card border border-border animate-pulse" />
       </div>
     )
   }
 
   return (
     <div className="p-4 sm:p-6 flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F0F6FC', margin: 0 }}>Portfolio</h2>
-          <p style={{ fontSize: 13, color: '#8B949E', margin: '4px 0 0' }}>
-            Live view of all positions and performance across your agents
-          </p>
+
+      {/* Error banner */}
+      {hasError && (
+        <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 flex items-center gap-2">
+          <span className="text-sm font-semibold text-error">API error</span>
+          <span className="text-sm text-text-secondary">
+            — portfolio data unavailable, showing last known values.
+          </span>
         </div>
+      )}
+
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-text-primary">Portfolio</h2>
+        <p className="text-sm text-text-secondary mt-1">
+          Live view of all positions and performance across your agents
+        </p>
       </div>
 
       {/* Primary KPIs */}
@@ -183,13 +219,13 @@ export default function PortfolioPage() {
           label="Total P&L"
           value={`${snap.totalPnl >= 0 ? '+' : ''}$${Math.abs(snap.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           sub={`${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}% all time`}
-          color={snap.totalPnl >= 0 ? '#22C55E' : '#EF4444'}
+          valueClass={snap.totalPnl >= 0 ? 'text-success' : 'text-error'}
         />
         <StatCard
           label="24h Change"
           value={`${snap.dayPnl >= 0 ? '+' : ''}$${Math.abs(snap.dayPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           sub={`${snap.dayPnlPct >= 0 ? '+' : ''}${snap.dayPnlPct.toFixed(2)}%`}
-          color={snap.dayPnl >= 0 ? '#22C55E' : '#EF4444'}
+          valueClass={snap.dayPnl >= 0 ? 'text-success' : 'text-error'}
         />
         <StatCard
           label="Sharpe Ratio"
@@ -203,29 +239,28 @@ export default function PortfolioPage() {
         <StatCard
           label="Max Drawdown"
           value={`${snap.maxDrawdown.toFixed(2)}%`}
-          color={snap.maxDrawdown < 5 ? '#22C55E' : snap.maxDrawdown < 15 ? '#F5C542' : '#EF4444'}
+          valueClass={snap.maxDrawdown < 5 ? 'text-success' : snap.maxDrawdown < 15 ? 'text-warning' : 'text-error'}
         />
-        <StatCard label="Active Positions"  value={String(openPositions.length)} />
-        <StatCard label="Closed Positions"  value={String(closedPositions.length)} />
-        <StatCard label="Protocols Active"  value="3" sub="Merchant Moe · Agni · Fluxion" />
+        <StatCard label="Active Positions" value={String(openPositions.length)} />
+        <StatCard label="Closed Positions" value={String(closedPositions.length)} />
+        <StatCard label="Protocols Active" value="3" sub="Merchant Moe · Agni · Fluxion" />
       </div>
 
       {/* PnL Chart */}
-      <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: 20 }}>
-        <div className="flex flex-wrap items-center justify-between gap-2" style={{ marginBottom: 16 }}>
-          <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Portfolio Value</h4>
+      <div className="bg-card border border-border rounded-lg p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h4 className="text-sm font-semibold text-text-primary">Portfolio Value</h4>
           <div className="flex flex-wrap gap-1">
             {[7, 14, 30].map(d => (
               <button
                 key={d}
                 onClick={() => setChartDays(d)}
-                style={{
-                  height: 26, padding: '0 10px', borderRadius: 4, fontSize: 11,
-                  border: `1px solid ${chartDays === d ? '#0066FF' : '#30363D'}`,
-                  background: chartDays === d ? '#0066FF1A' : 'transparent',
-                  color: chartDays === d ? '#58A6FF' : '#8B949E',
-                  cursor: 'pointer',
-                }}
+                className={cn(
+                  'h-7 px-2.5 rounded text-[11px] border transition-colors',
+                  chartDays === d
+                    ? 'border-primary bg-primary/10 text-text-link'
+                    : 'border-border bg-transparent text-text-secondary hover:text-text-primary hover:border-text-disabled',
+                )}
               >
                 {d}d
               </button>
@@ -233,7 +268,10 @@ export default function PortfolioPage() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={MOCK_PNL_HISTORY.slice(-chartDays)} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <AreaChart
+            data={MOCK_PNL_HISTORY.slice(-chartDays)}
+            margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+          >
             <defs>
               <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#22C55E" stopOpacity={0.25} />
@@ -241,157 +279,205 @@ export default function PortfolioPage() {
               </linearGradient>
             </defs>
             <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8B949E' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 10, fill: '#8B949E' }}
+              tickLine={false}
+              axisLine={false}
+              interval="preserveStartEnd"
+            />
             <YAxis
-              tick={{ fontSize: 10, fill: '#8B949E' }} tickLine={false} axisLine={false}
+              tick={{ fontSize: 10, fill: '#8B949E' }}
+              tickLine={false}
+              axisLine={false}
               tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
               domain={['auto', 'auto']}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area
-              type="monotone" dataKey="value"
-              stroke="#22C55E" strokeWidth={2}
+              type="monotone"
+              dataKey="value"
+              stroke="#22C55E"
+              strokeWidth={2}
               fill="url(#portfolioGrad)"
-              dot={false} activeDot={{ r: 4, fill: '#22C55E' }}
+              dot={false}
+              activeDot={{ r: 4, fill: '#22C55E' }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
       {/* Positions table */}
-      <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #21262D' }}>
-      <div style={{ minWidth: 780 }}>
-        <div className="flex flex-wrap items-center justify-between gap-2" style={{ padding: '14px 16px', background: '#161B22', borderBottom: '1px solid #21262D' }}>
-          <h4 style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>Open Positions</h4>
-          <span style={{ fontSize: 11, color: '#8B949E' }}>{openPositions.length} positions</span>
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-card border-b border-border">
+          <h4 className="text-sm font-semibold text-text-primary">Open Positions</h4>
+          <span className="text-[11px] text-text-secondary">{openPositions.length} positions</span>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '80px 120px 80px 100px 100px 100px 90px 90px 80px',
-          padding: '8px 16px',
-          background: '#0D1117',
-          borderBottom: '1px solid #21262D',
-        }}>
-          {['ASSET', 'PROTOCOL', 'SIDE', 'SIZE', 'ENTRY', 'CURRENT', 'P&L', 'P&L %', 'STATUS'].map(h => (
-            <span key={h} style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: '#8B949E' }}>{h}</span>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" style={{ minWidth: 780 }}>
+            <thead>
+              <tr className="bg-page border-b border-border">
+                {['Asset', 'Protocol', 'Side', 'Size', 'Entry', 'Current', 'P&L', 'P&L %', 'Status'].map(h => (
+                  <th
+                    key={h}
+                    scope="col"
+                    className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {openPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-16">
+                    <div className="flex flex-col items-center justify-center gap-3 text-center">
+                      <BarChart2 className="h-10 w-10 text-text-secondary opacity-40" />
+                      <p className="text-sm font-semibold text-text-primary">No open positions</p>
+                      <NextLink
+                        href="/dashboard/agents/deploy"
+                        className="text-xs text-text-link hover:text-text-link-hover transition-colors"
+                      >
+                        Deploy an agent →
+                      </NextLink>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                openPositions.map(p => {
+                  const positive = p.pnl >= 0
+                  return (
+                    <tr
+                      key={p.id}
+                      className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="px-4 py-3 text-[13px] font-semibold text-text-primary">
+                        {p.asset}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {/* Protocol dot — data-driven brand color stays inline */}
+                          <div
+                            className="h-2 w-2 rounded-full shrink-0"
+                            style={{ background: PROTOCOL_COLORS[p.protocol] ?? '#8B949E' }}
+                          />
+                          <span className="text-[11px] text-text-secondary whitespace-nowrap">
+                            {PROTOCOL_LABELS[p.protocol] ?? p.protocol}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          {p.direction === 'long'
+                            ? <TrendingUp className="h-3 w-3 text-success" />
+                            : <TrendingDown className="h-3 w-3 text-error" />
+                          }
+                          <span className={cn(
+                            'text-[11px] font-bold uppercase',
+                            p.direction === 'long' ? 'text-success' : 'text-error',
+                          )}>
+                            {p.direction}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-text-primary tabular-nums">
+                        ${p.size.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-text-secondary tabular-nums">
+                        ${p.entryPrice.toLocaleString('en-US', { minimumFractionDigits: p.entryPrice < 10 ? 4 : 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-text-primary tabular-nums">
+                        ${p.currentPrice.toLocaleString('en-US', { minimumFractionDigits: p.currentPrice < 10 ? 4 : 2 })}
+                      </td>
+                      <td className={cn(
+                        'px-4 py-3 text-xs font-semibold tabular-nums',
+                        positive ? 'text-success' : 'text-error',
+                      )}>
+                        {positive ? '+' : ''}${Math.abs(p.pnl).toFixed(2)}
+                      </td>
+                      <td className={cn(
+                        'px-4 py-3 text-xs font-semibold tabular-nums',
+                        positive ? 'text-success' : 'text-error',
+                      )}>
+                        {p.pnlPct >= 0 ? '+' : ''}{p.pnlPct.toFixed(2)}%
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={cn(
+                          'text-[10px] font-bold uppercase px-2 py-0.5 rounded',
+                          p.status === 'open'
+                            ? 'bg-success-bg text-success border border-success/20'
+                            : 'bg-card text-text-secondary border border-border',
+                        )}>
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-
-        {openPositions.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: 12 }}>
-            <BarChart2 style={{ width: 40, height: 40, color: '#8B949E', opacity: 0.4 }} />
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#F0F6FC', margin: 0 }}>No open positions</p>
-            <NextLink
-              href="/dashboard/agents/deploy"
-              style={{ fontSize: 12, color: '#58A6FF', textDecoration: 'none' }}
-            >
-              Deploy an agent →
-            </NextLink>
-          </div>
-        ) : (
-          openPositions.map((pos, i) => {
-            const pnlColor = pos.pnl >= 0 ? '#22C55E' : '#EF4444'
-            return (
-              <div
-                key={pos.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '80px 120px 80px 100px 100px 100px 90px 90px 80px',
-                  padding: '0 16px',
-                  minHeight: 52,
-                  alignItems: 'center',
-                  background: i % 2 === 0 ? '#0D1117' : '#161B22',
-                  borderBottom: i < openPositions.length - 1 ? '1px solid #21262D' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC' }}>{pos.asset}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{
-                    display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-                    background: PROTOCOL_COLORS[pos.protocol] ?? '#8B949E', flexShrink: 0,
-                  }} />
-                  <span style={{ fontSize: 11, color: '#8B949E' }}>{PROTOCOL_LABELS[pos.protocol] ?? pos.protocol}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {pos.direction === 'long'
-                    ? <TrendingUp style={{ width: 12, height: 12, color: '#22C55E' }} />
-                    : <TrendingDown style={{ width: 12, height: 12, color: '#EF4444' }} />
-                  }
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: pos.direction === 'long' ? '#22C55E' : '#EF4444' }}>
-                    {pos.direction}
-                  </span>
-                </div>
-                <span style={{ fontSize: 12, color: '#F0F6FC' }}>
-                  ${pos.size.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-                </span>
-                <span style={{ fontSize: 12, color: '#8B949E' }}>
-                  ${pos.entryPrice.toLocaleString('en-US', { minimumFractionDigits: pos.entryPrice < 10 ? 4 : 2 })}
-                </span>
-                <span style={{ fontSize: 12, color: '#F0F6FC' }}>
-                  ${pos.currentPrice.toLocaleString('en-US', { minimumFractionDigits: pos.currentPrice < 10 ? 4 : 2 })}
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: pnlColor }}>
-                  {pos.pnl >= 0 ? '+' : ''}${Math.abs(pos.pnl).toFixed(2)}
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: pnlColor }}>
-                  {pos.pnlPct >= 0 ? '+' : ''}{pos.pnlPct.toFixed(2)}%
-                </span>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                  padding: '2px 8px', borderRadius: 4,
-                  background: pos.status === 'open' ? '#0D2818' : '#161B22',
-                  color: pos.status === 'open' ? '#22C55E' : '#8B949E',
-                }}>
-                  {pos.status}
-                </span>
-              </div>
-            )
-          })
-        )}
-      </div>{/* /minWidth */}
-      </div>{/* /overflow-x-auto */}
+      </div>
 
       {/* Bottom row: allocation + risk */}
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+
         {/* Allocation by protocol */}
-        <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '16px 20px' }}>
-          <h4 style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 14px' }}>Allocation by Protocol</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h4 className="text-sm font-semibold text-text-primary mb-4">Allocation by Protocol</h4>
+          <div className="flex flex-col gap-3">
             {allocationByProtocol.map(({ protocol, pct }) => (
-              <div key={protocol} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, color: '#8B949E', minWidth: 80, flexShrink: 0 }}>
+              <div key={protocol} className="flex items-center gap-3">
+                <span className="text-xs text-text-secondary w-28 shrink-0">
                   {PROTOCOL_LABELS[protocol] ?? protocol}
                 </span>
-                <div style={{ flex: 1, height: 8, background: '#21262D', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: 8, borderRadius: 999, background: PROTOCOL_COLORS[protocol] ?? '#8B949E', width: `${pct}%`, transition: 'width 0.5s' }} />
+                <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                  {/* Dynamic width + brand color — must be inline */}
+                  <div
+                    className="h-2 rounded-full transition-[width] duration-500"
+                    style={{ width: `${pct}%`, background: PROTOCOL_COLORS[protocol] ?? '#8B949E' }}
+                  />
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#F0F6FC', width: 36, textAlign: 'right' }}>{pct}%</span>
+                <span className="text-xs font-semibold text-text-primary w-9 text-right shrink-0">
+                  {pct}%
+                </span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Risk exposure */}
-        <div style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, padding: '16px 20px' }}>
-          <h4 style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', margin: '0 0 14px' }}>Risk Exposure</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h4 className="text-sm font-semibold text-text-primary mb-4">Risk Exposure</h4>
+          <div className="flex flex-col divide-y divide-border">
             {[
-              { label: 'Current Drawdown', value: `${snap.maxDrawdown.toFixed(2)}%`, color: snap.maxDrawdown < 5 ? '#22C55E' : '#F5C542' },
-              { label: 'Sharpe Ratio',     value: snap.sharpeRatio.toFixed(2), color: '#F0F6FC' },
-              { label: 'Win Rate',         value: `${snap.winRate.toFixed(1)}%`, color: snap.winRate > 60 ? '#22C55E' : '#F5C542' },
-              { label: 'Total ROI',        value: `${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}%`, color: snap.totalRoi >= 0 ? '#22C55E' : '#EF4444' },
-            ].map((r, i, arr) => (
-              <div
-                key={r.label}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 0',
-                  borderBottom: i < arr.length - 1 ? '1px solid #21262D' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 12, color: '#8B949E' }}>{r.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: r.color }}>{r.value}</span>
+              {
+                label: 'Current Drawdown',
+                value: `${snap.maxDrawdown.toFixed(2)}%`,
+                valueClass: snap.maxDrawdown < 5 ? 'text-success' : 'text-warning',
+              },
+              {
+                label: 'Sharpe Ratio',
+                value: snap.sharpeRatio.toFixed(2),
+                valueClass: 'text-text-primary',
+              },
+              {
+                label: 'Win Rate',
+                value: `${snap.winRate.toFixed(1)}%`,
+                valueClass: snap.winRate > 60 ? 'text-success' : 'text-warning',
+              },
+              {
+                label: 'Total ROI',
+                value: `${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}%`,
+                valueClass: snap.totalRoi >= 0 ? 'text-success' : 'text-error',
+              },
+            ].map(r => (
+              <div key={r.label} className="flex items-center justify-between py-2.5">
+                <span className="text-xs text-text-secondary">{r.label}</span>
+                <span className={cn('text-sm font-semibold', r.valueClass)}>{r.value}</span>
               </div>
             ))}
           </div>
