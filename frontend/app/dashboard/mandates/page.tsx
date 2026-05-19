@@ -6,6 +6,7 @@ import { Plus, FileText, Search, Bot, TrendingUp, CheckCircle2 } from 'lucide-re
 import { useMandates } from '@/hooks/useMandates'
 import { useAuthStore } from '@/store/authStore'
 import { formatDate, cn } from '@/lib/utils'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 import type { Mandate } from '@/types/mandate'
 
 // ── mock data ─────────────────────────────────────────────────────────────────
