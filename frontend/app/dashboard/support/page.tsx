@@ -64,18 +64,15 @@ const PLAN_SUPPORT: Record<string, { tier: string; response: string }> = {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+const STATUS_CLASS: Record<Ticket['status'], string> = {
+  OPEN:    'bg-warning-bg text-warning',
+  CLOSED:  'bg-success-bg text-success',
+  PENDING: 'bg-primary/10 text-text-link',
+}
+
 function StatusBadge({ status }: { status: Ticket['status'] }) {
-  const styles: Record<Ticket['status'], { bg: string; color: string }> = {
-    OPEN:    { bg: '#2A2000', color: '#F5C542' },
-    CLOSED:  { bg: '#0D2818', color: '#22C55E' },
-    PENDING: { bg: '#0D1526', color: '#58A6FF' },
-  }
-  const { bg, color } = styles[status]
   return (
-    <span
-      className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded w-fit"
-      style={{ background: bg, color }}
-    >
+    <span className={cn('text-[10px] font-semibold uppercase px-2 py-0.5 rounded w-fit', STATUS_CLASS[status])}>
       {status}
     </span>
   )
@@ -162,8 +159,7 @@ function TicketForm({ onClose }: { onClose: () => void }) {
         <textarea
           value={message}
           onChange={e => setMessage(e.target.value)}
-          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary resize-none"
-          style={{ minHeight: '160px' }}
+          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary resize-none min-h-[160px]"
           placeholder="Describe your issue in detail..."
         />
       </div>
@@ -246,18 +242,14 @@ export default function SupportPage() {
             value={searchVal}
             onChange={e => setSearchVal(e.target.value)}
             placeholder="Search for help..."
-            className="w-full h-12 border-2 border-border rounded-lg pl-12 pr-4 text-[15px] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary transition-colors"
-            style={{ background: '#0D1117' }}
+            className="w-full h-12 border-2 border-border rounded-lg pl-12 pr-4 text-[15px] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary transition-colors bg-page"
           />
         </div>
       </div>
 
       {/* ── System Status Banner ── */}
       {incident ? (
-        <div
-          className="flex items-center gap-3 rounded-[6px] px-4 py-2.5 flex-wrap"
-          style={{ background: '#2A2000', border: '1px solid #F5C542', color: '#F5C542' }}
-        >
+        <div className="flex items-center gap-3 rounded-[6px] px-4 py-2.5 flex-wrap bg-warning-bg border border-warning text-warning">
           <span className="text-sm">⚠</span>
           <span className="text-[13px] font-medium flex-1">
             Partial outage — Agni Finance integration degraded
@@ -267,22 +259,15 @@ export default function SupportPage() {
           </a>
         </div>
       ) : (
-        <div
-          className="flex items-center gap-3 rounded-[6px] px-4 py-2.5 flex-wrap"
-          style={{ background: '#0D2818', border: '1px solid rgba(34,197,94,0.4)' }}
-        >
-          <span
-            className="h-2 w-2 rounded-full shrink-0 animate-pulse"
-            style={{ background: '#22C55E' }}
-          />
-          <span className="text-[13px] font-medium flex-1" style={{ color: '#22C55E' }}>
+        <div className="flex items-center gap-3 rounded-[6px] px-4 py-2.5 flex-wrap bg-success-bg border border-success/40">
+          <span className="h-2 w-2 rounded-full shrink-0 animate-pulse bg-success" />
+          <span className="text-[13px] font-medium flex-1 text-success">
             All systems operational
           </span>
           <span className="text-[13px] text-text-secondary">Last checked: 2 min ago</span>
           <a
             href="#"
-            className="text-[13px] flex items-center gap-1 hover:underline underline-offset-2 shrink-0"
-            style={{ color: '#58A6FF' }}
+            className="text-[13px] text-text-link flex items-center gap-1 hover:underline underline-offset-2 shrink-0"
           >
             Status Page <ExternalLink className="h-3 w-3" />
           </a>
@@ -329,7 +314,7 @@ export default function SupportPage() {
               Full guides, API reference, and mandate writing tutorials.
             </p>
           </div>
-          <a href="#" style={{ color: '#58A6FF' }} className="text-sm hover:underline underline-offset-2 w-fit flex items-center gap-1">
+          <a href="#" className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1">
             Browse Docs <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -343,7 +328,7 @@ export default function SupportPage() {
               Connect with other MantleMandate users. Share strategies.
             </p>
           </div>
-          <a href="#" style={{ color: '#58A6FF' }} className="text-sm hover:underline underline-offset-2 w-fit flex items-center gap-1">
+          <a href="#" className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1">
             Join Forum <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -389,7 +374,7 @@ export default function SupportPage() {
                   style={{ gridTemplateColumns: '13% 36% 14% 12% auto', minHeight: '44px' }}
                 >
                   <span className="font-mono text-xs text-text-secondary">#{t.id}</span>
-                  <button className="text-sm text-left truncate pr-2" style={{ color: '#58A6FF' }}>
+                  <button className="text-sm text-left truncate pr-2 text-text-link">
                     {t.subject}
                   </button>
                   <StatusBadge status={t.status} />
@@ -401,7 +386,7 @@ export default function SupportPage() {
 
             {/* View all */}
             <div className="flex justify-end">
-              <button className="text-xs flex items-center gap-1" style={{ color: '#58A6FF' }}>
+              <button className="text-xs text-text-link flex items-center gap-1">
                 View all tickets <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -414,8 +399,7 @@ export default function SupportPage() {
               {FAQ_ITEMS.map((q, i) => (
                 <button
                   key={i}
-                  className="w-full flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm transition-colors group text-left"
-                  style={{ color: '#58A6FF' }}
+                  className="w-full flex items-center justify-between py-2.5 border-b border-border last:border-0 text-sm transition-colors group text-left text-text-link"
                 >
                   <span className="group-hover:underline underline-offset-2">{q}</span>
                   <ChevronRight className="h-4 w-4 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
@@ -435,8 +419,7 @@ export default function SupportPage() {
               <a
                 key={label}
                 href="#"
-                className="flex items-center gap-1 text-sm py-1 transition-colors hover:underline underline-offset-2"
-                style={{ color: '#58A6FF' }}
+                className="flex items-center gap-1 text-sm py-1 text-text-link transition-colors hover:underline underline-offset-2"
               >
                 {label}
                 {ext && <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />}
@@ -460,7 +443,7 @@ export default function SupportPage() {
             <div className="space-y-0.5">
               <p className="text-xs font-semibold text-text-primary">💬 Live Chat</p>
               <p className="text-xs text-text-secondary">Mon–Fri, 9am–6pm UTC</p>
-              <p className="text-xs font-medium flex items-center gap-1.5" style={{ color: '#22C55E' }}>
+              <p className="text-xs font-medium flex items-center gap-1.5 text-success">
                 <span className="h-1.5 w-1.5 rounded-full bg-success inline-block animate-pulse" />
                 Currently: Online
               </p>
@@ -481,8 +464,7 @@ export default function SupportPage() {
             {plan !== 'institution' && (
               <Link
                 href="/dashboard/billing"
-                className="mt-2 block text-xs hover:underline underline-offset-2"
-                style={{ color: '#58A6FF' }}
+                className="mt-2 block text-xs text-text-link hover:underline underline-offset-2"
               >
                 Upgrade for 24/7 →
               </Link>
