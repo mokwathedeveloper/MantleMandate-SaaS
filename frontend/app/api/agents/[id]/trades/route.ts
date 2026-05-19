@@ -23,7 +23,7 @@ export async function GET(
     )
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json(FALLBACK_TRADES.map(t => ({ ...t, agentId: id })))
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data, error } = await supabase
       .from('trades')
