@@ -154,7 +154,8 @@ function MandateCard({ mandate }: { mandate: Mandate }) {
         {mandate.parsedPolicy && (
           <div className="flex flex-wrap gap-1.5">
             {mandate.parsedPolicy.asset && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-text-link border border-primary/20">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-text-link border border-primary/20 flex items-center gap-1">
+                <TokenIcon symbol={mandate.parsedPolicy.asset} size="sm" />
                 {mandate.parsedPolicy.asset}
               </span>
             )}
@@ -174,7 +175,10 @@ function MandateCard({ mandate }: { mandate: Mandate }) {
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border pt-2.5">
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-text-disabled">{mandate.baseCurrency}</span>
+            <span className="text-[11px] text-text-disabled flex items-center gap-1">
+              <TokenIcon symbol={mandate.baseCurrency} size="sm" />
+              {mandate.baseCurrency}
+            </span>
             {mandate.capitalCap && (
               <span className="text-[11px] text-text-disabled">
                 Cap: ${mandate.capitalCap.toLocaleString('en-US')}
