@@ -726,27 +726,20 @@ export default function ReportsPage() {
           {!isEmpty && !isLoading && !isError && reports.map((r, i) => (
             <div
               key={r.id}
-              className="grid px-4 items-center transition-colors"
-              style={{
-                gridTemplateColumns: cols,
-                minHeight: '52px',
-                background: i % 2 === 0 ? '' : '',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#1C2128')}
-              onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'var(--color-card)' : 'var(--color-page)')}
+              className={cn('grid px-4 items-center transition-colors hover:bg-surface', i % 2 === 0 ? 'bg-card' : 'bg-page')}
+              style={{ gridTemplateColumns: cols, minHeight: '52px' }}
             >
               <button
-                className="text-sm font-medium text-left truncate pr-2 hover:underline underline-offset-2"
-                style={{ color: '#58A6FF' }}
+                className="text-sm font-medium text-left truncate pr-2 hover:underline underline-offset-2 text-text-link"
               >
                 {r.name}
               </button>
               <TypeBadge type={r.type} />
               <span className="text-xs text-text-secondary whitespace-nowrap">{dateRange(r.dateFrom, r.dateTo)}</span>
-              <span className="text-sm font-medium whitespace-nowrap" style={{ color: r.totalPnl >= 0 ? '#22C55E' : '#EF4444' }}>
+              <span className={cn('text-sm font-medium whitespace-nowrap', r.totalPnl >= 0 ? 'text-success' : 'text-error')}>
                 {r.totalPnl >= 0 ? '+' : '-'}${fmt(r.totalPnl)}
               </span>
-              <span className="text-sm font-medium whitespace-nowrap" style={{ color: r.roi >= 0 ? '#22C55E' : '#EF4444' }}>
+              <span className={cn('text-sm font-medium whitespace-nowrap', r.roi >= 0 ? 'text-success' : 'text-error')}>
                 {r.roi >= 0 ? '+' : ''}{r.roi.toFixed(2)}%
               </span>
               <div className="flex items-center gap-1.5">
@@ -768,7 +761,7 @@ export default function ReportsPage() {
                   <span className="text-xs text-text-secondary whitespace-nowrap">
                     {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
-                  <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#EF4444' }}>
+                  <span className="text-xs font-medium whitespace-nowrap text-error">
                     {r.drawdown != null ? `-$${fmt(Math.abs(r.drawdown))}` : '—'}
                   </span>
                   <span className="text-xs text-text-secondary">
