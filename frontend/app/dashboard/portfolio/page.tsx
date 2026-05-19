@@ -10,6 +10,28 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils'
 
+const TOKEN_META: Record<string, { bg: string; fg: string; label: string }> = {
+  MNT:  { bg: '#0066FF', fg: '#FFFFFF', label: 'M' },
+  ETH:  { bg: '#627EEA', fg: '#FFFFFF', label: 'Ξ' },
+  WBTC: { bg: '#F7931A', fg: '#FFFFFF', label: '₿' },
+  USDC: { bg: '#2775CA', fg: '#FFFFFF', label: '$' },
+  USDT: { bg: '#26A17B', fg: '#FFFFFF', label: '$' },
+  WETH: { bg: '#8A9FF7', fg: '#FFFFFF', label: 'Ξ' },
+}
+
+function TokenIcon({ symbol }: { symbol: string }) {
+  const meta = TOKEN_META[symbol] ?? { bg: '#8B949E', fg: '#FFFFFF', label: symbol.slice(0, 1) }
+  return (
+    <span
+      className="inline-flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-bold shrink-0 select-none"
+      style={{ background: meta.bg, color: meta.fg }}
+      aria-hidden="true"
+    >
+      {meta.label}
+    </span>
+  )
+}
+
 // ── types ─────────────────────────────────────────────────────────────────────
 
 interface PortfolioSnapshot {
@@ -353,8 +375,11 @@ export default function PortfolioPage() {
                       key={p.id}
                       className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors"
                     >
-                      <td className="px-4 py-3 text-[13px] font-semibold text-text-primary">
-                        {p.asset}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <TokenIcon symbol={p.asset} />
+                          <span className="text-[13px] font-semibold text-text-primary">{p.asset}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
