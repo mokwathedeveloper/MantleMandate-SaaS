@@ -114,7 +114,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
 
           {walletOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[240px] rounded-xl border border-white/10 bg-card shadow-2xl overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-[240px] max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-card shadow-2xl overflow-hidden z-50">
               {isConnected ? (
                 <div className="p-3 space-y-2.5">
                   <div className="flex items-center gap-2">
@@ -129,10 +129,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     </div>
                   </div>
 
-                  <div
-                    className="flex items-center gap-2 rounded-md px-2.5 py-2"
-                    style={{ background: '#0D1117', border: '1px solid #30363D' }}
-                  >
+                  <div className="flex items-center gap-2 rounded-md px-2.5 py-2 bg-page border border-border">
                     <span className="font-mono text-[11px] text-text-primary flex-1 truncate">
                       {truncatedAddress}
                     </span>
@@ -195,7 +192,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
 
           {bellOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/10 bg-card shadow-2xl overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
                 <span className="text-sm font-semibold">Notifications</span>
                 <Link
@@ -254,7 +251,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
 
           {dropOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-card shadow-2xl overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-card shadow-2xl overflow-hidden z-50">
               {/* Header */}
               <div className="px-4 py-3 border-b border-white/5">
                 <p className="text-sm font-semibold text-foreground/90 truncate">
