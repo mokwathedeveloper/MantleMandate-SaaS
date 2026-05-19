@@ -25,7 +25,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-text-primary">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using MantleMandate ("the Service"), you agree to be bound by these Terms of
+              By accessing or using MantleMandate (&ldquo;the Service&rdquo;), you agree to be bound by these Terms of
               Service. If you do not agree to all terms, you may not use the Service.
             </p>
           </section>
