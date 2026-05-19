@@ -42,8 +42,8 @@ export function MobileBottomNav() {
           )
         })}
       </div>
-      {/* Safe area spacer for iOS home indicator */}
-      <div className="h-safe-area-inset-bottom bg-page" />
+      {/* Safe area spacer — grows to match iOS home indicator / Android gesture bar */}
+      <div className="h-safe-bottom bg-page" />
     </nav>
   )
 }
