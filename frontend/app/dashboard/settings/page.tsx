@@ -63,10 +63,7 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
     return () => clearTimeout(t)
   }, [onDone])
   return (
-    <div
-      className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-[6px] px-4 py-3 text-sm font-medium"
-      style={{ background: '#0D2818', border: '1px solid #22C55E', color: '#22C55E' }}
-    >
+    <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-[6px] px-4 py-3 text-sm font-medium bg-success-bg border border-success text-success">
       <CheckCircle2 className="h-4 w-4 shrink-0" />
       {msg}
     </div>
@@ -511,10 +508,7 @@ export default function SettingsPage() {
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
               <h4 className="text-sm font-semibold text-text-primary">Two-Factor Authentication</h4>
               <div className="flex items-center gap-3 flex-wrap">
-                <span
-                  className="text-xs px-2 py-0.5 rounded font-semibold uppercase border"
-                  style={{ background: '#0D2818', color: '#22C55E', borderColor: 'rgba(34,197,94,0.3)' }}
-                >
+                <span className="text-xs px-2 py-0.5 rounded font-semibold uppercase border bg-success-bg text-success border-success/30">
                   ENABLED ✓
                 </span>
                 <button
