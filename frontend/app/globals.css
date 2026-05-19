@@ -50,6 +50,22 @@
   .scrollbar-hidden::-webkit-scrollbar {
     display: none;
   }
+
+  /* iOS / Android safe-area helpers (works in Safari, Chrome, Firefox) */
+  .pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
+  .h-safe-bottom { height: env(safe-area-inset-bottom, 0px);    }
+
+  /* Combined bottom-nav + safe-area clearance for scroll containers */
+  .pb-nav-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Firefox native scrollbar theming */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #21262D transparent; /* border token value */
 }
 
 /* Auth page — floating 3D cube animation */
