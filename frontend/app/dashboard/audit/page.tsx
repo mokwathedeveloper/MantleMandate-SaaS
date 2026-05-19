@@ -7,6 +7,7 @@ import {
   FileCode,
 } from 'lucide-react'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import { fetchOnChainAuditEvents, type OnChainEvent } from '@/hooks/useOnChain'
 
 // ── Chain constants ───────────────────────────────────────────────────────────
@@ -227,21 +228,17 @@ function truncateHash(hash: string): string {
   return `${hash.slice(0, 8)}...${hash.slice(-4)}`
 }
 
-
 // ── Status badge ──────────────────────────────────────────────────────────────
 
+const STATUS_CLASS: Record<TxStatus, string> = {
+  SUCCESS: 'bg-success-bg text-success border border-success/20',
+  FAILED:  'bg-error-bg text-error border border-error/20',
+  PENDING: 'bg-warning-bg text-warning border border-warning/20',
+}
+
 function StatusBadge({ status }: { status: TxStatus }) {
-  const styles: Record<TxStatus, { bg: string; color: string }> = {
-    SUCCESS: { bg: '#0D2818', color: '#22C55E' },
-    FAILED:  { bg: '#2D0F0F', color: '#EF4444' },
-    PENDING: { bg: '#2A2000', color: '#F5C542' },
-  }
-  const s = styles[status]
   return (
-    <span
-      className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded whitespace-nowrap"
-      style={{ background: s.bg, color: s.color }}
-    >
+    <span className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded whitespace-nowrap', STATUS_CLASS[status])}>
       {status}
     </span>
   )
@@ -257,22 +254,13 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
   const copyDec = async () => { try { await navigator.clipboard.writeText(entry.decisionHash); setCopiedDec(true); setTimeout(() => setCopiedDec(false), 2000) } catch {} }
 
   return (
-    <div
-      style={{
-        background: '#1C2128',
-        borderTop: '1px solid #21262D',
-        borderBottom: '1px solid #21262D',
-      }}
-    >
+    <div className="bg-surface border-y border-border">
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between mb-4">
-          <p
-            className="text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: '#8B949E' }}
-          >
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
             Transaction Detail
           </p>
-          <button onClick={onClose} style={{ color: '#484F58' }} className="hover:opacity-70">
+          <button onClick={onClose} className="text-text-disabled hover:text-text-secondary transition-colors" aria-label="Close detail">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -280,17 +268,14 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-xs">
           {/* Full TX Hash */}
           <div className="sm:col-span-2">
-            <span className="block mb-1" style={{ color: '#484F58' }}>Full TX Hash</span>
+            <span className="block mb-1 text-text-disabled">Full TX Hash</span>
             <div className="flex items-center gap-2">
-              <span
-                className="font-mono truncate"
-                style={{ color: '#F0F6FC', fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}
-              >
+              <span className="font-mono text-[11px] text-text-primary truncate">
                 {entry.txHash}
               </span>
-              <button onClick={copyTx} style={{ color: '#8B949E' }} className="hover:opacity-70 shrink-0">
+              <button onClick={copyTx} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label="Copy TX hash">
                 {copiedTx
-                  ? <CheckCircle2 className="h-3.5 w-3.5" style={{ color: '#22C55E' }} />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   : <Copy className="h-3.5 w-3.5" />
                 }
               </button>
@@ -298,28 +283,25 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </div>
 
           <div>
-            <span className="block mb-1" style={{ color: '#484F58' }}>Mandate</span>
-            <span style={{ color: '#F0F6FC' }}>{entry.mandate}</span>
+            <span className="block mb-1 text-text-disabled">Mandate</span>
+            <span className="text-text-primary">{entry.mandate}</span>
           </div>
 
           <div>
-            <span className="block mb-1" style={{ color: '#484F58' }}>Agent</span>
-            <span style={{ color: '#F0F6FC' }}>{entry.agent}</span>
+            <span className="block mb-1 text-text-disabled">Agent</span>
+            <span className="text-text-primary">{entry.agent}</span>
           </div>
 
           {/* Decision Hash */}
           <div className="sm:col-span-2">
-            <span className="block mb-1" style={{ color: '#484F58' }}>Decision Hash</span>
+            <span className="block mb-1 text-text-disabled">Decision Hash</span>
             <div className="flex items-center gap-2">
-              <span
-                className="font-mono text-[11px] truncate"
-                style={{ color: '#8B949E', fontFamily: '"JetBrains Mono", monospace' }}
-              >
+              <span className="font-mono text-[11px] text-text-secondary truncate">
                 {truncateHash(entry.decisionHash)}
               </span>
-              <button onClick={copyDec} style={{ color: '#8B949E' }} className="hover:opacity-70 shrink-0">
+              <button onClick={copyDec} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label="Copy decision hash">
                 {copiedDec
-                  ? <CheckCircle2 className="h-3.5 w-3.5" style={{ color: '#22C55E' }} />
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   : <Copy className="h-3.5 w-3.5" />
                 }
               </button>
@@ -327,18 +309,18 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </div>
 
           <div className="sm:col-span-2">
-            <span className="block mb-1" style={{ color: '#484F58' }}>Rule Applied</span>
-            <span style={{ color: '#F0F6FC' }}>{entry.ruleApplied}</span>
+            <span className="block mb-1 text-text-disabled">Rule Applied</span>
+            <span className="text-text-primary">{entry.ruleApplied}</span>
           </div>
 
           <div>
-            <span className="block mb-1" style={{ color: '#484F58' }}>Gas Used</span>
-            <span style={{ color: '#F0F6FC' }}>{entry.gasUsed > 0 ? entry.gasUsed.toLocaleString() : '—'}</span>
+            <span className="block mb-1 text-text-disabled">Gas Used</span>
+            <span className="text-text-primary">{entry.gasUsed > 0 ? entry.gasUsed.toLocaleString() : '—'}</span>
           </div>
 
           <div>
-            <span className="block mb-1" style={{ color: '#484F58' }}>Gas Price</span>
-            <span style={{ color: '#F0F6FC' }}>{entry.gasPrice}</span>
+            <span className="block mb-1 text-text-disabled">Gas Price</span>
+            <span className="text-text-primary">{entry.gasPrice}</span>
           </div>
         </div>
 
@@ -347,8 +329,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
             href={`${EXPLORER}/tx/${entry.txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-4 text-xs transition-opacity hover:opacity-70"
-            style={{ color: '#58A6FF' }}
+            className="inline-flex items-center gap-1.5 mt-4 text-xs text-text-link hover:opacity-70 transition-opacity"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             View on Mantle Explorer
@@ -369,13 +350,9 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium"
-      style={{
-        background: '#0D2818',
-        border: '1px solid #22C55E',
-        color: '#22C55E',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-      }}
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-success-bg border border-success text-success shadow-modal"
     >
       <CheckCircle2 className="h-4 w-4 shrink-0" />
       {message}
@@ -441,8 +418,8 @@ export default function AuditPage() {
   }, [])
 
   const removeFilter = (key: string) => {
-    if (key === 'status')  { setStatus('All Status'); }
-    if (key === 'mandate') { setMandate('All Mandates'); }
+    if (key === 'status')  { setStatus('All Status') }
+    if (key === 'mandate') { setMandate('All Mandates') }
     setActiveFilters(prev => prev.filter(f => f.key !== key))
   }
 
@@ -468,46 +445,34 @@ export default function AuditPage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: '#F0F6FC' }}>On-Chain Audit Viewer</h2>
-          <p className="text-sm mt-0.5" style={{ color: '#8B949E' }}>
+          <h2 className="text-2xl font-bold text-text-primary">On-Chain Audit Viewer</h2>
+          <p className="text-sm mt-0.5 text-text-secondary">
             Every decision and trade recorded immutably on Mantle Network.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Share Public Audit Link */}
           <button
             onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors"
-            style={{ border: '1px solid #30363D', color: '#8B949E' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#0066FF'; (e.currentTarget as HTMLElement).style.color = '#F0F6FC' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#30363D'; (e.currentTarget as HTMLElement).style.color = '#8B949E' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
             <Link2 className="h-4 w-4" />
             Share Public Audit Link
           </button>
 
-          {/* Export CSV */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors"
-            style={{ border: '1px solid #30363D', color: '#8B949E' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#0066FF'; (e.currentTarget as HTMLElement).style.color = '#F0F6FC' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#30363D'; (e.currentTarget as HTMLElement).style.color = '#8B949E' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
             <Download className="h-4 w-4" />
             Export CSV
           </button>
 
-          {/* View on Explorer */}
           <a
             href={`${EXPLORER}/address/${CONTRACTS.AgentExecutor}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors"
-            style={{ border: '1px solid #30363D', color: '#8B949E' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#0066FF'; (e.currentTarget as HTMLElement).style.color = '#F0F6FC' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#30363D'; (e.currentTarget as HTMLElement).style.color = '#8B949E' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
             View on Mantle Explorer
             <ExternalLink className="h-3.5 w-3.5" />
@@ -516,11 +481,8 @@ export default function AuditPage() {
       </div>
 
       {/* ── Live contract links ──────────────────────────────────────────────── */}
-      <div
-        className="rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
-        style={{ background: '#0D1117', border: '1px solid #21262D' }}
-      >
-        <div className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: '#484F58' }}>
+      <div className="bg-page border border-border rounded-lg px-4 py-3 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1.5 text-xs shrink-0 text-text-disabled">
           <FileCode className="h-3.5 w-3.5" />
           <span className="font-semibold uppercase tracking-wider">Live Contracts · Mantle Sepolia</span>
         </div>
@@ -531,16 +493,10 @@ export default function AuditPage() {
               href={`${EXPLORER}/address/${addr}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-opacity hover:opacity-70"
-              style={{
-                background: '#161B22',
-                border: '1px solid #30363D',
-                color: '#58A6FF',
-                fontFamily: '"JetBrains Mono", monospace',
-              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-card border border-border text-text-link font-mono hover:opacity-70 transition-opacity"
             >
               {name}
-              <span style={{ color: '#484F58' }}>{addr.slice(0, 6)}…{addr.slice(-4)}</span>
+              <span className="text-text-disabled">{addr.slice(0, 6)}…{addr.slice(-4)}</span>
               <ExternalLink className="h-3 w-3 shrink-0" />
             </a>
           ))}
@@ -554,7 +510,7 @@ export default function AuditPage() {
             label:    'Total Transactions',
             value:    liveEntries.length > 0 ? liveEntries.length.toLocaleString() : '1,248',
             sub:      liveEntries.length > 0 ? 'Live on-chain' : 'All time',
-            subColor: liveEntries.length > 0 ? '#22C55E' : '#8B949E',
+            subClass: liveEntries.length > 0 ? 'text-success' : 'text-text-secondary',
           },
           {
             label:    'Total Volume',
@@ -562,35 +518,28 @@ export default function AuditPage() {
               ? `$${liveEntries.reduce((s, e) => s + Number(e.amount.replace(/[^0-9.]/g, '')), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               : '$24,589,435.21',
             sub:      'Verified on-chain',
-            subColor: '#8B949E',
+            subClass: 'text-text-secondary',
           },
           {
             label:    'Success Rate',
             value:    liveEntries.length > 0 ? '100%' : '98.74%',
             sub:      '',
-            valColor: '#22C55E',
+            valClass: 'text-success',
           },
           {
             label:    'Last 7 Days',
             value:    liveEntries.length > 0 ? `${liveEntries.length} transaction${liveEntries.length !== 1 ? 's' : ''}` : '18 transactions',
             sub:      liveEntries.length > 0 ? 'Live data' : '3 pending',
-            subColor: liveEntries.length > 0 ? '#22C55E' : '#F5C542',
+            subClass: liveEntries.length > 0 ? 'text-success' : 'text-warning',
           },
-        ] as { label: string; value: string; sub: string; valColor?: string; subColor?: string }[]).map(c => (
-          <div
-            key={c.label}
-            className="rounded-lg p-4"
-            style={{ background: '#161B22', border: '1px solid #21262D' }}
-          >
-            <p
-              className="text-[10px] font-semibold uppercase tracking-wider mb-1"
-              style={{ color: '#8B949E' }}
-            >
+        ] as { label: string; value: string; sub: string; valClass?: string; subClass?: string }[]).map(c => (
+          <div key={c.label} className="bg-card border border-border rounded-lg p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 text-text-secondary">
               {c.label}
             </p>
-            <p className="text-lg font-bold truncate" style={{ color: c.valColor ?? '#F0F6FC' }}>{c.value}</p>
+            <p className={cn('text-lg font-bold truncate', c.valClass ?? 'text-text-primary')}>{c.value}</p>
             {c.sub && (
-              <p className="text-xs mt-0.5" style={{ color: c.subColor ?? '#8B949E' }}>{c.sub}</p>
+              <p className={cn('text-xs mt-0.5', c.subClass ?? 'text-text-secondary')}>{c.sub}</p>
             )}
           </div>
         ))}
@@ -600,70 +549,53 @@ export default function AuditPage() {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Date range */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#8B949E' }}>
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
             <span>Date:</span>
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              className="rounded-md px-2 py-1.5 text-xs focus:outline-none cursor-pointer"
-              style={{ background: '#161B22', border: '1px solid #21262D', color: '#8B949E' }}
+              className="rounded-md px-2 py-1.5 text-xs bg-card border border-border text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             />
             <span>to</span>
             <input
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              className="rounded-md px-2 py-1.5 text-xs focus:outline-none cursor-pointer"
-              style={{ background: '#161B22', border: '1px solid #21262D', color: '#8B949E' }}
+              className="rounded-md px-2 py-1.5 text-xs bg-card border border-border text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             />
           </div>
 
           {/* Dropdowns */}
           {([
-            { label: 'Chain',    value: 'All Chains',   opts: ['All Chains', 'Mantle', 'Ethereum'] },
-            { label: 'Status',   value: status,         opts: ['All Status', 'Success', 'Failed', 'Pending'], onChange: applyStatus },
-            { label: 'Agent',    value: agent,          opts: ['All Agents', 'Agent-001', 'Agent-002', 'Agent-003'], onChange: (v: string) => setAgent(v) },
-            { label: 'Mandate',  value: mandate,        opts: ['All Mandates', 'ETH Conservative Buyer', 'MNT Momentum Trader', 'DeFi Yield Optimizer'], onChange: (v: string) => setMandate(v) },
+            { label: 'Chain',   value: 'All Chains',   opts: ['All Chains', 'Mantle', 'Ethereum'] },
+            { label: 'Status',  value: status,          opts: ['All Status', 'Success', 'Failed', 'Pending'], onChange: applyStatus },
+            { label: 'Agent',   value: agent,           opts: ['All Agents', 'Agent-001', 'Agent-002', 'Agent-003'], onChange: (v: string) => setAgent(v) },
+            { label: 'Mandate', value: mandate,         opts: ['All Mandates', 'ETH Conservative Buyer', 'MNT Momentum Trader', 'DeFi Yield Optimizer'], onChange: (v: string) => setMandate(v) },
           ] as { label: string; value: string; opts: string[]; onChange?: (v: string) => void }[]).map(f => (
             <div key={f.label} className="relative">
               <select
                 value={f.value}
                 onChange={e => f.onChange?.(e.target.value)}
-                className="appearance-none rounded-md pl-3 pr-7 py-1.5 text-xs focus:outline-none cursor-pointer"
-                style={{
-                  background: '#161B22',
-                  border: `1px solid ${f.value.startsWith('All') ? '#21262D' : '#0066FF'}`,
-                  color: f.value.startsWith('All') ? '#8B949E' : '#58A6FF',
-                }}
+                className={cn(
+                  'appearance-none rounded-md pl-3 pr-7 py-1.5 text-xs bg-card border focus:outline-none cursor-pointer',
+                  f.value.startsWith('All') ? 'border-border text-text-secondary' : 'border-primary text-text-link'
+                )}
               >
                 {f.opts.map(o => <option key={o}>{o}</option>)}
               </select>
-              <ChevronDown
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none"
-                style={{ color: '#484F58' }}
-              />
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-text-disabled" />
             </div>
           ))}
 
           {/* Search */}
           <div className="relative flex-1 min-w-[220px]">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-              style={{ color: '#484F58' }}
-            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-text-disabled" />
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search by hash or address..."
-              className="w-full rounded-md pl-8 pr-3 py-1.5 text-xs focus:outline-none"
-              style={{
-                background: '#161B22',
-                border: '1px solid #21262D',
-                color: '#F0F6FC',
-              }}
-              onFocus={e => (e.target as HTMLInputElement).style.borderColor = '#0066FF'}
-              onBlur={e => (e.target as HTMLInputElement).style.borderColor = '#21262D'}
+              className="w-full rounded-md pl-8 pr-3 py-1.5 text-xs bg-card border border-border text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary"
             />
           </div>
         </div>
@@ -674,21 +606,17 @@ export default function AuditPage() {
             {activeFilters.map(f => (
               <span
                 key={f.key}
-                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full"
-                style={{ background: '#1C2128', border: '1px solid #30363D', color: '#8B949E' }}
+                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-surface border border-border text-text-secondary"
               >
                 {f.label}
-                <button onClick={() => removeFilter(f.key)} className="hover:opacity-70">
+                <button onClick={() => removeFilter(f.key)} className="hover:opacity-70" aria-label={`Remove ${f.label} filter`}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
             ))}
             <button
-              onClick={() => {
-                setStatus('All Status'); setMandate('All Mandates'); setActiveFilters([])
-              }}
-              className="text-xs transition-colors hover:opacity-70"
-              style={{ color: '#58A6FF' }}
+              onClick={() => { setStatus('All Status'); setMandate('All Mandates'); setActiveFilters([]) }}
+              className="text-xs text-text-link hover:opacity-70 transition-opacity"
             >
               Clear all
             </button>
@@ -698,15 +626,13 @@ export default function AuditPage() {
 
       {/* ── Live / demo indicator ───────────────────────────────────────────── */}
       {!loadingLive && (
-        <div
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-xs"
-          style={{
-            background: liveEntries.length > 0 ? '#0D2818' : '#1C2128',
-            border:     `1px solid ${liveEntries.length > 0 ? '#22C55E44' : '#30363D'}`,
-            color:      liveEntries.length > 0 ? '#22C55E' : '#484F58',
-          }}
-        >
-          <span style={{ fontSize: 8 }}>●</span>
+        <div className={cn(
+          'flex items-center gap-2 rounded-md px-3 py-2 text-xs',
+          liveEntries.length > 0
+            ? 'bg-success-bg border border-success/30 text-success'
+            : 'bg-surface border border-border text-text-disabled'
+        )}>
+          <span className="text-[8px] leading-none">●</span>
           {liveEntries.length > 0
             ? `${liveEntries.length} live on-chain transaction${liveEntries.length !== 1 ? 's' : ''} fetched from the AgentExecutor contract`
             : 'Showing demo data — real transactions will appear here once agents execute trades on Mantle Network'}
@@ -714,165 +640,112 @@ export default function AuditPage() {
       )}
 
       {/* ── Audit table ───────────────────────────────────────────────────────── */}
-      <div
-        className="rounded-lg overflow-x-auto"
-        style={{ border: '1px solid #21262D' }}
-      >
+      <div className="border border-border rounded-lg overflow-x-auto">
         <div style={{ minWidth: 820 }}>
-        {/* Table header */}
-        <div
-          className="grid px-4 py-2.5"
-          style={{
-            gridTemplateColumns: COLS,
-            background: '#0D1117',
-          }}
-        >
-          {HEADERS.map(h => (
-            <span
-              key={h}
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: '#8B949E' }}
-            >
-              {h}
-            </span>
-          ))}
-        </div>
-
-        {/* Rows */}
-        {entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center" style={{ background: '#161B22' }}>
-            <Shield className="h-12 w-12 mb-4" style={{ color: '#484F58' }} />
-            <p className="font-semibold text-base mb-1" style={{ color: '#F0F6FC' }}>No on-chain activity yet</p>
-            <p className="text-sm max-w-sm mb-6" style={{ color: '#8B949E' }}>
-              Once your AI agent executes its first trade on Mantle Network, every transaction will appear here with full verification.
-            </p>
-            <Link
-              href="/dashboard/agents"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-white"
-              style={{ background: '#0066FF' }}
-            >
-              Deploy Your First Agent →
-            </Link>
+          {/* Table header */}
+          <div
+            className="grid px-4 py-2.5 bg-page"
+            style={{ gridTemplateColumns: COLS }}
+          >
+            {HEADERS.map(h => (
+              <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                {h}
+              </span>
+            ))}
           </div>
-        ) : (
-          entries.map((entry, i) => (
-            <div key={entry.id}>
-              {/* Main row */}
-              <div
-                className="grid px-4 items-center cursor-pointer transition-colors"
-                style={{
-                  gridTemplateColumns: COLS,
-                  minHeight: 52,
-                  background: expanded === entry.id ? '#1C2128' : i % 2 === 0 ? '#161B22' : '#0D1117',
-                  borderBottom: '1px solid #21262D',
-                }}
-                onClick={() => setExpanded(prev => prev === entry.id ? null : entry.id)}
-                onMouseEnter={e => {
-                  if (expanded !== entry.id) (e.currentTarget as HTMLElement).style.background = '#1C2128'
-                }}
-                onMouseLeave={e => {
-                  if (expanded !== entry.id) (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? '#161B22' : '#0D1117'
-                }}
+
+          {/* Rows */}
+          {entries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center bg-card">
+              <Shield className="h-12 w-12 mb-4 text-text-disabled" />
+              <p className="font-semibold text-base mb-1 text-text-primary">No on-chain activity yet</p>
+              <p className="text-sm max-w-sm mb-6 text-text-secondary">
+                Once your AI agent executes its first trade on Mantle Network, every transaction will appear here with full verification.
+              </p>
+              <Link
+                href="/dashboard/agents"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-white bg-primary hover:opacity-90 transition-opacity"
               >
-                {/* TX Hash */}
-                <span
-                  title={entry.txHash}
-                  className="flex items-center gap-1"
-                  style={{
-                    color: '#58A6FF',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 11,
-                  }}
-                >
-                  {entry.isLive && <span style={{ color: '#22C55E', fontSize: 8, lineHeight: 1 }}>●</span>}
-                  {truncateHash(entry.txHash)}
-                </span>
-
-                {/* Timestamp */}
-                <span
-                  style={{
-                    color: '#8B949E',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 11,
-                  }}
-                >
-                  {entry.timestamp}
-                </span>
-
-                {/* From */}
-                <span
-                  style={{
-                    color: '#8B949E',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 11,
-                  }}
-                >
-                  {entry.from}
-                </span>
-
-                {/* To */}
-                <span
-                  style={{
-                    color: '#F0F6FC',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 11,
-                  }}
-                >
-                  {entry.to}
-                </span>
-
-                {/* Mandate */}
-                <span
-                  className="truncate text-xs"
-                  style={{ color: '#58A6FF' }}
-                  title={entry.mandate}
-                >
-                  {entry.mandate}
-                </span>
-
-                {/* Amount */}
-                <span className="text-xs font-medium" style={{ color: '#F0F6FC' }}>{entry.amount}</span>
-
-                {/* Status */}
-                <StatusBadge status={entry.status} />
-
-                {/* Block */}
-                <span
-                  style={{
-                    color: '#8B949E',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 11,
-                  }}
-                >
-                  {entry.blockNumber > 0 ? `#${entry.blockNumber.toLocaleString()}` : '—'}
-                </span>
-
-                {/* Actions */}
-                <a
-                  href={entry.txHash ? `${EXPLORER}/tx/${entry.txHash}` : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  className="flex items-center gap-0.5 text-xs transition-opacity hover:opacity-70"
-                  style={{ color: '#58A6FF' }}
-                >
-                  Explorer <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-
-              {/* Expanded detail */}
-              {expanded === entry.id && (
-                <ExpandedRow entry={entry} onClose={() => setExpanded(null)} />
-              )}
+                Deploy Your First Agent →
+              </Link>
             </div>
-          ))
-        )}
-        </div>{/* /minWidth */}
+          ) : (
+            entries.map((entry, i) => (
+              <div key={entry.id}>
+                {/* Main row */}
+                <div
+                  className={cn(
+                    'grid px-4 items-center cursor-pointer transition-colors border-b border-border hover:bg-surface',
+                    expanded === entry.id ? 'bg-surface' : i % 2 === 0 ? 'bg-card' : 'bg-page'
+                  )}
+                  style={{ gridTemplateColumns: COLS, minHeight: 52 }}
+                  onClick={() => setExpanded(prev => prev === entry.id ? null : entry.id)}
+                >
+                  {/* TX Hash */}
+                  <span
+                    className="flex items-center gap-1 text-text-link font-mono text-[11px]"
+                    title={entry.txHash}
+                  >
+                    {entry.isLive && <span className="text-success text-[8px] leading-none">●</span>}
+                    {truncateHash(entry.txHash)}
+                  </span>
+
+                  {/* Timestamp */}
+                  <span className="text-text-secondary font-mono text-[11px]">
+                    {entry.timestamp}
+                  </span>
+
+                  {/* From */}
+                  <span className="text-text-secondary font-mono text-[11px]">
+                    {entry.from}
+                  </span>
+
+                  {/* To */}
+                  <span className="text-text-primary font-mono text-[11px]">
+                    {entry.to}
+                  </span>
+
+                  {/* Mandate */}
+                  <span className="truncate text-xs text-text-link" title={entry.mandate}>
+                    {entry.mandate}
+                  </span>
+
+                  {/* Amount */}
+                  <span className="text-xs font-medium text-text-primary">{entry.amount}</span>
+
+                  {/* Status */}
+                  <StatusBadge status={entry.status} />
+
+                  {/* Block */}
+                  <span className="text-text-secondary font-mono text-[11px]">
+                    {entry.blockNumber > 0 ? `#${entry.blockNumber.toLocaleString()}` : '—'}
+                  </span>
+
+                  {/* Actions */}
+                  <a
+                    href={entry.txHash ? `${EXPLORER}/tx/${entry.txHash}` : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-0.5 text-xs text-text-link hover:opacity-70 transition-opacity"
+                  >
+                    Explorer <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+
+                {/* Expanded detail */}
+                {expanded === entry.id && (
+                  <ExpandedRow entry={entry} onClose={() => setExpanded(null)} />
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* ── Pagination ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm flex-wrap gap-3">
-        <span style={{ color: '#8B949E' }}>
+        <span className="text-text-secondary">
           Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, displayTotal)} of {displayTotal.toLocaleString()} transactions
         </span>
 
@@ -880,10 +753,7 @@ export default function AuditPage() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded text-xs transition-colors disabled:opacity-40"
-            style={{ border: '1px solid #21262D', color: '#8B949E' }}
-            onMouseEnter={e => { if (page > 1) (e.currentTarget as HTMLElement).style.borderColor = '#0066FF' }}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#21262D'}
+            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded text-xs border border-border text-text-secondary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Prev
@@ -893,26 +763,23 @@ export default function AuditPage() {
             <button
               key={n}
               onClick={() => setPage(n)}
-              className="h-8 w-8 rounded-full text-xs font-medium transition-colors"
-              style={{
-                background: page === n ? '#0066FF' : 'transparent',
-                color: page === n ? '#fff' : '#8B949E',
-                border: page === n ? 'none' : '1px solid transparent',
-              }}
+              className={cn(
+                'h-8 w-8 rounded-full text-xs font-medium transition-colors',
+                page === n ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
+              )}
             >
               {n}
             </button>
           ))}
 
-          <span style={{ color: '#484F58', padding: '0 4px' }}>...</span>
+          <span className="text-text-disabled px-1">...</span>
 
           <button
             onClick={() => setPage(totalPages)}
-            className="h-8 w-8 rounded-full text-xs font-medium transition-colors"
-            style={{
-              background: page === totalPages ? '#0066FF' : 'transparent',
-              color: page === totalPages ? '#fff' : '#8B949E',
-            }}
+            className={cn(
+              'h-8 w-8 rounded-full text-xs font-medium transition-colors',
+              page === totalPages ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
+            )}
           >
             {totalPages}
           </button>
@@ -920,10 +787,7 @@ export default function AuditPage() {
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded text-xs transition-colors disabled:opacity-40"
-            style={{ border: '1px solid #21262D', color: '#8B949E' }}
-            onMouseEnter={e => { if (page < totalPages) (e.currentTarget as HTMLElement).style.borderColor = '#0066FF' }}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#21262D'}
+            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded text-xs border border-border text-text-secondary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />
@@ -933,12 +797,7 @@ export default function AuditPage() {
         <select
           value={perPage}
           onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
-          className="rounded text-xs px-2 py-1.5 focus:outline-none cursor-pointer"
-          style={{
-            background: '#161B22',
-            border: '1px solid #21262D',
-            color: '#8B949E',
-          }}
+          className="rounded text-xs px-2 py-1.5 bg-card border border-border text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
         >
           <option value={20}>20 per page</option>
           <option value={50}>50 per page</option>
