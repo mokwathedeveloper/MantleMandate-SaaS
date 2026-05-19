@@ -205,7 +205,7 @@ describe('AgentExecutor', () => {
       await executor.connect(owner).executeOrder(agentId, ASSET_ETH, 100n, true,  REF_A)
       await executor.connect(owner).executeOrder(agentId, ASSET_ETH, 200n, false, REF_B)
 
-      const execs = await executor.getExecutions(agentId)
+      const [execs] = await executor.getExecutions(agentId, 0n, 100n)
       expect(execs).to.have.lengthOf(2)
       expect(execs[0].amount).to.equal(100n)
       expect(execs[1].isBuy).to.be.false

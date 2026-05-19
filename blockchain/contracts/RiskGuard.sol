@@ -108,7 +108,7 @@ contract RiskGuard {
         uint256 agentId,
         uint256 orderValue,
         uint256 capitalBase
-    ) external onlyAgentOwner(agentId) initialized(agentId) {
+    ) external initialized(agentId) onlyAgentOwner(agentId) {
         AgentRiskState storage s = _state[agentId];
         RiskParams     storage p = s.params;
 
