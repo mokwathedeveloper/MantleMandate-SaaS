@@ -184,10 +184,11 @@ function StatusBadge({ status }: { status: ProtocolStatus }) {
 // ── Protocol Card ─────────────────────────────────────────────────────────────
 
 function ProtocolCard({
-  p, onConfigure, onAdd,
+  p, onConfigure, onMonitor, onAdd,
 }: {
   p: Protocol
   onConfigure: (p: Protocol) => void
+  onMonitor: (p: Protocol) => void
   onAdd: (p: Protocol) => void
 }) {
   const [showTooltip, setShowTooltip] = useState(false)
@@ -241,6 +242,7 @@ function ProtocolCard({
           {p.status !== 'INACTIVE' && (
             <>
               <button
+                onClick={() => onMonitor(p)}
                 className="p-1.5 rounded border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
                 aria-label="Monitor"
               >
@@ -553,8 +555,8 @@ function levelClass(level: string): string {
   return 'text-error'
 }
 
-function ConfigurePanel({ p, onClose }: { p: Protocol; onClose: () => void }) {
-  const [configTab, setConfigTab] = useState<ConfigTab>('overview')
+function ConfigurePanel({ p, onClose, initialTab = 'overview' }: { p: Protocol; onClose: () => void; initialTab?: ConfigTab }) {
+  const [configTab, setConfigTab] = useState<ConfigTab>(initialTab)
   const [copied, setCopied]       = useState(false)
   const [maxAlloc, setMaxAlloc]   = useState(p.allocation)
 
@@ -755,7 +757,7 @@ export default function ProtocolsPage() {
   const [tab, setTab]               = useState<TabFilter>('All')
   const [search, setSearch]         = useState('')
   const [showAdd, setShowAdd]       = useState(false)
-  const [configProtocol, setConfig] = useState<Protocol | null>(null)
+  const [configProtocol, setConfig] = useState<{ protocol: Protocol; tab: ConfigTab } | null>(null)
   const [statusFilter, setStatus]   = useState('All Protocols')
   const [showStatusDd, setStatusDd] = useState(false)
   const [protocols, setProtocols]   = useState<Protocol[]>(PROTOCOLS)
@@ -802,7 +804,7 @@ export default function ProtocolsPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       {showAdd       && <AddProtocolPanel onClose={() => setShowAdd(false)} onConnect={handleConnect} />}
-      {configProtocol && <ConfigurePanel p={configProtocol} onClose={() => setConfig(null)} />}
+      {configProtocol && <ConfigurePanel p={configProtocol.protocol} initialTab={configProtocol.tab} onClose={() => setConfig(null)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -913,7 +915,8 @@ export default function ProtocolsPage() {
             <ProtocolCard
               key={p.id}
               p={p}
-              onConfigure={setConfig}
+              onConfigure={p => setConfig({ protocol: p, tab: 'overview' })}
+              onMonitor={p => setConfig({ protocol: p, tab: 'history' })}
               onAdd={() => setShowAdd(true)}
             />
           ))}
