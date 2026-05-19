@@ -8,6 +8,7 @@ import {
 import { useTrades } from '@/hooks/useTrades'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 import type { Trade } from '@/types/trade'
 
 const PROTOCOL_LABELS: Record<string, string> = {
@@ -283,8 +284,11 @@ export default function TradesPage() {
                       key={t.id}
                       className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors"
                     >
-                      <td className="px-4 py-3 text-[13px] font-semibold text-text-primary whitespace-nowrap">
-                        {t.assetPair}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <TokenIcon symbol={t.assetPair.split('/')[0]} size="sm" />
+                          <span className="text-[13px] font-semibold text-text-primary">{t.assetPair}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
