@@ -84,16 +84,11 @@ function ActionModal({
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="fixed z-50 w-[360px] rounded-xl overflow-hidden shadow-2xl"
-        style={{
-          top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          background: '#161B22', border: '1px solid #21262D',
-        }}
+        className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                   w-[min(360px,calc(100vw-1.5rem))] rounded-xl overflow-hidden shadow-modal
+                   bg-card border border-border"
       >
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ background: '#1C2128', borderBottom: '1px solid #21262D' }}
-        >
+        <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border">
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center">
               <Icon className="h-3.5 w-3.5 text-primary" />
@@ -160,8 +155,7 @@ function InviteUserModal({ onClose }: { onClose: () => void }) {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="colleague@company.com"
                 type="email"
-                className="w-full rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary transition-colors"
-                style={{ background: '#0D1117', border: '1px solid #30363D' }}
+                className="w-full rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled bg-page border border-border focus:outline-none focus:border-primary transition-colors"
               />
             </div>
             <div className="space-y-1">
@@ -170,8 +164,7 @@ function InviteUserModal({ onClose }: { onClose: () => void }) {
                 <select
                   value={role}
                   onChange={e => setRole(e.target.value)}
-                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none cursor-pointer"
-                  style={{ background: '#0D1117', border: '1px solid #30363D' }}
+                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary bg-page border border-border focus:outline-none focus:border-primary cursor-pointer transition-colors"
                 >
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
@@ -344,7 +337,7 @@ function GenerateTokenModal({ onClose }: { onClose: () => void }) {
       <div className="p-4 space-y-3">
         {token ? (
           <>
-            <div className="rounded-md p-3 space-y-2" style={{ background: '#0D1117', border: '1px solid #30363D' }}>
+            <div className="rounded-md p-3 space-y-2 bg-page border border-border">
               <p className="text-[10px] font-semibold text-success uppercase tracking-wider">Token generated</p>
               <p className="font-mono text-[11px] text-text-primary break-all leading-relaxed">{token}</p>
             </div>
@@ -434,7 +427,7 @@ function GenerateTradeModal({ onClose }: { onClose: () => void }) {
                 {direction === 'buy' ? 'Buy' : 'Sell'} ${Number(amount).toLocaleString()} of {pair.split('/')[0]} via {protocol}
               </p>
             </div>
-            <div className="w-full rounded-md p-2.5 text-left" style={{ background: '#0D1117', border: '1px solid #30363D' }}>
+            <div className="w-full rounded-md p-2.5 text-left bg-page border border-border">
               <p className="text-[10px] text-text-secondary mb-1">Tx Hash</p>
               <p className="font-mono text-[10px] text-text-primary break-all">{txHash}</p>
             </div>
@@ -481,8 +474,7 @@ function GenerateTradeModal({ onClose }: { onClose: () => void }) {
                 <select
                   value={pair}
                   onChange={e => setPair(e.target.value)}
-                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none cursor-pointer"
-                  style={{ background: '#0D1117', border: '1px solid #30363D' }}
+                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary bg-page border border-border focus:outline-none focus:border-primary cursor-pointer transition-colors"
                 >
                   {TRADE_PAIRS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
@@ -499,8 +491,7 @@ function GenerateTradeModal({ onClose }: { onClose: () => void }) {
                 placeholder="500"
                 type="number"
                 min="1"
-                className="w-full rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none transition-colors"
-                style={{ background: '#0D1117', border: '1px solid #30363D' }}
+                className="w-full rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled bg-page border border-border focus:outline-none focus:border-primary transition-colors"
               />
             </div>
 
@@ -511,8 +502,7 @@ function GenerateTradeModal({ onClose }: { onClose: () => void }) {
                 <select
                   value={protocol}
                   onChange={e => setProtocol(e.target.value)}
-                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none cursor-pointer"
-                  style={{ background: '#0D1117', border: '1px solid #30363D' }}
+                  className="w-full appearance-none rounded-md px-3 pr-8 py-2 text-sm text-text-primary bg-page border border-border focus:outline-none focus:border-primary cursor-pointer transition-colors"
                 >
                   {TRADE_PROTOCOLS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
