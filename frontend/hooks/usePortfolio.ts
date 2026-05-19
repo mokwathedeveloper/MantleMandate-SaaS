@@ -55,29 +55,23 @@ export function usePortfolioStats() {
       if (!session) return MOCK_STATS
       try {
         const uid = session.user.id
-        const [wallets, agents, trades, history] = await Promise.all([
-          supabase.from('wallets').select('balance_usd').eq('user_id', uid),
-          supabase.from('agents').select('status').eq('user_id', uid),
+        const [agents, trades] = await Promise.all([
+          supabase.from('agents').select('status, capital_cap, total_pnl').eq('user_id', uid),
           supabase.from('trades').select('pnl, status').eq('user_id', uid),
-          supabase.from('portfolio_history').select('value, pnl').eq('user_id', uid)
-            .order('date', { ascending: false }).limit(2),
         ])
 
-        const totalValue   = (wallets.data ?? []).reduce((s: number, w: { balance_usd?: number | null }) => s + (w.balance_usd ?? 0), 0)
-        const activeAgents = (agents.data  ?? []).filter((a: { status: string }) => a.status === 'active').length
+        const agentRows: { status: string; capital_cap?: number | null; total_pnl?: number | null }[] = agents.data ?? []
+        const totalValue   = agentRows.reduce((s, a) => s + (a.capital_cap ?? 0), 0)
+        const totalPnl24h  = agentRows.reduce((s, a) => s + (a.total_pnl  ?? 0), 0)
+        const totalPnlPct  = totalValue > 0 ? (totalPnl24h / totalValue) * 100 : 0
+        const activeAgents = agentRows.filter(a => a.status === 'active').length
         const allTrades: { pnl?: number | null; status: string }[] = trades.data ?? []
         const totalTrades  = allTrades.length
         const wins         = allTrades.filter(t => t.status === 'success' && (t.pnl ?? 0) > 0).length
         const winRate      = totalTrades > 0 ? (wins / totalTrades) * 100 : 0
 
-        const h = history.data ?? []
-        const todayPnl    = h[0]?.pnl  ?? 0
-        const todayValue  = h[0]?.value ?? totalValue
-        const prevValue   = h[1]?.value ?? todayValue
-        const totalPnlPct = prevValue > 0 ? ((todayValue - prevValue) / prevValue) * 100 : 0
-
         if (totalValue === 0 && activeAgents === 0 && totalTrades === 0) return MOCK_STATS
-        return { totalValue, totalPnl24h: todayPnl, totalPnlPct, activeAgents, totalTrades, winRate }
+        return { totalValue, totalPnl24h, totalPnlPct, activeAgents, totalTrades, winRate }
       } catch {
         return MOCK_STATS
       }
