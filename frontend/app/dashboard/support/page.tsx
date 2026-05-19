@@ -43,12 +43,12 @@ const FAQ_ITEMS = [
 ]
 
 const RESOURCES: { label: string; href: string; ext: boolean }[] = [
-  { label: 'API Documentation',              href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/blob/master/docs/API.md',                  ext: true  },
-  { label: 'Smart Contract Source (GitHub)', href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/tree/master/blockchain/contracts',         ext: true  },
-  { label: 'Changelog',                      href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/releases',                                  ext: true  },
-  { label: 'Status Page',                    href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues',                                    ext: true  },
-  { label: 'Privacy Policy',                 href: '/privacy',                                                                                           ext: false },
-  { label: 'Terms of Service',               href: '/terms',                                                                                             ext: false },
+  { label: 'API Documentation',       href: 'https://docs.mantlemandate.xyz/api',                         ext: true  },
+  { label: 'Smart Contract Docs',     href: 'https://docs.mantlemandate.xyz/contracts',                   ext: true  },
+  { label: 'Changelog',               href: 'https://docs.mantlemandate.xyz/changelog',                   ext: true  },
+  { label: 'Status Page',             href: 'https://status.mantlemandate.xyz',                           ext: true  },
+  { label: 'Privacy Policy',          href: '/privacy',                                                    ext: false },
+  { label: 'Terms of Service',        href: '/terms',                                                      ext: false },
 ]
 
 const PLAN_LABELS: Record<string, string> = {
@@ -255,7 +255,7 @@ export default function SupportPage() {
             Partial outage — Agni Finance integration degraded
           </span>
           <a
-            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues"
+            href="https://status.mantlemandate.xyz"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[13px] font-medium underline-offset-2 hover:underline shrink-0"
@@ -271,7 +271,7 @@ export default function SupportPage() {
           </span>
           <span className="text-[13px] text-text-secondary">Last checked: 2 min ago</span>
           <a
-            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues"
+            href="https://status.mantlemandate.xyz"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[13px] text-text-link flex items-center gap-1 hover:underline underline-offset-2 shrink-0"
@@ -322,7 +322,7 @@ export default function SupportPage() {
             </p>
           </div>
           <a
-            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS"
+            href="https://docs.mantlemandate.xyz"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1"
@@ -341,7 +341,7 @@ export default function SupportPage() {
             </p>
           </div>
           <a
-            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/discussions"
+            href="https://docs.mantlemandate.xyz/community"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1"

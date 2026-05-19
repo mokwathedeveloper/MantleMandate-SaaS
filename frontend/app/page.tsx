@@ -1005,10 +1005,12 @@ function DocsSection() {
               Ask Support
             </Link>
             <Link
-              href="https://github.com/mokwathedeveloper/MantleMandate-SaaS"
+              href="https://docs.mantlemandate.xyz"
+              target="_blank"
+              rel="noopener noreferrer"
               className="h-9 px-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
             >
-              GitHub
+              View Docs
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
