@@ -21,11 +21,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // Keep store in sync with Supabase auth state changes
     let subscription: { unsubscribe: () => void } | null = null
     try {
-      const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-        if (session) {
-          setSession(session)
-          setUser(sessionToUser(session.user))
-        } else {
+      const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+        if (
+          event === 'SIGNED_IN'      ||
+          event === 'TOKEN_REFRESHED' ||
+          event === 'USER_UPDATED'
+        ) {
+          if (session) {
+            setSession(session)
+            setUser(sessionToUser(session.user))
+          }
+        } else if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
         }
