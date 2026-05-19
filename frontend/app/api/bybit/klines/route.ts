@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getKlines, BYBIT_SYMBOLS } from '@/lib/bybit'
 
+const VALID_INTERVALS = new Set(['1', '5', '15', '60', 'D', 'W'] as const)
+type KlineInterval = '1' | '5' | '15' | '60' | 'D' | 'W'
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const symbol   = searchParams.get('symbol')?.toUpperCase() ?? 'BTC'
-  const interval = (searchParams.get('interval') ?? 'D') as '1' | '5' | '15' | '60' | 'D' | 'W'
-  const limit    = Math.min(parseInt(searchParams.get('limit') ?? '30'), 200)
+  const symbol      = searchParams.get('symbol')?.toUpperCase() ?? 'BTC'
+  const rawInterval = searchParams.get('interval') ?? 'D'
+  const interval: KlineInterval = VALID_INTERVALS.has(rawInterval as KlineInterval)
+    ? (rawInterval as KlineInterval)
+    : 'D'
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '30'), 200)
 
   const bybitSymbol = BYBIT_SYMBOLS[symbol] ?? `${symbol}USDT`
 
