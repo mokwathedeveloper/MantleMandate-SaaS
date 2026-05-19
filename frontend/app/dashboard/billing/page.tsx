@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { Download, Copy, CheckCircle2, ChevronDown, ExternalLink, TriangleAlert, Loader2, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 
 // Load QR code only client-side — qrcode.react uses browser APIs that fail during SSR
 const QRCodeSVG = dynamic(
@@ -441,15 +442,16 @@ function CryptoTab() {
               key={t}
               onClick={() => setToken(t)}
               className={cn(
-                'flex-1 py-2 text-sm rounded-md border transition-colors text-center',
+                'flex-1 py-2 text-sm rounded-md border transition-colors flex flex-col items-center gap-1',
                 token === t
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border text-text-secondary hover:border-primary/60'
               )}
             >
-              {t}
+              <TokenIcon symbol={t} size="md" />
+              <span className="font-semibold">{t}</span>
               {t === 'MNT' && (
-                <span className="block text-[9px] text-text-disabled leading-tight">Mantle native</span>
+                <span className="text-[9px] text-text-disabled leading-tight">Mantle native</span>
               )}
             </button>
           ))}
