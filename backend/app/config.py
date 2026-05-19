@@ -25,6 +25,9 @@ class DevelopmentConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
+    # Explicit overrides — no fallback so Flask fails fast if these are unset
+    SECRET_KEY     = os.environ.get('SECRET_KEY')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     REDIS_URL = os.environ.get('REDIS_URL')
     CELERY_BROKER_URL = REDIS_URL
