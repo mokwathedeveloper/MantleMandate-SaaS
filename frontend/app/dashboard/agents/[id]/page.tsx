@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 import {
   ChevronLeft, Pause, Play, Square, Activity, Hash, FileText,
   Shield, Settings2, ClipboardList, Copy, CheckCircle2, ExternalLink,
