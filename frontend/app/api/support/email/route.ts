@@ -7,6 +7,16 @@ function ticketRef(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Auth guard — prevents ticket spam and OpenRouter quota abuse
+  const cookieStore = cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } }
+  )
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { from, name, subject, category, priority, message } = await req.json()
 
@@ -21,17 +31,8 @@ export async function POST(req: NextRequest) {
 
     // Save to Supabase support_tickets table
     try {
-      const cookieStore = cookies()
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { cookies: { getAll: () => cookieStore.getAll(), setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } }
-      )
-
-      const { data: { user } } = await supabase.auth.getUser()
-
       await supabase.from('support_tickets').insert({
-        user_id:    user?.id ?? null,
+        user_id:    user.id,
         from_email: from,
         from_name:  name ?? '',
         subject,
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
         ticket_ref: ref,
         status:     'open',
       })
-    } catch (dbErr) {
+    } catch (dbErr: unknown) {
       // DB failure should not block the user — ticket is still logged above
       console.warn('[Support Ticket] DB insert failed:', dbErr)
     }

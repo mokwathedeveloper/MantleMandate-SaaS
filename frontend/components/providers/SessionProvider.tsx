@@ -10,20 +10,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setSession } = useAuthStore()
 
   useEffect(() => {
-    // Restore session on page load — silently skip if Supabase is unreachable
+    // Restore session on page load
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
         setSession(session)
         setUser(sessionToUser(session.user))
       }
-    }).catch(() => { /* Supabase offline / paused — app continues with mock data */ })
+    }).catch((err: unknown) => {
+      console.error('[SessionProvider] Failed to restore session:', err)
+    })
 
     // Keep store in sync with Supabase auth state changes
     let subscription: { unsubscribe: () => void } | null = null
     try {
       const { data } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
         if (
-          event === 'SIGNED_IN'      ||
+          event === 'SIGNED_IN'       ||
           event === 'TOKEN_REFRESHED' ||
           event === 'USER_UPDATED'
         ) {
@@ -37,8 +39,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         }
       })
       subscription = data.subscription
-    } catch {
-      // Supabase unavailable — auth state changes will not be tracked
+    } catch (err: unknown) {
+      console.error('[SessionProvider] Failed to subscribe to auth state changes:', err)
     }
 
     return () => subscription?.unsubscribe()

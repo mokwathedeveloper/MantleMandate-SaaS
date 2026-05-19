@@ -83,24 +83,27 @@ export function AppAlertBanner() {
   const v         = VARIANT[variant]
   const isSuccess = variant === 'success'
 
+  // Capture only the ID so the timer closure never holds a stale object ref
+  const topAlertId = topAlert?.id ?? null
+
   // Auto-dismiss success alerts after 8 s
   useEffect(() => {
-    if (!topAlert || !isSuccess) return
+    if (!topAlertId || !isSuccess) return
     setProgress(100)
     const interval = setInterval(() => {
       setProgress(p => {
         const next = p - (100 / 80)
         if (next <= 0) {
           clearInterval(interval)
-          setDismissed(prev => [...prev, topAlert.id])
-          markRead(topAlert.id)
+          setDismissed(prev => [...prev, topAlertId])
+          markRead(topAlertId)
           return 0
         }
         return next
       })
     }, 100)
     return () => clearInterval(interval)
-  }, [topAlert?.id, isSuccess]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [topAlertId, isSuccess, markRead])
 
   if (!topAlert) return null
 

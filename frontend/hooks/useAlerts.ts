@@ -45,10 +45,11 @@ export function useAlerts() {
     queryKey: ['alerts'],
     queryFn: async () => {
       try {
+        if (!user) return { data: [], total: 0, unreadCount: 0 }
         const { data, error, count } = await supabase
           .from('alerts')
           .select('*', { count: 'exact' })
-          .eq('user_id', user!.id)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
         if (error) throw error
         const alerts: Alert[] = (data ?? []).map(rowToAlert)

@@ -50,10 +50,11 @@ export function useTrades(params?: {
     queryKey: ['trades', params],
     queryFn: async () => {
       try {
+        if (!user) return { data: [], total: 0, page, page_size: pageSize, total_pages: 0 }
         let q = supabase
           .from('trades')
           .select('*, mandate:mandates(name)', { count: 'exact' })
-          .eq('user_id', user!.id)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .range((page - 1) * pageSize, page * pageSize - 1)
 

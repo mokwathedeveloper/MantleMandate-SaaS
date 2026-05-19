@@ -40,11 +40,14 @@ interface MandateListResponse {
 
 export function useMandates(params?: { page?: number; status?: string; enabled?: boolean }) {
   const { user } = useAuthStore()
-  const page = params?.page ?? 1
+  const page     = params?.page   ?? 1
+  const status   = params?.status ?? null
   const pageSize = 20
 
   return useQuery<MandateListResponse>({
-    queryKey: ['mandates', params],
+    // Use specific scalar deps — not the whole params object — so React Query
+    // can correctly detect when only the filter changes (and resets to page 1).
+    queryKey: ['mandates', page, status],
     queryFn: async () => {
       try {
         let q = supabase
@@ -53,7 +56,7 @@ export function useMandates(params?: { page?: number; status?: string; enabled?:
           .order('created_at', { ascending: false })
           .range((page - 1) * pageSize, page * pageSize - 1)
 
-        if (params?.status) q = q.eq('status', params.status)
+        if (status) q = q.eq('status', status)
 
         const { data, error, count } = await q
         if (error) throw error
@@ -70,6 +73,8 @@ export function useMandates(params?: { page?: number; status?: string; enabled?:
     },
     retry: false,
     enabled: params?.enabled !== false && !!user,
+    // Reset to first page when a new status filter fires
+    placeholderData: (prev) => page === 1 ? undefined : prev,
   })
 }
 

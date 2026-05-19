@@ -27,9 +27,9 @@ export function ChatWidget() {
   const inputRef   = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
+    if (!open) return
+    const tid = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(tid)
   }, [open])
 
   useEffect(() => {
@@ -52,15 +52,17 @@ export function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next }),
       })
-      const data = await res.json()
+      const data = await res.json() as { reply?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`)
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.reply ?? 'Sorry, something went wrong. Please try again.',
       }])
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connection error.'
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Connection error. Please check your internet and try again.',
+        content: msg,
       }])
     } finally {
       setLoading(false)
