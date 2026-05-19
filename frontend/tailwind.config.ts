@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: '480px',   // narrow-phone safe zone — between mobile and sm (640px)
+      },
       colors: {
         // Backgrounds
         page:    '#0D1117',

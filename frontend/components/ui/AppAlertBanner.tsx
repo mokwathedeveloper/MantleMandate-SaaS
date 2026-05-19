@@ -2,50 +2,74 @@
 
 import { useState, useEffect } from 'react'
 import { CheckCircle2, TriangleAlert, Zap, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useAlertStore } from '@/store/alertStore'
-
-// ─── Severity → banner style map ──────────────────────────────────────────────
 
 type BannerVariant = 'success' | 'high' | 'warning'
 
-const VARIANT_STYLE: Record<BannerVariant, {
-  bg: string; border: string; color: string; Icon: typeof X
+const VARIANT: Record<BannerVariant, {
+  wrapper: string
+  bar:     string
+  icon:    string
+  text:    string
+  btn:     string
+  outline: string
+  Icon:    typeof X
 }> = {
-  success: { bg: '#0D2818', border: '#22C55E', color: '#22C55E', Icon: CheckCircle2 },
-  high:    { bg: '#2D0F0F', border: '#EF4444', color: '#EF4444', Icon: TriangleAlert },
-  warning: { bg: '#2A2000', border: '#F5C542', color: '#F5C542', Icon: Zap },
+  success: {
+    wrapper: 'bg-success-bg border-l-4 border-success',
+    bar:     'bg-success',
+    icon:    'text-success',
+    text:    'text-success',
+    btn:     'bg-success text-white hover:opacity-90',
+    outline: 'border border-success text-success hover:bg-success/10',
+    Icon:    CheckCircle2,
+  },
+  high: {
+    wrapper: 'bg-error-bg border-l-4 border-error',
+    bar:     'bg-error',
+    icon:    'text-error',
+    text:    'text-error',
+    btn:     'bg-error text-white hover:opacity-90',
+    outline: 'border border-error text-error hover:bg-error/10',
+    Icon:    TriangleAlert,
+  },
+  warning: {
+    wrapper: 'bg-warning-bg border-l-4 border-warning',
+    bar:     'bg-warning',
+    icon:    'text-warning',
+    text:    'text-warning',
+    btn:     'bg-warning text-black hover:opacity-90',
+    outline: 'border border-warning text-warning hover:bg-warning/10',
+    Icon:    Zap,
+  },
 }
 
-// Map alert severity to banner variant
 function toVariant(severity: string): BannerVariant {
   if (severity === 'low')    return 'success'
   if (severity === 'medium') return 'warning'
   return 'high'
 }
 
-// Contextual action buttons per alert type
 const ACTION_MAP: Record<string, string[]> = {
-  'INSUFFICIENT GAS':     ['Add Funds', 'Pause Agent'],
-  'DRAWDOWN LIMIT HIT':   ['Review Risk', 'Pause Agent'],
-  'MANDATE BREACH':       ['Review Agent'],
-  'TRADE FAILED':         ['View Details'],
-  'AGENT ERROR':          ['View Agent'],
-  'APPROVAL NEEDED':      ['Approve'],
-  'LOW GAS WARNING':      ['Add Gas'],
-  'DRAWDOWN WARNING':     ['Review Risk'],
-  'TRADE EXECUTED':       ['View Trade'],
-  'AGENT DEPLOYED':       ['View Agent'],
-  'MANDATE UPDATED':      ['View Mandate'],
+  'INSUFFICIENT GAS':   ['Add Funds', 'Pause Agent'],
+  'DRAWDOWN LIMIT HIT': ['Review Risk', 'Pause Agent'],
+  'MANDATE BREACH':     ['Review Agent'],
+  'TRADE FAILED':       ['View Details'],
+  'AGENT ERROR':        ['View Agent'],
+  'APPROVAL NEEDED':    ['Approve'],
+  'LOW GAS WARNING':    ['Add Gas'],
+  'DRAWDOWN WARNING':   ['Review Risk'],
+  'TRADE EXECUTED':     ['View Trade'],
+  'AGENT DEPLOYED':     ['View Agent'],
+  'MANDATE UPDATED':    ['View Mandate'],
 }
-
-// ─── Banner ───────────────────────────────────────────────────────────────────
 
 export function AppAlertBanner() {
   const { alerts, markRead } = useAlertStore()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [progress, setProgress]   = useState(100)
 
-  // Pick the most severe unread, non-dismissed alert
   const topAlert = (() => {
     const unread = alerts.filter(a => !a.isRead && !dismissed.includes(a.id))
     return (
@@ -55,17 +79,17 @@ export function AppAlertBanner() {
     )
   })()
 
-  const variant  = topAlert ? toVariant(topAlert.severity) : 'success'
-  const style    = VARIANT_STYLE[variant]
+  const variant   = topAlert ? toVariant(topAlert.severity) : 'success'
+  const v         = VARIANT[variant]
   const isSuccess = variant === 'success'
 
-  // Auto-dismiss for success/low only (8 s)
+  // Auto-dismiss success alerts after 8 s
   useEffect(() => {
     if (!topAlert || !isSuccess) return
     setProgress(100)
     const interval = setInterval(() => {
       setProgress(p => {
-        const next = p - (100 / 80)          // 80 ticks × 100 ms = 8 s
+        const next = p - (100 / 80)
         if (next <= 0) {
           clearInterval(interval)
           setDismissed(prev => [...prev, topAlert.id])
@@ -76,7 +100,7 @@ export function AppAlertBanner() {
       })
     }, 100)
     return () => clearInterval(interval)
-  }, [topAlert?.id, isSuccess])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [topAlert?.id, isSuccess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!topAlert) return null
 
@@ -89,61 +113,57 @@ export function AppAlertBanner() {
 
   return (
     <div
-      className="relative flex items-center gap-3 px-4 shrink-0 overflow-hidden"
-      style={{
-        height: 48,
-        background: style.bg,
-        borderLeft: `4px solid ${style.border}`,
-      }}
+      role="alert"
+      aria-live={variant === 'high' ? 'assertive' : 'polite'}
+      aria-atomic="true"
+      className={cn(
+        'relative shrink-0 overflow-hidden',
+        'flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5',
+        'px-4 py-2.5 min-h-[48px]',
+        v.wrapper,
+      )}
     >
-      <style.Icon className="h-4 w-4 shrink-0" style={{ color: style.color }} />
+      {/* Icon */}
+      <v.Icon className={cn('h-4 w-4 shrink-0', v.icon)} aria-hidden="true" />
 
-      <p className="text-[14px] font-medium flex-1 truncate" style={{ color: style.color }}>
-        {topAlert.title}: {topAlert.message}
+      {/* Message — fills available width, wraps naturally on narrow screens */}
+      <p className={cn('flex-1 min-w-0 text-[13px] sm:text-sm font-medium leading-snug', v.text)}>
+        <span className="font-semibold">{topAlert.title}:</span>{' '}
+        {topAlert.message}
       </p>
 
-      {/* Inline action buttons */}
-      <div className="flex items-center gap-2 shrink-0">
-        {actions.map((label, i) => (
-          i === 0 ? (
+      {/* Action buttons — hidden on xs (< 480px) to prevent overflow */}
+      {actions.length > 0 && (
+        <div className="hidden xs:flex items-center gap-2 shrink-0">
+          {actions.map((label, i) => (
             <button
               key={label}
-              className="text-xs px-3 font-medium text-white rounded transition-opacity hover:opacity-80"
-              style={{ background: style.border, height: 28 }}
+              className={cn(
+                'text-xs px-3 h-7 rounded font-semibold transition-opacity',
+                i === 0 ? v.btn : v.outline,
+              )}
             >
               {label}
             </button>
-          ) : (
-            <button
-              key={label}
-              className="text-xs px-3 font-medium rounded transition-opacity hover:opacity-80"
-              style={{
-                border: `1px solid ${style.border}`,
-                color: style.color,
-                height: 28,
-              }}
-            >
-              {label}
-            </button>
-          )
-        ))}
+          ))}
+        </div>
+      )}
 
-        {/* Dismiss */}
-        <button
-          onClick={dismiss}
-          aria-label="Dismiss"
-          className="shrink-0 ml-1 hover:opacity-70 transition-opacity"
-          style={{ color: style.color }}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+      {/* Dismiss */}
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss notification"
+        className={cn('shrink-0 ml-1 hover:opacity-70 transition-opacity', v.icon)}
+      >
+        <X className="h-4 w-4" />
+      </button>
 
       {/* Auto-dismiss progress bar (success only) */}
       {isSuccess && (
         <div
-          className="absolute bottom-0 left-0 h-0.5 transition-none"
-          style={{ width: `${progress}%`, background: style.border }}
+          aria-hidden="true"
+          className={cn('absolute bottom-0 left-0 h-0.5 transition-none', v.bar)}
+          style={{ width: `${progress}%` }}
         />
       )}
     </div>

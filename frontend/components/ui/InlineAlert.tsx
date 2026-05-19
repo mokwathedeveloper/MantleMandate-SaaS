@@ -14,23 +14,25 @@ interface InlineAlertProps {
   className?: string
 }
 
-const config: Record<Tone, { bg: string; border: string; text: string; Icon: typeof AlertTriangle }> = {
+const TONE: Record<Tone, { bg: string; border: string; text: string; Icon: typeof AlertTriangle }> = {
   warning: { bg: 'bg-warning-bg', border: 'border-warning', text: 'text-warning', Icon: AlertTriangle },
-  error:   { bg: 'bg-error/10',   border: 'border-error',   text: 'text-error',   Icon: XCircle       },
-  success: { bg: 'bg-success/10', border: 'border-success', text: 'text-success', Icon: CheckCircle2  },
+  error:   { bg: 'bg-error-bg',   border: 'border-error',   text: 'text-error',   Icon: XCircle       },
+  success: { bg: 'bg-success-bg', border: 'border-success', text: 'text-success', Icon: CheckCircle2  },
   info:    { bg: 'bg-primary/10', border: 'border-primary', text: 'text-text-link', Icon: Info        },
 }
 
 export function InlineAlert({ tone, title, description, action, className }: InlineAlertProps) {
-  const c = config[tone]
+  const c = TONE[tone]
+  // error/warning demand immediate attention — use role="alert" (assertive); info/success use "status" (polite)
+  const role = tone === 'error' || tone === 'warning' ? 'alert' : 'status'
   return (
     <div
-      role="status"
+      role={role}
+      aria-live={role === 'alert' ? 'assertive' : 'polite'}
       className={cn(
         'flex items-start gap-3 rounded-lg border-l-4 px-4 py-3',
         c.bg, c.border, className,
       )}
-      style={{ backgroundColor: tone === 'warning' ? '#2A2000' : undefined }}
     >
       <c.Icon className={cn('h-5 w-5 shrink-0 mt-0.5', c.text)} />
       <div className="flex-1 min-w-0">
