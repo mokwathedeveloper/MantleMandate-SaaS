@@ -6,7 +6,7 @@ class Alert(BaseModel):
     __tablename__ = 'alerts'
 
     user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    agent_id = db.Column(db.String(36), db.ForeignKey('agents.id', ondelete='SET NULL'), nullable=True)
+    agent_id = db.Column(db.String(36), db.ForeignKey('agents.id', ondelete='SET NULL'), nullable=True, index=True)
     alert_type = db.Column(db.String(50), nullable=False, index=True)
     severity = db.Column(db.String(10), nullable=False, default='low')
     title = db.Column(db.String(255), nullable=False)
