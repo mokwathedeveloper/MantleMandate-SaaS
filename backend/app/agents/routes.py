@@ -6,8 +6,10 @@ from marshmallow import ValidationError
 from app.agents import agents_bp
 from app.agents.schemas import AgentCreateSchema, AgentUpdateSchema
 from app.extensions import db
+from sqlalchemy.exc import IntegrityError
 from app.models.agent import Agent
 from app.models.mandate import Mandate
+from app.models.wallet import Wallet
 from app.models.alert import Alert
 from app.models.audit_log import AuditLog
 from app.models.trade import Trade
@@ -48,6 +50,11 @@ def create_agent():
     if mandate.status not in ('active', 'draft'):
         return jsonify(error='Conflict', message='Mandate must be active or draft to deploy an agent'), 409
 
+    if data.get('wallet_id'):
+        wallet = Wallet.query.filter_by(id=str(data['wallet_id']), user_id=user_id).first()
+        if not wallet:
+            return jsonify(error='Not found', message='Wallet not found'), 404
+
     agent = Agent(
         user_id=user_id,
         mandate_id=str(data['mandate_id']),
@@ -57,7 +64,12 @@ def create_agent():
         status='inactive',
     )
     db.session.add(agent)
-    db.session.flush()
+    try:
+        db.session.flush()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent flush failed')
+        return jsonify(error='Server error', message='Could not create agent'), 500
 
     log = AuditLog(
         user_id=user_id,
@@ -66,7 +78,12 @@ def create_agent():
         details={'name': agent.name, 'mandate_id': str(mandate.id)},
     )
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent commit failed')
+        return jsonify(error='Server error', message='Could not create agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent created'), 201
 
 
@@ -96,7 +113,12 @@ def update_agent(agent_id):
 
     for field, value in data.items():
         setattr(agent, field, value)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent update failed')
+        return jsonify(error='Server error', message='Could not update agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent updated'), 200
 
 
@@ -111,7 +133,12 @@ def delete_agent(agent_id):
         return jsonify(error='Conflict', message='Stop the agent before deleting'), 409
 
     db.session.delete(agent)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent delete failed')
+        return jsonify(error='Server error', message='Could not delete agent'), 500
     return jsonify(data=None, message='Agent deleted'), 200
 
 
@@ -145,7 +172,12 @@ def deploy_agent(agent_id):
     log = AuditLog(user_id=user_id, agent_id=agent.id, event_type='agent_deployed',
                    details={'mandate_id': str(agent.mandate_id)})
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent deploy commit failed')
+        return jsonify(error='Server error', message='Could not deploy agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent deployed'), 200
 
 
@@ -164,7 +196,12 @@ def pause_agent(agent_id):
                   f'Agent "{agent.name}" paused', 'Trading has been suspended.')
     log = AuditLog(user_id=user_id, agent_id=agent.id, event_type='agent_paused', details={})
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent pause commit failed')
+        return jsonify(error='Server error', message='Could not pause agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent paused'), 200
 
 
@@ -181,7 +218,12 @@ def resume_agent(agent_id):
     agent.status = 'active'
     log = AuditLog(user_id=user_id, agent_id=agent.id, event_type='agent_resumed', details={})
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent resume commit failed')
+        return jsonify(error='Server error', message='Could not resume agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent resumed'), 200
 
 
@@ -200,7 +242,12 @@ def stop_agent(agent_id):
                   f'Agent "{agent.name}" stopped', 'All positions will be closed at next opportunity.')
     log = AuditLog(user_id=user_id, agent_id=agent.id, event_type='agent_stopped', details={})
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('agent stop commit failed')
+        return jsonify(error='Server error', message='Could not stop agent'), 500
     return jsonify(data=agent.to_dict(), message='Agent stopped'), 200
 
 
