@@ -53,6 +53,11 @@ function buildAuthHeaders(queryString: string) {
   }
 }
 
+function safeFloat(val: unknown, fallback = 0): number {
+  const n = parseFloat(val as string)
+  return isNaN(n) ? fallback : n
+}
+
 export async function getSpotTicker(bybitSymbol: string): Promise<BybitTicker | null> {
   try {
     const res = await fetch(
@@ -63,12 +68,14 @@ export async function getSpotTicker(bybitSymbol: string): Promise<BybitTicker | 
     const json = await res.json()
     const item = json?.result?.list?.[0]
     if (!item) return null
+    const lastPrice = safeFloat(item.lastPrice)
+    if (lastPrice === 0) return null  // unusable ticker — treat as missing
     return {
       symbol:       item.symbol,
-      lastPrice:    parseFloat(item.lastPrice),
-      change24hPct: parseFloat(item.price24hPcnt) * 100,
-      volume24h:    parseFloat(item.volume24h),
-      turnover24h:  parseFloat(item.turnover24h),
+      lastPrice,
+      change24hPct: safeFloat(item.price24hPcnt) * 100,
+      volume24h:    safeFloat(item.volume24h),
+      turnover24h:  safeFloat(item.turnover24h),
     }
   } catch {
     return null
@@ -97,11 +104,11 @@ export async function getKlines(
     const list: string[][] = json?.result?.list ?? []
     return list.reverse().map(k => ({
       openTime: parseInt(k[0]),
-      open:     parseFloat(k[1]),
-      high:     parseFloat(k[2]),
-      low:      parseFloat(k[3]),
-      close:    parseFloat(k[4]),
-      volume:   parseFloat(k[5]),
+      open:     safeFloat(k[1]),
+      high:     safeFloat(k[2]),
+      low:      safeFloat(k[3]),
+      close:    safeFloat(k[4]),
+      volume:   safeFloat(k[5]),
     }))
   } catch {
     return []
@@ -119,13 +126,13 @@ export async function getWalletBalance(): Promise<BybitBalance[]> {
     const json = await res.json()
     const coins: Record<string, string>[] = json?.result?.list?.[0]?.coin ?? []
     return coins
-      .filter(c => parseFloat(c.walletBalance) > 0)
+      .filter(c => safeFloat(c.walletBalance) > 0)
       .map(c => ({
         coin:             c.coin,
-        walletBalance:    parseFloat(c.walletBalance),
-        availableBalance: parseFloat(c.availableToWithdraw ?? '0'),
-        unrealisedPnl:    parseFloat(c.unrealisedPnl ?? '0'),
-        equity:           parseFloat(c.equity ?? '0'),
+        walletBalance:    safeFloat(c.walletBalance),
+        availableBalance: safeFloat(c.availableToWithdraw),
+        unrealisedPnl:    safeFloat(c.unrealisedPnl),
+        equity:           safeFloat(c.equity),
       }))
   } catch {
     return []
