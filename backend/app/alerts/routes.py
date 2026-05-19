@@ -1,8 +1,11 @@
+import logging
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.alerts import alerts_bp
 from app.extensions import db
 from app.models.alert import Alert
+
+logger = logging.getLogger(__name__)
 
 
 @alerts_bp.route('', methods=['GET'])
@@ -34,7 +37,12 @@ def mark_read(alert_id):
     if not alert:
         return jsonify(error='Not found', message='Alert not found'), 404
     alert.is_read = True
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('alert mark-read failed')
+        return jsonify(error='Server error', message='Could not update alert'), 500
     return jsonify(data=alert.to_dict(), message='Alert marked as read'), 200
 
 
@@ -43,5 +51,10 @@ def mark_read(alert_id):
 def mark_all_read():
     user_id = get_jwt_identity()
     Alert.query.filter_by(user_id=user_id, is_read=False).update({'is_read': True})
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('mark-all-read failed')
+        return jsonify(error='Server error', message='Could not update alerts'), 500
     return jsonify(data=None, message='All alerts marked as read'), 200
