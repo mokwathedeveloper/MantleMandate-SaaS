@@ -15,7 +15,7 @@ const FALLBACK = {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
+    const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,33 +25,28 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json(FALLBACK)
 
-    const [wallets, agents, trades, history] = await Promise.all([
-      supabase.from('wallets').select('balance_usd').eq('user_id', user.id),
-      supabase.from('agents').select('status').eq('user_id', user.id),
+    const [agents, trades] = await Promise.all([
+      supabase.from('agents').select('status, capital_cap, total_pnl, total_roi, drawdown_current').eq('user_id', user.id),
       supabase.from('trades').select('pnl, status').eq('user_id', user.id),
-      supabase.from('portfolio_history').select('value, pnl').eq('user_id', user.id)
-        .order('date', { ascending: false }).limit(2),
     ])
 
-    const totalValue   = (wallets.data ?? []).reduce((s, w) => s + (w.balance_usd ?? 0), 0)
-    const activeAgents = (agents.data ?? []).filter(a => a.status === 'active').length
+    const agentRows = (agents.data ?? []) as { status: string; capital_cap?: number | null; total_pnl?: number | null; total_roi?: number | null; drawdown_current?: number | null }[]
+    const totalValue   = agentRows.reduce((s, a) => s + (a.capital_cap ?? 0), 0)
+    const totalPnl     = agentRows.reduce((s, a) => s + (a.total_pnl   ?? 0), 0)
+    const maxDrawdown  = agentRows.reduce((s, a) => Math.max(s, a.drawdown_current ?? 0), 0)
+    const activeAgents = agentRows.filter(a => a.status === 'active').length
     const allTrades    = trades.data ?? []
-    const wins         = allTrades.filter(t => t.status === 'success' && (t.pnl ?? 0) > 0).length
+    const wins         = allTrades.filter((t: { status: string; pnl?: number | null }) => t.status === 'success' && (t.pnl ?? 0) > 0).length
     const winRate      = allTrades.length > 0 ? (wins / allTrades.length) * 100 : 0
-
-    const h = history.data ?? []
-    const dayPnl    = h[0]?.pnl  ?? 0
-    const todayVal  = h[0]?.value ?? totalValue
-    const prevVal   = h[1]?.value ?? todayVal
-    const dayPnlPct = prevVal > 0 ? ((todayVal - prevVal) / prevVal) * 100 : 0
-    const totalPnl  = allTrades.reduce((s, t) => s + (t.pnl ?? 0), 0)
-    const totalRoi  = totalValue > 0 ? (totalPnl / totalValue) * 100 : 0
+    const totalRoi     = totalValue > 0 ? (totalPnl / totalValue) * 100 : 0
+    const dayPnl       = totalPnl
+    const dayPnlPct    = totalValue > 0 ? (dayPnl / totalValue) * 100 : 0
 
     if (totalValue === 0 && activeAgents === 0) return NextResponse.json(FALLBACK)
 
     return NextResponse.json({
       totalValue, totalPnl, totalRoi, dayPnl, dayPnlPct,
-      maxDrawdown: 3.2, sharpeRatio: 1.87, winRate,
+      maxDrawdown, sharpeRatio: 1.87, winRate,
     })
   } catch {
     return NextResponse.json(FALLBACK)
