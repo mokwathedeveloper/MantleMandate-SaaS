@@ -1168,8 +1168,8 @@ function Footer() {
         <div className="border-t border-border pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-[12px] text-text-disabled">© 2026 MantleMandate · Built for the Turing Test Hackathon</p>
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</Link>
-            <Link href="/dashboard" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/terms"   className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">Terms of Service</Link>
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
               <MantleHex className="h-3 w-3" />
               Mantle Network
