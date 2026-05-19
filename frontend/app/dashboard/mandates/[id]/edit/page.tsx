@@ -13,6 +13,7 @@ import { AlertBanner } from '@/components/ui/AlertBanner'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { TokenIcon } from '@/components/ui/TokenIcon'
 import { useMandate, useUpdateMandate, useParsePreview } from '@/hooks/useMandates'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
@@ -285,12 +286,13 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
                       type="button"
                       onClick={() => setBaseCurrency(c)}
                       className={cn(
-                        'flex-1 h-9 rounded-lg border text-sm font-medium transition-colors',
+                        'flex-1 h-9 rounded-lg border text-sm font-medium transition-colors flex items-center justify-center gap-1.5',
                         baseCurrency === c
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-border text-text-secondary hover:border-text-secondary',
                       )}
                     >
+                      <TokenIcon symbol={c} size="sm" />
                       {c}
                     </button>
                   ))}
