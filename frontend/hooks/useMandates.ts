@@ -186,9 +186,11 @@ export function useParsePreview() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
   const timerRef              = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef              = useRef<AbortController | null>(null)
 
   const parse = useCallback((text: string) => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    abortRef.current?.abort()
 
     if (!text || text.length < 10) {
       setResult(null)
@@ -197,6 +199,7 @@ export function useParsePreview() {
     }
 
     timerRef.current = setTimeout(async () => {
+      abortRef.current = new AbortController()
       setLoading(true)
       setError(null)
       try {
@@ -204,11 +207,13 @@ export function useParsePreview() {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ mandate_text: text }),
+          signal:  abortRef.current.signal,
         })
         const json = await res.json() as { data?: ParsePreviewResult; error?: string }
         if (!res.ok || json.error) throw new Error(json.error ?? 'Parse failed')
         setResult(json.data!)
       } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         setError(err instanceof Error ? err.message : 'Parse failed')
         setResult(null)
       } finally {
