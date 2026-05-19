@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle2, TriangleAlert, Zap, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAlertStore } from '@/store/alertStore'
@@ -65,8 +66,22 @@ const ACTION_MAP: Record<string, string[]> = {
   'MANDATE UPDATED':    ['View Mandate'],
 }
 
+const ACTION_ROUTES: Record<string, string> = {
+  'Add Funds':    '/dashboard/wallets',
+  'Add Gas':      '/dashboard/wallets',
+  'Pause Agent':  '/dashboard/agents',
+  'Review Risk':  '/dashboard/mandates',
+  'Review Agent': '/dashboard/agents',
+  'View Agent':   '/dashboard/agents',
+  'View Trade':   '/dashboard/trades',
+  'View Details': '/dashboard/trades',
+  'Approve':      '/dashboard/agents',
+  'View Mandate': '/dashboard/mandates',
+}
+
 export function AppAlertBanner() {
   const { alerts, markRead } = useAlertStore()
+  const router = useRouter()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [progress, setProgress]   = useState(100)
 
@@ -141,6 +156,7 @@ export function AppAlertBanner() {
           {actions.map((label, i) => (
             <button
               key={label}
+              onClick={() => router.push(ACTION_ROUTES[label] ?? '/dashboard')}
               className={cn(
                 'text-xs px-3 h-7 rounded font-semibold transition-opacity',
                 i === 0 ? v.btn : v.outline,
