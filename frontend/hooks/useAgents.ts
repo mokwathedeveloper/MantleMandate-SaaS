@@ -124,7 +124,7 @@ function simulateAgentMetrics(agent: Agent): Agent {
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export function useAgents() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
 
   return useQuery<Agent[]>({
     queryKey: ['agents'],
@@ -142,13 +142,13 @@ export function useAgents() {
       }
     },
     retry: false,
-    enabled: !!session,
+    enabled: !!user,
     refetchInterval: 15_000,
   })
 }
 
 export function useAgent(id: string) {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
 
   return useQuery<Agent>({
     queryKey: ['agents', id],
@@ -161,7 +161,7 @@ export function useAgent(id: string) {
       if (error) throw error
       return simulateAgentMetrics(rowToAgent(data))
     },
-    enabled: !!id && !!session,
+    enabled: !!id && !!user,
     refetchInterval: 15_000,
   })
 }
@@ -202,15 +202,15 @@ export function useStopAgent()   { return useAgentStatusMutation('stopped') }
 interface DeployPayload { name: string; mandateId: string; capitalCap?: number }
 
 export function useDeployAgent() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: DeployPayload) => {
-      if (!session) throw new Error('Not authenticated')
+      if (!user) throw new Error('Not authenticated')
       const { data, error } = await supabase
         .from('agents')
         .insert({
-          user_id:          session.user.id,
+          user_id:          user.id,
           mandate_id:       payload.mandateId,
           name:             payload.name,
           capital_cap:      payload.capitalCap ?? 0,

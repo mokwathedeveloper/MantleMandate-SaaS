@@ -39,7 +39,7 @@ interface MandateListResponse {
 }
 
 export function useMandates(params?: { page?: number; status?: string; enabled?: boolean }) {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const page = params?.page ?? 1
   const pageSize = 20
 
@@ -69,12 +69,12 @@ export function useMandates(params?: { page?: number; status?: string; enabled?:
       }
     },
     retry: false,
-    enabled: params?.enabled !== false && !!session,
+    enabled: params?.enabled !== false && !!user,
   })
 }
 
 export function useMandate(id: string) {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   return useQuery<Mandate>({
     queryKey: ['mandates', id],
     queryFn: async () => {
@@ -91,7 +91,7 @@ export function useMandate(id: string) {
       }
     },
     retry: false,
-    enabled: !!id && !!session,
+    enabled: !!id && !!user,
   })
 }
 
@@ -106,15 +106,15 @@ interface CreatePayload {
 }
 
 export function useCreateMandate() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: CreatePayload) => {
-      if (!session) throw new Error('Not authenticated')
+      if (!user) throw new Error('Not authenticated')
       const { data, error } = await supabase
         .from('mandates')
         .insert({
-          user_id:       session.user.id,
+          user_id:       user.id,
           name:          payload.name,
           mandate_text:  payload.mandate_text,
           base_currency: payload.base_currency ?? 'USDC',

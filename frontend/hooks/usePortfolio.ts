@@ -47,14 +47,14 @@ function generateMockHistory(days: number): PortfolioPoint[] {
 }
 
 export function usePortfolioStats() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
 
   return useQuery<PortfolioStats>({
     queryKey: ['portfolio', 'stats'],
     queryFn: async () => {
-      if (!session) return MOCK_STATS
+      if (!user) return MOCK_STATS
       try {
-        const uid = session.user.id
+        const uid = user.id
         const [agents, trades] = await Promise.all([
           supabase.from('agents').select('status, capital_cap, total_pnl').eq('user_id', uid),
           supabase.from('trades').select('pnl, status').eq('user_id', uid),
@@ -83,19 +83,19 @@ export function usePortfolioStats() {
 }
 
 export function usePortfolioHistory(days = 30) {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
 
   return useQuery<PortfolioPoint[]>({
     queryKey: ['portfolio', 'history', days],
     queryFn: async () => {
-      if (!session) return generateMockHistory(days)
+      if (!user) return generateMockHistory(days)
       try {
         const since = new Date()
         since.setDate(since.getDate() - days)
         const { data, error } = await supabase
           .from('portfolio_history')
           .select('date, value, pnl')
-          .eq('user_id', session.user.id)
+          .eq('user_id', user.id)
           .gte('date', since.toISOString().split('T')[0])
           .order('date', { ascending: true })
         if (error || !data || data.length === 0) return generateMockHistory(days)

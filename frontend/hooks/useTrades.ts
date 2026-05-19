@@ -42,7 +42,7 @@ export function useTrades(params?: {
   direction?: string
   enabled?: boolean
 }) {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const page     = params?.page     ?? 1
   const pageSize = params?.per_page ?? 20
 
@@ -53,7 +53,7 @@ export function useTrades(params?: {
         let q = supabase
           .from('trades')
           .select('*, mandate:mandates(name)', { count: 'exact' })
-          .eq('user_id', session!.user.id)
+          .eq('user_id', user!.id)
           .order('created_at', { ascending: false })
           .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -76,7 +76,7 @@ export function useTrades(params?: {
       }
     },
     retry: false,
-    enabled: params?.enabled !== false && !!session,
+    enabled: params?.enabled !== false && !!user,
     refetchInterval: params?.enabled !== false ? 15_000 : false,
   })
 }

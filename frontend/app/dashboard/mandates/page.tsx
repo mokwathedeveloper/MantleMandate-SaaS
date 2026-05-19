@@ -218,10 +218,10 @@ export default function MandatesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search,       setSearch]       = useState('')
 
-  const { session } = useAuthStore()
-  const { data, isLoading, isError } = useMandates({ enabled: !!session })
+  const { user } = useAuthStore()
+  const { data, isLoading, isError } = useMandates({ enabled: !!user })
   const apiMandates = data?.data ?? []
-  const isMock = !session || (!isLoading && apiMandates.length === 0) || isError
+  const isMock = !user || (!isLoading && apiMandates.length === 0) || isError
 
   const allMandates = isMock ? MOCK_MANDATES : apiMandates
 

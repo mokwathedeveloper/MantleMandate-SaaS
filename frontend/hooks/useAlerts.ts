@@ -38,7 +38,7 @@ function rowToAlert(row: Record<string, any>): Alert {
 }
 
 export function useAlerts() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const { unreadCount } = useAlertStore()
 
   const query = useQuery<AlertsResponse>({
@@ -48,7 +48,7 @@ export function useAlerts() {
         const { data, error, count } = await supabase
           .from('alerts')
           .select('*', { count: 'exact' })
-          .eq('user_id', session!.user.id)
+          .eq('user_id', user!.id)
           .order('created_at', { ascending: false })
         if (error) throw error
         const alerts: Alert[] = (data ?? []).map(rowToAlert)
@@ -62,7 +62,7 @@ export function useAlerts() {
       }
     },
     retry: false,
-    enabled: !!session,
+    enabled: !!user,
     refetchInterval: 10_000,
   })
 
@@ -76,15 +76,15 @@ export function useAlerts() {
 }
 
 export function useMarkAllRead() {
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => {
-      if (!session) return
+      if (!user) return
       const { error } = await supabase
         .from('alerts')
         .update({ is_read: true })
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
       if (error) throw error
     },
     onSuccess: () => {

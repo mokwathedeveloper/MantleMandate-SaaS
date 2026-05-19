@@ -91,15 +91,15 @@ export default function TradesPage() {
   const [page,   setPage]   = useState(1)
   const [filter, setFilter] = useState<Filter>({})
 
-  const { session } = useAuthStore()
+  const { user } = useAuthStore()
   const { data: apiData, isLoading, isError } = useTrades({
     page,
     per_page: 25,
     status:   filter.status,
-    enabled:  !!session,
+    enabled:  !!user,
   })
 
-  const isMock = !session || (!isLoading && !apiData?.data?.length) || isError
+  const isMock = !user || (!isLoading && !apiData?.data?.length) || isError
   const raw    = isMock ? MOCK_RESPONSE : (apiData ?? MOCK_RESPONSE)
 
   const visibleTrades = useMemo(() => {
