@@ -86,6 +86,30 @@ export function useSignup() {
   return { mutate, isPending, error }
 }
 
+export function useOAuth() {
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  const signIn = async (provider: 'google' | 'azure') => {
+    setIsPending(true)
+    setError(null)
+    const { error: err } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: provider === 'azure' ? 'email profile openid' : undefined,
+      },
+    })
+    if (err) {
+      setError(err)
+      setIsPending(false)
+    }
+    // On success Supabase redirects the browser — no need to setIsPending(false)
+  }
+
+  return { signIn, isPending, error }
+}
+
 export function useLogout() {
   const { logout } = useAuthStore()
   const qc = useQueryClient()

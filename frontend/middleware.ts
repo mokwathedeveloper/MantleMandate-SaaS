@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl
 
-  const isAuthRoute      = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password')
+  const isAuthRoute      = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/auth')
   const isDashboardRoute = pathname.startsWith('/dashboard')
 
   // Redirect unauthenticated users away from dashboard
@@ -43,5 +43,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup', '/forgot-password'],
+  matcher: ['/dashboard/:path*', '/login', '/signup', '/forgot-password', '/auth/:path*'],
 }

@@ -1,6 +1,9 @@
+'use client'
+
 import { ReactNode } from 'react'
 import Image from 'next/image'
-import { Hexagon } from 'lucide-react'
+import { Hexagon, Loader2 } from 'lucide-react'
+import { useOAuth } from '@/hooks/useAuth'
 
 interface AuthShellProps {
   leftPanel: ReactNode
@@ -191,34 +194,45 @@ export function OrDivider({ label }: { label: string }) {
 /* ─── OAuth buttons ──────────────────────────────────────────────────── */
 
 export function OAuthButtons() {
+  const { signIn, isPending } = useOAuth()
+
+  const providers = [
+    { label: 'Google',    provider: 'google' as const,  icon: <GoogleIcon /> },
+    { label: 'Microsoft', provider: 'azure'  as const,  icon: <MicrosoftIcon /> },
+  ]
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-      {([
-        { label: 'Google',    icon: <GoogleIcon /> },
-        { label: 'Microsoft', icon: <MicrosoftIcon /> },
-      ] as const).map(({ label, icon }) => (
+      {providers.map(({ label, provider, icon }) => (
         <button
           key={label}
           type="button"
-          onClick={() => alert(`${label} OAuth — coming soon`)}
+          disabled={isPending}
+          onClick={() => signIn(provider)}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
             height: '44px', borderRadius: '10px',
             border: '1px solid rgba(255,255,255,0.09)',
             background: 'rgba(255,255,255,0.04)',
-            color: '#C9D1D9', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            color: '#C9D1D9', fontSize: '13px', fontWeight: 600,
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            opacity: isPending ? 0.6 : 1,
             transition: 'all 0.15s',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'
+            if (!isPending) {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'
+            }
           }}
           onMouseLeave={e => {
             e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)'
           }}
         >
-          {icon}
+          {isPending
+            ? <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+            : icon}
           {label}
         </button>
       ))}
