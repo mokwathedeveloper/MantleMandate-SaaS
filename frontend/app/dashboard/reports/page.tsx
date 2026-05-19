@@ -70,20 +70,17 @@ const WIN_RATE = [
 
 // ─── Badge ───────────────────────────────────────────────────────────────────
 
-const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  PERFORMANCE: { bg: 'rgba(0,102,255,0.15)',    color: '#58A6FF' },
-  RISK:        { bg: 'rgba(245,199,66,0.15)',   color: '#F5C542' },
-  AGENT:       { bg: 'rgba(34,197,94,0.15)',    color: '#22C55E' },
-  PORTFOLIO:   { bg: 'rgba(139,148,158,0.15)',  color: '#8B949E' },
+const TYPE_BADGE_CLASS: Record<string, string> = {
+  PERFORMANCE: 'bg-primary/15 text-text-link',
+  RISK:        'bg-warning/15 text-warning',
+  AGENT:       'bg-success/15 text-success',
+  PORTFOLIO:   'bg-surface text-text-secondary',
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const s = TYPE_COLORS[type] ?? TYPE_COLORS.PORTFOLIO
+  const cls = TYPE_BADGE_CLASS[type] ?? TYPE_BADGE_CLASS.PORTFOLIO
   return (
-    <span
-      className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded w-fit"
-      style={{ background: s.bg, color: s.color }}
-    >
+    <span className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded w-fit', cls)}>
       {type}
     </span>
   )
@@ -110,10 +107,7 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
     return () => clearTimeout(t)
   }, [onDone])
   return (
-    <div
-      className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-[6px] px-4 py-3 text-sm font-medium"
-      style={{ background: '#0D2818', border: '1px solid #22C55E', color: '#22C55E' }}
-    >
+    <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-[6px] px-4 py-3 text-sm font-medium bg-success-bg border border-success text-success">
       <CheckCircle2 className="h-4 w-4 shrink-0" />
       {msg}
     </div>
@@ -141,7 +135,7 @@ function TableSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <BarChart2 className="h-12 w-12 mb-4" style={{ color: '#484F58' }} />
+      <BarChart2 className="h-12 w-12 mb-4 text-text-disabled" />
       <p className="text-text-primary font-semibold text-sm mb-2">No reports yet</p>
       <p className="text-text-secondary text-sm max-w-sm mb-6">
         Reports are generated automatically each week once your agents start executing trades.
@@ -163,21 +157,18 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
   const roiPositive = report.roi >= 0
 
   const metrics = [
-    { label: 'Total P&L',    value: `${pnlPositive ? '+' : '-'}$${fmt(report.totalPnl)}`,    color: pnlPositive ? '#22C55E' : '#EF4444' },
-    { label: 'ROI',          value: `${roiPositive ? '+' : ''}${report.roi.toFixed(2)}%`,     color: roiPositive ? '#22C55E' : '#EF4444' },
-    { label: 'Max Drawdown', value: report.drawdown != null ? `-$${fmt(Math.abs(report.drawdown))}` : '—', color: '#EF4444' },
-    { label: 'Sharpe Ratio', value: report.sharpeRatio != null ? String(report.sharpeRatio) : '—', color: '' },
+    { label: 'Total P&L',    value: `${pnlPositive ? '+' : '-'}$${fmt(report.totalPnl)}`,    colorClass: pnlPositive ? 'text-success' : 'text-error' },
+    { label: 'ROI',          value: `${roiPositive ? '+' : ''}${report.roi.toFixed(2)}%`,     colorClass: roiPositive ? 'text-success' : 'text-error' },
+    { label: 'Max Drawdown', value: report.drawdown != null ? `-$${fmt(Math.abs(report.drawdown))}` : '—', colorClass: 'text-error' },
+    { label: 'Sharpe Ratio', value: report.sharpeRatio != null ? String(report.sharpeRatio) : '—', colorClass: 'text-text-primary' },
   ]
 
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="fixed z-50 w-[calc(100vw-2rem)] max-w-[520px] rounded-xl overflow-hidden shadow-2xl"
-        style={{ top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#161B22', border: '1px solid #21262D' }}
-      >
+      <div className="fixed z-50 w-[calc(100vw-2rem)] max-w-[520px] rounded-xl overflow-hidden shadow-2xl bg-card border border-border top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-5 py-4" style={{ borderBottom: '1px solid #21262D' }}>
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-text-primary truncate">{report.name}</p>
             <div className="flex items-center gap-2 mt-1">
@@ -193,9 +184,9 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
         {/* KPI grid */}
         <div className="grid grid-cols-2 gap-3 p-5">
           {metrics.map(m => (
-            <div key={m.label} className="rounded-lg p-4" style={{ background: '#0D1117', border: '1px solid #21262D' }}>
+            <div key={m.label} className="rounded-lg p-4 bg-page border border-border">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">{m.label}</p>
-              <p className="text-xl font-bold" style={{ color: m.color || 'var(--color-text-primary)' }}>{m.value}</p>
+              <p className={cn('text-xl font-bold', m.colorClass)}>{m.value}</p>
             </div>
           ))}
         </div>
@@ -216,7 +207,7 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 flex justify-end gap-2" style={{ borderTop: '1px solid #21262D' }}>
+        <div className="px-5 py-3 flex justify-end gap-2 border-t border-border">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
@@ -339,10 +330,7 @@ function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div
-        className="w-[calc(100vw-2rem)] max-w-[480px] p-5 sm:p-6 space-y-5"
-        style={{ background: '#161B22', border: '1px solid #21262D', borderRadius: '10px' }}
-      >
+      <div className="w-[calc(100vw-2rem)] max-w-[480px] p-5 sm:p-6 space-y-5 bg-card border border-border rounded-[10px]">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-text-primary">Export Report</h3>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
@@ -642,20 +630,17 @@ export default function ReportsPage() {
       {/* ── KPI strip (5 cards) ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {([
-          { label: 'Total Reports', value: '1,248',          sub: 'Generated',     color: '' },
-          { label: 'Total P&L',     value: '$24,580,439.21', sub: 'All time',      color: '' },
-          { label: 'Total P&L %',   value: '72.45%',         sub: '',              color: '#22C55E' },
-          { label: 'Max Drawdown',  value: '-$3,245.20',     sub: '',              color: '#EF4444' },
-          { label: 'Sharpe Ratio',  value: '20',             sub: 'Risk-adjusted', color: '' },
-        ] as { label: string; value: string; sub: string; color: string }[]).map(c => (
+          { label: 'Total Reports', value: '1,248',          sub: 'Generated',     colorClass: '' },
+          { label: 'Total P&L',     value: '$24,580,439.21', sub: 'All time',      colorClass: '' },
+          { label: 'Total P&L %',   value: '72.45%',         sub: '',              colorClass: 'text-success' },
+          { label: 'Max Drawdown',  value: '-$3,245.20',     sub: '',              colorClass: 'text-error' },
+          { label: 'Sharpe Ratio',  value: '20',             sub: 'Risk-adjusted', colorClass: '' },
+        ] as { label: string; value: string; sub: string; colorClass: string }[]).map(c => (
           <div key={c.label} className="bg-card border border-border rounded-lg p-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">
               {c.label}
             </p>
-            <p
-              className="text-base sm:text-xl font-bold truncate"
-              style={{ color: c.color || undefined }}
-            >
+            <p className={cn('text-base sm:text-xl font-bold truncate', c.colorClass || 'text-text-primary')}>
               {c.value}
             </p>
             {c.sub && <p className="text-xs text-text-secondary mt-0.5">{c.sub}</p>}
@@ -711,7 +696,7 @@ export default function ReportsPage() {
 
       {/* ── Table View ── */}
       {view === 'table' && (
-        <div className="overflow-x-auto rounded-lg border border-[#21262D]">
+        <div className="overflow-x-auto rounded-lg border border-border">
         <div style={{ minWidth: tableMinW }}>
           {/* Header row */}
           <div className="grid px-4 py-2.5 bg-page" style={{ gridTemplateColumns: cols }}>
@@ -728,8 +713,7 @@ export default function ReportsPage() {
           <div className="flex justify-end px-4 py-1.5 border-b border-border bg-page">
             <button
               onClick={() => setShowExtra(v => !v)}
-              className="text-[12px] flex items-center gap-0.5 transition-colors"
-              style={{ color: '#58A6FF' }}
+              className="text-[12px] flex items-center gap-0.5 transition-colors text-text-link"
             >
               {showExtra ? 'Hide extra columns −' : 'Show more columns +'}
             </button>
