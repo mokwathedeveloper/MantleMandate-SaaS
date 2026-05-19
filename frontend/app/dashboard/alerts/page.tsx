@@ -65,15 +65,15 @@ const MOCK_ALERTS: Alert[] = [
 
 // ─── Severity styles (exact hex) ──────────────────────────────────────────────
 
-const SEVERITY_DOT: Record<string, string> = {
-  high:   '#EF4444',
-  medium: '#F5C542',
-  low:    '#58A6FF',
+const SEVERITY_DOT_CLASS: Record<string, string> = {
+  high:   'bg-error',
+  medium: 'bg-warning',
+  low:    'bg-text-link',
 }
-const SEVERITY_BADGE: Record<string, { color: string }> = {
-  high:   { color: '#EF4444' },
-  medium: { color: '#F5C542' },
-  low:    { color: '#58A6FF' },
+const SEVERITY_BADGE_CLASS: Record<string, string> = {
+  high:   'text-error',
+  medium: 'text-warning',
+  low:    'text-text-link',
 }
 
 // ─── Action buttons per alert type ───────────────────────────────────────────
@@ -127,47 +127,39 @@ function Toggle({ on, locked }: { on: boolean; locked?: boolean }) {
 // ─── Alert Card ───────────────────────────────────────────────────────────────
 
 function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: string) => void }) {
-  const dot      = SEVERITY_DOT[alert.severity] ?? '#8B949E'
-  const badge    = SEVERITY_BADGE[alert.severity] ?? { color: '#8B949E' }
-  const action   = ACTION_LABEL[alert.alertType]
-  const agentName = alert.agentId ? (AGENT_NAMES[alert.agentId] ?? `Agent ${alert.agentId}`) : null
+  const dotClass   = SEVERITY_DOT_CLASS[alert.severity] ?? 'bg-text-secondary'
+  const badgeClass = SEVERITY_BADGE_CLASS[alert.severity] ?? 'text-text-secondary'
+  const action     = ACTION_LABEL[alert.alertType]
+  const agentName  = alert.agentId ? (AGENT_NAMES[alert.agentId] ?? `Agent ${alert.agentId}`) : null
 
   return (
-    <div
-      style={{
-        background: alert.isRead ? '#161B22' : '#1C2128',
-        border: alert.isRead
-          ? '1px solid #21262D'
-          : '1px solid #21262D',
-        borderLeft: alert.isRead ? '1px solid #21262D' : '3px solid #0066FF',
-        borderRadius: 6,
-        padding: 16,
-      }}
-    >
+    <div className={cn(
+      'rounded-md p-4',
+      alert.isRead
+        ? 'bg-card border border-border'
+        : 'bg-surface border border-border border-l-[3px] border-l-primary',
+    )}>
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         {/* Left: dot + content */}
         <div className="flex items-start gap-2 sm:gap-3 min-w-0">
-          <div
-            className="shrink-0 rounded-full"
-            style={{ width: 10, height: 10, background: dot, marginTop: 3, flexShrink: 0 }}
-          />
+          <div className={cn('w-2.5 h-2.5 rounded-full shrink-0 mt-0.5', dotClass)} />
           <div className="min-w-0 flex-1">
             {/* Alert type */}
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#F0F6FC', lineHeight: 1.4 }}>
+            <p className="text-[13px] font-semibold text-text-primary leading-[1.4]">
               {alert.title}
             </p>
             {/* Description */}
-            <p style={{ fontSize: 13, color: '#8B949E', marginTop: 2, lineHeight: 1.4 }}>
+            <p className="text-[13px] text-text-secondary mt-0.5 leading-[1.4]">
               {alert.message}
             </p>
             {/* Agent name */}
             {agentName && (
-              <p style={{ fontSize: 12, color: '#484F58', marginTop: 4 }}>
+              <p className="text-xs text-text-disabled mt-1">
                 Agent: {agentName}
               </p>
             )}
             {/* Timestamp */}
-            <p style={{ fontSize: 11, color: '#484F58', marginTop: 2 }}>
+            <p className="text-[11px] text-text-disabled mt-0.5">
               {new Date(alert.createdAt).toLocaleString('en-US', {
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -177,8 +169,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
             {alert.agentId && (
               <NextLink
                 href={`/dashboard/agents/${alert.agentId}`}
-                className="text-xs hover:underline underline-offset-2 mt-1 inline-block"
-                style={{ color: '#58A6FF' }}
+                className="text-xs text-text-link hover:underline underline-offset-2 mt-1 inline-block"
               >
                 View agent →
               </NextLink>
@@ -189,10 +180,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
         {/* Right: badge + read indicator + action */}
         <div className="flex flex-col items-end gap-2 shrink-0">
           <div className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: badge.color }}
-            >
+            <span className={cn('text-[10px] font-semibold uppercase tracking-wider', badgeClass)}>
               {alert.severity}
             </span>
             {alert.isRead
@@ -203,8 +191,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
           {action && (
             <button
               onClick={() => onMarkRead(alert.id)}
-              className="text-xs border rounded px-2 py-1 transition-colors hover:opacity-80"
-              style={{ borderColor: '#30363D', color: '#8B949E', height: 26 }}
+              className="text-xs border border-border text-text-secondary rounded px-2 py-1 h-[26px] transition-colors hover:opacity-80"
             >
               {action}
             </button>
@@ -221,8 +208,8 @@ function AlertSkeleton() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex gap-3 p-4 border border-border rounded-md" style={{ background: '#161B22' }}>
-          <div className="rounded-full bg-surface animate-pulse mt-0.5 shrink-0" style={{ width: 10, height: 10 }} />
+        <div key={i} className="flex gap-3 p-4 border border-border rounded-md bg-card">
+          <div className="w-2.5 h-2.5 rounded-full bg-surface animate-pulse mt-0.5 shrink-0" />
           <div className="flex-1 space-y-2">
             <div className="h-3 bg-surface rounded animate-pulse w-1/4" />
             <div className="h-3 bg-surface rounded animate-pulse w-3/4" />
@@ -238,7 +225,7 @@ function AlertSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <Bell className="h-12 w-12 mb-4" style={{ color: '#484F58' }} />
+      <Bell className="h-12 w-12 mb-4 text-text-disabled" />
       <p className="font-semibold text-sm text-text-primary mb-1">{"You're all caught up"}</p>
       <p className="text-sm text-text-secondary">No alerts right now. Your agents are running smoothly.</p>
     </div>
@@ -347,8 +334,7 @@ export default function AlertsPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleMarkAllRead}
-              className="text-xs transition-colors hover:underline underline-offset-2"
-              style={{ color: '#58A6FF' }}
+              className="text-xs text-text-link transition-colors hover:underline underline-offset-2"
             >
               Mark all read
             </button>
