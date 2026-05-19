@@ -4,6 +4,7 @@ from flask_jwt_extended import (
     create_access_token, create_refresh_token,
     jwt_required, get_jwt_identity, get_jwt,
 )
+from sqlalchemy.exc import IntegrityError
 from marshmallow import ValidationError
 from app.auth import auth_bp
 from app.auth.schemas import SignupSchema, LoginSchema
@@ -39,7 +40,15 @@ def signup():
         password_hash=bcrypt.generate_password_hash(data['password']).decode('utf-8'),
     )
     db.session.add(user)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(error='Conflict', message='Email already registered'), 409
+    except Exception:
+        db.session.rollback()
+        logger.exception('signup db commit failed')
+        return jsonify(error='Server error', message='Could not create account'), 500
 
     access_token  = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
