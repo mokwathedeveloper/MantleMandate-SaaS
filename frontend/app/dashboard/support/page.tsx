@@ -42,13 +42,13 @@ const FAQ_ITEMS = [
   'Exporting reports for tax purposes',
 ]
 
-const RESOURCES: { label: string; ext: boolean }[] = [
-  { label: 'API Documentation',              ext: true  },
-  { label: 'Smart Contract Source (GitHub)', ext: true  },
-  { label: 'Changelog',                      ext: false },
-  { label: 'Status Page',                    ext: true  },
-  { label: 'Privacy Policy',                 ext: false },
-  { label: 'Terms of Service',               ext: false },
+const RESOURCES: { label: string; href: string; ext: boolean }[] = [
+  { label: 'API Documentation',              href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/blob/master/docs/API.md',                  ext: true  },
+  { label: 'Smart Contract Source (GitHub)', href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/tree/master/blockchain/contracts',         ext: true  },
+  { label: 'Changelog',                      href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/releases',                                  ext: true  },
+  { label: 'Status Page',                    href: 'https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues',                                    ext: true  },
+  { label: 'Privacy Policy',                 href: '/privacy',                                                                                           ext: false },
+  { label: 'Terms of Service',               href: '/terms',                                                                                             ext: false },
 ]
 
 const PLAN_LABELS: Record<string, string> = {
@@ -254,7 +254,12 @@ export default function SupportPage() {
           <span className="text-[13px] font-medium flex-1">
             Partial outage — Agni Finance integration degraded
           </span>
-          <a href="#" className="text-[13px] font-medium underline-offset-2 hover:underline shrink-0">
+          <a
+            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-medium underline-offset-2 hover:underline shrink-0"
+          >
             View Incident →
           </a>
         </div>
@@ -266,7 +271,9 @@ export default function SupportPage() {
           </span>
           <span className="text-[13px] text-text-secondary">Last checked: 2 min ago</span>
           <a
-            href="#"
+            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS/issues"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-[13px] text-text-link flex items-center gap-1 hover:underline underline-offset-2 shrink-0"
           >
             Status Page <ExternalLink className="h-3 w-3" />
@@ -314,7 +321,12 @@ export default function SupportPage() {
               Full guides, API reference, and mandate writing tutorials.
             </p>
           </div>
-          <a href="#" className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1">
+          <a
+            href="https://github.com/mokwathedeveloper/MantleMandate-SaaS"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1"
+          >
             Browse Docs <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -415,10 +427,12 @@ export default function SupportPage() {
           {/* Resources */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-1">
             <h4 className="text-sm font-semibold text-text-primary mb-3">Resources</h4>
-            {RESOURCES.map(({ label, ext }) => (
+            {RESOURCES.map(({ label, href, ext }) => (
               <a
                 key={label}
-                href="#"
+                href={href}
+                target={ext ? '_blank' : undefined}
+                rel={ext ? 'noopener noreferrer' : undefined}
                 className="flex items-center gap-1 text-sm py-1 text-text-link transition-colors hover:underline underline-offset-2"
               >
                 {label}
