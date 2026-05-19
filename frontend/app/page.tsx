@@ -7,7 +7,7 @@ import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
   CheckCircle2, Play, Star, ArrowRight, ArrowDown, Sparkles,
-  KeyRound, Users, Eye, Award, Hexagon,
+  KeyRound, Users, Eye, Award, Hexagon, Flame, Activity, Hash,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -444,20 +444,21 @@ function FeatureSection() {
             so you stay in control without staying at the screen.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[1080px] mx-auto">
+        {/* 4-column on lg+, 2-column on sm+, 1-column on mobile — matches reference */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map(({ Icon, title, body, link, href }) => (
             <div
               key={title}
-              className="group rounded-lg border border-border bg-card p-6 transition-all duration-150 hover:border-primary/30 hover:bg-surface"
+              className="group rounded-lg border border-border bg-card p-5 transition-all duration-150 hover:border-primary/30 hover:bg-surface flex flex-col"
             >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 shrink-0">
                 <Icon className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="text-[18px] font-semibold text-text-primary mb-2">{title}</h3>
-              <p className="text-[13.5px] text-text-secondary leading-[1.6] mb-3">{body}</p>
-              <Link href={href} className="inline-flex items-center gap-1 text-[13px] font-medium text-text-link group-hover:text-text-link-hover transition-colors">
+              <h3 className="text-[15px] font-semibold text-text-primary mb-2 leading-snug">{title}</h3>
+              <p className="text-[13px] text-text-secondary leading-[1.6] mb-3 flex-1">{body}</p>
+              <Link href={href} className="inline-flex items-center gap-1 text-[12.5px] font-medium text-text-link group-hover:text-text-link-hover transition-colors mt-auto">
                 {link}
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           ))}
@@ -478,6 +479,7 @@ const STEPS = [
     title: 'Write Your Mandate',
     body:  'Describe your trading strategy in plain English. No syntax. No special formatting. Just tell the AI what you want it to do.',
     chip:  '"Buy ETH when RSI < 30. Never exceed 5% per trade."',
+    chipIcon: null as React.ElementType | null,
     accent: 'primary' as const,
   },
   {
@@ -485,7 +487,8 @@ const STEPS = [
     Icon:  Bot,
     title: 'Deploy Your Agent',
     body:  'MantleMandate compiles your mandate into an enforceable policy, generates an on-chain hash, and deploys your AI agent.',
-    chip:  null,
+    chip:  'Policy hash: 0x7f3e…c1a2',
+    chipIcon: Hash as React.ElementType | null,
     accent: 'primary' as const,
   },
   {
@@ -493,7 +496,8 @@ const STEPS = [
     Icon:  TrendingUp,
     title: 'Watch It Execute',
     body:  'Your agent trades autonomously within your rules. Every action is recorded on Mantle Network — visible to you (and anyone you share it with).',
-    chip:  null,
+    chip:  'ETH/USDC · +$2,450 · +2.57%',
+    chipIcon: TrendingUp as React.ElementType | null,
     accent: 'success' as const,
   },
 ]
@@ -536,7 +540,13 @@ function HowItWorksSection() {
                   <h3 className="text-[18px] font-semibold text-text-primary mb-2">{step.title}</h3>
                   <p className="text-[13.5px] text-text-secondary leading-[1.6] mb-3">{step.body}</p>
                   {step.chip && (
-                    <div className="inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-mono text-primary italic">
+                    <div className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-mono',
+                      step.accent === 'success'
+                        ? 'border border-success/30 bg-success/10 text-success'
+                        : 'border border-primary/30 bg-primary/10 text-primary italic',
+                    )}>
+                      {step.chipIcon && <step.chipIcon className="h-3 w-3 shrink-0" />}
                       {step.chip}
                     </div>
                   )}
@@ -555,9 +565,9 @@ function HowItWorksSection() {
    ───────────────────────────────────────────────────────────────── */
 
 const PROTOCOLS = [
-  { name: 'Merchant Moe', symbol: 'MOE',  color: '#F5C542' },
-  { name: 'Agni Finance', symbol: 'AGNI', color: '#22C55E' },
-  { name: 'Fluxion',      symbol: 'FLUX', color: '#00C2FF' },
+  { name: 'Merchant Moe', Icon: Flame,    color: '#F5C542' },
+  { name: 'Agni Finance', Icon: Zap,      color: '#22C55E' },
+  { name: 'Fluxion',      Icon: Activity, color: '#00C2FF' },
 ]
 
 function ProtocolStrip() {
@@ -571,19 +581,19 @@ function ProtocolStrip() {
           MantleMandate routes trades to the best available liquidity — automatically.
         </p>
         <div className="flex items-center justify-center gap-8 lg:gap-14 flex-wrap">
-          {PROTOCOLS.map(({ name, symbol, color }) => (
+          {PROTOCOLS.map(({ name, Icon: ProtoIcon, color }) => (
             <div key={name} className="flex items-center gap-2.5">
               <div
-                className="h-9 w-9 rounded-full flex items-center justify-center font-mono text-[10px] font-bold border"
-                style={{ background: `${color}20`, borderColor: `${color}40`, color }}
+                className="h-9 w-9 rounded-full flex items-center justify-center border"
+                style={{ background: `${color}18`, borderColor: `${color}40` }}
               >
-                {symbol.slice(0, 3)}
+                <ProtoIcon className="h-4.5 w-4.5" style={{ color, width: 18, height: 18 }} />
               </div>
               <span className="text-[14px] font-semibold text-text-primary">{name}</span>
             </div>
           ))}
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-full bg-page border border-dashed border-border flex items-center justify-center text-text-disabled text-base">+</div>
+            <div className="h-9 w-9 rounded-full bg-page border border-dashed border-border flex items-center justify-center text-text-disabled text-lg leading-none">+</div>
             <span className="text-[14px] font-medium text-text-disabled">+ more protocols</span>
           </div>
         </div>
@@ -620,102 +630,8 @@ const PLANS = [
   },
 ]
 
-function PricingSection() {
-  const [annual, setAnnual] = useState(false)
-  return (
-    <section id="pricing" className="py-16 lg:py-20 bg-page">
-      <div className="max-w-[1280px] mx-auto px-6">
-        <div className="text-center mb-8">
-          <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight">
-            One Platform. Three Scales.
-          </h2>
-          <p className="text-[15px] text-text-secondary mt-2">
-            Start free for 14 days. No credit card. No wallet required.
-          </p>
-          <div className="inline-flex items-center gap-3 mt-5 p-1 rounded-md border border-border bg-card">
-            <button
-              onClick={() => setAnnual(false)}
-              className={cn(
-                'h-8 px-4 rounded text-[13px] font-semibold transition-colors',
-                !annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary',
-              )}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setAnnual(true)}
-              className={cn(
-                'h-8 px-4 rounded text-[13px] font-semibold transition-colors inline-flex items-center gap-1.5',
-                annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary',
-              )}
-            >
-              Annual
-              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', annual ? 'bg-white/20 text-white' : 'bg-success/15 text-success')}>
-                −20%
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-[1080px] mx-auto">
-          {PLANS.map(({ name, monthly, tagline, features, popular }) => {
-            const price = annual ? Math.round(monthly * 0.8) : monthly
-            return (
-              <div
-                key={name}
-                className={cn(
-                  'relative rounded-lg p-6 flex flex-col gap-4 transition-colors',
-                  popular
-                    ? 'border-2 border-primary bg-card'
-                    : 'border border-border bg-card hover:border-text-secondary',
-                )}
-              >
-                {popular && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-primary text-white text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-[0.08em]">
-                    <Sparkles className="h-3 w-3" />
-                    Most Popular
-                  </span>
-                )}
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-text-secondary mb-1">{name}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[40px] font-bold text-text-primary leading-none">${price}</span>
-                    <span className="text-[13px] text-text-secondary">/month</span>
-                  </div>
-                  <p className="text-[12px] text-text-secondary mt-1.5">{tagline}</p>
-                </div>
-
-                <ul className="space-y-2 flex-1">
-                  {features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-[13px] text-text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
-                      <span className="leading-snug">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href="/signup"
-                  className={cn(
-                    'h-10 inline-flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors',
-                    popular
-                      ? 'bg-primary text-white hover:bg-primary-hover'
-                      : 'border border-border text-text-primary hover:bg-surface',
-                  )}
-                >
-                  {popular ? 'Start Free Trial' : 'Get Started'}
-                </Link>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 /* ─────────────────────────────────────────────────────────────────
-   8. SECURITY
+   7 + 8. PRICING  ×  SECURITY  — side-by-side (matches reference)
    ───────────────────────────────────────────────────────────────── */
 
 const SECURITY_ITEMS = [
@@ -725,44 +641,131 @@ const SECURITY_ITEMS = [
   { Icon: Award,    title: 'SOC2-Ready',        body: 'Architecture and controls aligned with SOC2 Type II readiness.' },
 ]
 
-function SecuritySection() {
+function PricingAndSecuritySection() {
+  const [annual, setAnnual] = useState(false)
   return (
-    <section id="security" className="py-16 lg:py-20 bg-card border-y border-border">
+    <section id="pricing" className="py-16 lg:py-20 bg-page border-b border-border">
       <div className="max-w-[1280px] mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-10 lg:gap-16 items-start">
-          {/* Left text */}
+        {/* Two-column: Pricing left, Security right — stack on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-12 lg:gap-16 items-start">
+
+          {/* ── LEFT: Pricing ──────────────────────────── */}
+          <div>
+            <h2 className="text-[26px] lg:text-[30px] font-bold text-text-primary tracking-tight">
+              One Platform. Three Scales.
+            </h2>
+            <p className="text-[14px] text-text-secondary mt-1.5 mb-5">
+              Start free for 14 days. No credit card. No wallet required.
+            </p>
+
+            {/* Toggle */}
+            <div className="inline-flex items-center gap-2 mb-6 p-1 rounded-md border border-border bg-card">
+              <button
+                onClick={() => setAnnual(false)}
+                className={cn('h-7 px-3 rounded text-[12px] font-semibold transition-colors',
+                  !annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary')}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setAnnual(true)}
+                className={cn('h-7 px-3 rounded text-[12px] font-semibold transition-colors inline-flex items-center gap-1',
+                  annual ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary')}
+              >
+                Annual
+                <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded', annual ? 'bg-white/20 text-white' : 'bg-success/15 text-success')}>
+                  −20%
+                </span>
+              </button>
+            </div>
+
+            {/* Pricing cards — 3-col compact grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {PLANS.map(({ name, monthly, tagline, features, popular }) => {
+                const price = annual ? Math.round(monthly * 0.8) : monthly
+                return (
+                  <div
+                    key={name}
+                    className={cn(
+                      'relative rounded-lg p-4 flex flex-col gap-3 transition-colors',
+                      popular
+                        ? 'border-2 border-primary bg-card'
+                        : 'border border-border bg-card hover:border-text-secondary',
+                    )}
+                  >
+                    {popular && (
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-primary text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-[0.08em] whitespace-nowrap">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        Most Popular
+                      </span>
+                    )}
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary mb-1">{name}</p>
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-[32px] font-bold text-text-primary leading-none">${price}</span>
+                        <span className="text-[12px] text-text-secondary">/mo</span>
+                      </div>
+                      <p className="text-[11px] text-text-secondary mt-1 leading-snug">{tagline}</p>
+                    </div>
+
+                    <ul className="space-y-1.5 flex-1">
+                      {features.map((f) => (
+                        <li key={f} className="flex items-start gap-1.5 text-[12px] text-text-primary">
+                          <CheckCircle2 className="h-3 w-3 text-success shrink-0 mt-0.5" />
+                          <span className="leading-snug">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      href="/signup"
+                      className={cn(
+                        'h-8 inline-flex items-center justify-center rounded-md text-[12px] font-semibold transition-colors',
+                        popular
+                          ? 'bg-primary text-white hover:bg-primary-hover'
+                          : 'border border-border text-text-primary hover:bg-surface',
+                      )}
+                    >
+                      {popular ? 'Start Free Trial' : 'Get Started'}
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── RIGHT: Security ────────────────────────── */}
           <div>
             <div className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary bg-primary/10 border border-primary/20 mb-4">
               <Shield className="h-3 w-3" />
               Security First
             </div>
-            <h2 className="text-[28px] lg:text-[32px] font-bold text-text-primary tracking-tight mb-3">
+            <h2 className="text-[26px] lg:text-[30px] font-bold text-text-primary tracking-tight mb-2">
               Your Funds Stay Yours
             </h2>
-            <p className="text-[15px] text-text-secondary leading-relaxed mb-6">
+            <p className="text-[14px] text-text-secondary leading-relaxed mb-5">
               MantleMandate never holds custody. Your wallets, your keys, your rules —
-              we only execute what you authorize. Every decision is verifiable on-chain.
+              we only execute what you authorize.
             </p>
-            <Link href="/signup" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-text-link hover:text-text-link-hover transition-colors">
-              Read security docs
-              <ArrowRight className="h-3.5 w-3.5" />
+            <Link href="/signup" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-text-link hover:text-text-link-hover transition-colors mb-6">
+              Read security docs <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+
+            <div className="grid grid-cols-1 gap-2.5 mt-2">
+              {SECURITY_ITEMS.map(({ Icon, title, body }) => (
+                <div key={title} className="rounded-lg border border-border bg-card p-3.5 hover:border-primary/30 transition-colors flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-text-primary mb-0.5">{title}</p>
+                    <p className="text-[12px] text-text-secondary leading-[1.5]">{body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Right grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {SECURITY_ITEMS.map(({ Icon, title, body }) => (
-              <div key={title} className="rounded-lg border border-border bg-page p-4 hover:border-primary/30 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-7 w-7 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <p className="text-[14px] font-semibold text-text-primary">{title}</p>
-                </div>
-                <p className="text-[12.5px] text-text-secondary leading-[1.55]">{body}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>
@@ -1206,8 +1209,7 @@ export default function LandingPage() {
         <HowItWorksSection />
         <ProtocolStrip />
         <DocsSection />
-        <PricingSection />
-        <SecuritySection />
+        <PricingAndSecuritySection />
         <TeamSection />
         <CtaBanner />
       </main>
