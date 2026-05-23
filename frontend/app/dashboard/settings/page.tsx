@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAuthStore } from '@/store/authStore'
 import {
   CheckCircle2, Eye, EyeOff, Plus, Trash2,
   Copy, Check, X, ExternalLink,
@@ -139,12 +140,13 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const user = useAuthStore(s => s.user)
   const [section, setSection] = useState<Section>('general')
   const [toast, setToast] = useState<string | null>(null)
   const save = (msg = 'Settings saved') => setToast(msg)
 
   // ── General state ──
-  const [username]  = useState('john_michael')
+  const [username]  = useState(user?.name ?? '')
   const [timezone]  = useState('UTC+2 (Eastern European Time)')
   const [lang, setLang] = useState('English')
 
@@ -266,7 +268,7 @@ export default function SettingsPage() {
                 {/* Email */}
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-text-secondary w-40 shrink-0">Email</span>
-                  <span className="text-sm text-text-primary flex-1">john@example.com</span>
+                  <span className="text-sm text-text-primary flex-1">{user?.email ?? '—'}</span>
                   <span className="text-xs text-success font-medium shrink-0">Verified ✓</span>
                   <button className="text-xs border border-border rounded px-2 py-1 h-7 text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0">
                     Change Email
