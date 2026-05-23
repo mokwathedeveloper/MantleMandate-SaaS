@@ -18,16 +18,24 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { from, name, subject, category, priority, message } = await req.json()
+    const formData = await req.formData()
+    const from       = String(formData.get('from')     ?? '').trim()
+    const name       = String(formData.get('name')     ?? '').trim()
+    const subject    = String(formData.get('subject')  ?? '').trim()
+    const category   = String(formData.get('category') ?? '').trim()
+    const priority   = String(formData.get('priority') ?? '').trim()
+    const message    = String(formData.get('message')  ?? '').trim()
+    const attachFile = formData.get('attachment')
+    const attachName = attachFile instanceof File && attachFile.size > 0 ? attachFile.name : null
 
-    if (!subject?.trim() || !message?.trim() || !from?.trim()) {
+    if (!subject || !message || !from) {
       return NextResponse.json({ error: 'subject, message and from are required' }, { status: 400 })
     }
 
     const ref = ticketRef()
 
     // Log server-side for dev visibility
-    console.log('[Support Ticket]', { ref, from, name, subject, category, priority, ts: new Date().toISOString() })
+    console.log('[Support Ticket]', { ref, from, name, subject, category, priority, attachName, ts: new Date().toISOString() })
 
     // Save to Supabase support_tickets table
     try {
