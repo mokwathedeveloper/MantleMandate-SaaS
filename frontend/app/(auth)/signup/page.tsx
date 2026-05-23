@@ -131,9 +131,8 @@ function SignupPageInner() {
     defaultValues: { terms: false },
   })
 
-  const password      = watch('password') ?? ''
-  const confirmPwd    = watch('confirmPassword') ?? ''
-  const termsValue    = watch('terms')
+  const password       = watch('password') ?? ''
+  const confirmPwd     = watch('confirmPassword') ?? ''
   const passwordsMatch = password.length > 0 && confirmPwd.length > 0 && password === confirmPwd
 
   const onSubmit = ({ name, email, password, company }: FormData) =>
@@ -228,7 +227,6 @@ function SignupPageInner() {
               type="checkbox"
               className="mt-0.5 h-4 w-4 rounded border border-border bg-input checked:bg-primary checked:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors cursor-pointer shrink-0"
               {...register('terms')}
-              checked={termsValue}
             />
             <span className="text-[13px] text-text-secondary leading-relaxed">
               I agree to the{' '}
