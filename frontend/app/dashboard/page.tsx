@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -25,8 +25,19 @@ import {
 import { MOCK_AGENTS } from '@/mocks/agents'
 import { formatCurrency, cn } from '@/lib/utils'
 
+const MANTLE_EXPLORER_TX = 'https://explorer.sepolia.mantle.xyz/tx'
+
 const TIME_TABS = ['7D', '30D', '90D', 'YTD', 'All'] as const
 type TimeTab = typeof TIME_TABS[number]
+
+// Slices to show per tab — 30D data has 30 points
+const TAB_SLICE: Record<TimeTab, number> = {
+  '7D':  7,
+  '30D': 30,
+  '90D': 30,  // only 30 days of mock data available
+  'YTD': 30,
+  'All': 30,
+}
 
 function formatLargeUsd(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
@@ -40,6 +51,11 @@ export default function DashboardPage() {
   const k = DASHBOARD_KPIS
   const trades = DASHBOARD_RECENT_TRADES
   const activeAgents = MOCK_AGENTS.filter((a) => a.status === 'active')
+
+  const chartData = useMemo(
+    () => DASHBOARD_PNL_30D.slice(-TAB_SLICE[tab]),
+    [tab],
+  )
 
   return (
     <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-10 space-y-6">
@@ -72,7 +88,7 @@ export default function DashboardPage() {
       <InlineAlert
         tone="success"
         title="All systems operational — Policy Engine, Risk Engine, and 4 protocols are online."
-        description="12 active agents executed 412 trades in the last 24h with 99.8% uptime."
+        description={`${activeAgents.length} active agents · ${trades.filter(t => t.status === 'success').length} successful trades shown · on-chain via Mantle Network`}
         action={
           <Link href="/dashboard/agents" className="text-xs font-semibold text-success hover:underline">
             View status →
@@ -141,7 +157,7 @@ export default function DashboardPage() {
           bodyClassName="px-2 py-2"
         >
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={DASHBOARD_PNL_30D} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <defs>
                 <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%"  stopColor="#0066FF" stopOpacity={0.35} />
@@ -281,10 +297,15 @@ export default function DashboardPage() {
                       <StatusBadge status={t.status === 'success' ? 'success' : t.status === 'pending' ? 'pending' : 'failed'} />
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 font-mono text-[12px] text-text-link hover:text-text-link-hover cursor-pointer">
+                      <a
+                        href={t.txHash.includes('...') ? '/dashboard/audit' : `${MANTLE_EXPLORER_TX}/${t.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-mono text-[12px] text-text-link hover:text-text-link-hover transition-colors"
+                      >
                         {t.txHash}
                         <ExternalLink className="h-3 w-3" />
-                      </span>
+                      </a>
                     </td>
                   </tr>
                 ))}
