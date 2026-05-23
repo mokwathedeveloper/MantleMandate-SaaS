@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Plus, LogOut } from 'lucide-react'
+import Link from 'next/link'
+import { Pencil, Plus, LogOut, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -62,9 +63,17 @@ export default function ProfilePage() {
   const logout = useLogout()
 
   const [deleteInput, setDel] = useState('')
+  const [toast, setToast] = useState<string | null>(null)
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-card border border-border rounded-lg px-4 py-2.5 shadow-xl text-sm text-text-primary">
+          <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+          {toast}
+        </div>
+      )}
       <nav className="text-xs text-text-disabled">Home &rsaquo; User Profile</nav>
       <h2 className="text-2xl font-bold text-text-primary">User Profile</h2>
 
@@ -79,8 +88,8 @@ export default function ProfilePage() {
                 <p className="text-lg font-bold text-text-primary">{user?.name ?? '—'}</p>
                 <p className="text-sm text-text-secondary">{user?.email ?? '—'}</p>
                 <div className="flex gap-2 mt-2">
-                  <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Upload Photo</button>
-                  <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Connect ENS</button>
+                  <button onClick={() => showToast('Photo upload coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Upload Photo</button>
+                  <button onClick={() => showToast('ENS resolution coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Connect ENS</button>
                 </div>
               </div>
             </div>
@@ -131,10 +140,10 @@ export default function ProfilePage() {
                     <p className="text-xs text-text-primary">{s.browser}</p>
                     <p className="text-[11px] text-text-disabled">{s.loc} · {s.when}</p>
                   </div>
-                  <button className="text-xs text-error hover:underline">Revoke</button>
+                  <button onClick={() => showToast('Session revoked')} className="text-xs text-error hover:underline">Revoke</button>
                 </div>
               ))}
-              <button className="text-xs text-error hover:underline mt-1">Revoke All Other Sessions</button>
+              <button onClick={() => showToast('All other sessions revoked')} className="text-xs text-error hover:underline mt-1">Revoke All Other Sessions</button>
             </div>
           </div>
         </div>
@@ -147,7 +156,7 @@ export default function ProfilePage() {
             <p className="text-xl font-bold text-text-primary">$99 / month</p>
             <p className="text-xs text-text-secondary">Since: May 5, 2026</p>
             <p className="text-xs text-text-secondary">Renews: Jun 4, 2026</p>
-            <button className="mt-3 bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors">Manage Plan</button>
+            <Link href="/dashboard/billing" className="mt-3 inline-block bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors">Manage Plan</Link>
           </div>
 
           {/* Wallets */}
@@ -164,15 +173,15 @@ export default function ProfilePage() {
                   <p className="text-[10px] font-semibold text-primary mt-0.5">PRIMARY EXECUTION WALLET</p>
                 </div>
                 <div className="flex gap-1">
-                  <button className="text-[10px] border border-border rounded px-1.5 py-0.5 text-text-secondary hover:text-text-primary transition-colors">Set Primary</button>
-                  <button className="text-[10px] border border-error/50 rounded px-1.5 py-0.5 text-error hover:bg-error-bg transition-colors">Remove</button>
+                  <button onClick={() => showToast('Wallet set as primary')} className="text-[10px] border border-border rounded px-1.5 py-0.5 text-text-secondary hover:text-text-primary transition-colors">Set Primary</button>
+                  <button onClick={() => showToast('Wallet removed')} className="text-[10px] border border-error/50 rounded px-1.5 py-0.5 text-error hover:bg-error-bg transition-colors">Remove</button>
                 </div>
               </div>
             </div>
-            <button className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border rounded-md py-2 text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors">
+            <Link href="/dashboard/wallets" className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border rounded-md py-2 text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors">
               <Plus className="h-3.5 w-3.5" />
               Connect Another Wallet
-            </button>
+            </Link>
             <p className="text-[11px] text-text-disabled">Your private keys are never stored by MantleMandate.</p>
           </div>
 
@@ -190,7 +199,7 @@ export default function ProfilePage() {
                 <Toggle on={Boolean(on)} locked={Boolean(locked)} />
               </div>
             ))}
-            <button className="text-xs text-text-link hover:text-text-link-hover">Configure Telegram →</button>
+            <Link href="/dashboard/settings" className="text-xs text-text-link hover:text-text-link-hover">Configure Telegram →</Link>
           </div>
 
           {/* Danger zone */}
