@@ -37,6 +37,10 @@ export function useLogin() {
         ensName:     null,
         createdAt:   data.user.created_at,
       })
+      // refresh() forces Next.js to re-run middleware with the new session
+      // cookies before the dashboard RSC payload is fetched, preventing a
+      // stale cache from treating the user as unauthenticated.
+      router.refresh()
       router.push('/dashboard')
     }
   }
@@ -76,6 +80,7 @@ export function useSignup() {
         ensName:     null,
         createdAt:   data.user.created_at,
       })
+      router.refresh()
       router.push('/dashboard')
     } else {
       // Email confirmation required
