@@ -6,7 +6,7 @@ import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
   Lock, Zap, Link2, ChevronRight, Menu, X,
-  CheckCircle2, Play, Star, ArrowRight, ArrowDown, Sparkles,
+  CheckCircle2, Play, ArrowRight, ArrowDown, Sparkles,
   KeyRound, Users, Eye, Award, Hexagon, Flame, Activity, Hash,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -347,17 +347,17 @@ function HeroSection() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 pt-1 justify-center lg:justify-start">
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 text-warning fill-warning" />
-                ))}
-              </div>
-              <p className="text-[13px] text-text-secondary">
-                <span className="text-text-primary font-semibold">2,852 ready</span>, trading-safe agents
-                <span className="mx-1.5">·</span>
-                Trusted by traders on Mantle
-              </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 justify-center lg:justify-start">
+              {([
+                { Icon: CheckCircle2, text: '3 smart contracts on Mantle' },
+                { Icon: Sparkles,     text: 'Claude Sonnet AI engine' },
+                { Icon: Shield,       text: 'Full QA audit — 25 checks passed' },
+              ] as { Icon: typeof CheckCircle2; text: string }[]).map(({ Icon, text }) => (
+                <div key={text} className="flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5 text-success shrink-0" />
+                  <span className="text-[12px] text-text-secondary">{text}</span>
+                </div>
+              ))}
             </div>
           </div>
 
