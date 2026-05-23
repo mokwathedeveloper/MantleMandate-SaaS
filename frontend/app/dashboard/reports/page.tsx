@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart2, Download, X, Eye, CheckCircle2 } from 'lucide-react'
 import NextLink from 'next/link'
@@ -592,6 +592,26 @@ export default function ReportsPage() {
   const reports = (!isLoading && !isError && data && data.length > 0) ? data : MOCK_REPORTS
   const isEmpty  = !isLoading && !isError && data && data.length === 0
 
+  // Filter by date range
+  const filteredReports = useMemo(() => {
+    if (!dateFrom && !dateTo) return reports
+    return reports.filter(r => {
+      if (dateFrom && r.dateTo < dateFrom)   return false
+      if (dateTo   && r.dateFrom > dateTo)   return false
+      return true
+    })
+  }, [reports, dateFrom, dateTo])
+
+  // Compute KPIs from filtered data
+  const kpi = useMemo(() => {
+    const rs = filteredReports as Report[]
+    const totalPnl    = rs.reduce((s: number, r: Report) => s + r.totalPnl, 0)
+    const avgRoi      = rs.length ? rs.reduce((s: number, r: Report) => s + r.roi, 0) / rs.length : 0
+    const maxDrawdown = rs.length ? Math.min(...rs.map((r: Report) => r.drawdown ?? 0)) : 0
+    const avgSharpe   = rs.length ? rs.reduce((s: number, r: Report) => s + (r.sharpeRatio ?? 0), 0) / rs.length : 0
+    return { count: rs.length, totalPnl, avgRoi, maxDrawdown, avgSharpe }
+  }, [filteredReports])
+
   //                   Name   Type  DateRange  P&L   ROI   Actions
   const COLS_BASE  = '220px 120px    160px    125px  85px  145px'
   //                   GeneratedOn  Drawdown  Sharpe
@@ -630,11 +650,11 @@ export default function ReportsPage() {
       {/* ── KPI strip (5 cards) ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {([
-          { label: 'Total Reports', value: '1,248',          sub: 'Generated',     colorClass: '' },
-          { label: 'Total P&L',     value: '$24,580,439.21', sub: 'All time',      colorClass: '' },
-          { label: 'Total P&L %',   value: '72.45%',         sub: '',              colorClass: 'text-success' },
-          { label: 'Max Drawdown',  value: '-$3,245.20',     sub: '',              colorClass: 'text-error' },
-          { label: 'Sharpe Ratio',  value: '20',             sub: 'Risk-adjusted', colorClass: '' },
+          { label: 'Total Reports', value: String(kpi.count),                                                                           sub: 'In selected range',  colorClass: '' },
+          { label: 'Total P&L',     value: `${kpi.totalPnl >= 0 ? '+' : '-'}$${fmt(Math.abs(kpi.totalPnl))}`,                           sub: 'Selected range',     colorClass: kpi.totalPnl >= 0 ? 'text-success' : 'text-error' },
+          { label: 'Avg ROI',       value: `${kpi.avgRoi >= 0 ? '+' : ''}${kpi.avgRoi.toFixed(2)}%`,                                    sub: '',                   colorClass: kpi.avgRoi >= 0 ? 'text-success' : 'text-error' },
+          { label: 'Max Drawdown',  value: kpi.maxDrawdown !== 0 ? `-$${fmt(Math.abs(kpi.maxDrawdown))}` : '—',                         sub: '',                   colorClass: 'text-error' },
+          { label: 'Avg Sharpe',    value: kpi.avgSharpe > 0 ? kpi.avgSharpe.toFixed(2) : '—',                                          sub: 'Risk-adjusted',      colorClass: '' },
         ] as { label: string; value: string; sub: string; colorClass: string }[]).map(c => (
           <div key={c.label} className="bg-card border border-border rounded-lg p-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">
@@ -723,13 +743,14 @@ export default function ReportsPage() {
           {isError   && <div className="py-8 text-center text-sm text-error">Failed to load reports.</div>}
           {isEmpty   && <EmptyState />}
 
-          {!isEmpty && !isLoading && !isError && reports.map((r, i) => (
+          {!isEmpty && !isLoading && !isError && (filteredReports as Report[]).map((r: Report, i: number) => (
             <div
               key={r.id}
               className={cn('grid px-4 items-center transition-colors hover:bg-surface', i % 2 === 0 ? 'bg-card' : 'bg-page')}
               style={{ gridTemplateColumns: cols, minHeight: '52px' }}
             >
               <button
+                onClick={() => setViewReport(r)}
                 className="text-sm font-medium text-left truncate pr-2 hover:underline underline-offset-2 text-text-link"
               >
                 {r.name}
