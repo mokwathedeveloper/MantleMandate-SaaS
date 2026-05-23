@@ -5,8 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Bot, Gauge, Shield, Network, FileText, TrendingUp,
-  Lock, Zap, Link2, ChevronRight, Menu, X,
-  CheckCircle2, Play, ArrowRight, ArrowDown, Sparkles,
+  Zap, Link2, ChevronRight, Menu, X,
+  CheckCircle2, Play, ArrowRight, ArrowDown, Sparkles, ExternalLink,
   KeyRound, Users, Eye, Award, Hexagon, Flame, Activity, Hash,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -577,21 +577,34 @@ function HeroSection() {
    3. TRUST BAR
    ───────────────────────────────────────────────────────────────── */
 
+const EXPLORER = 'https://explorer.sepolia.mantle.xyz'
+
+const TRUST_CONTRACTS = [
+  { label: 'MandatePolicy',  addr: '0x690Ab021b40a01E9f3818CdBa149fb5721480871' },
+  { label: 'AgentExecutor',  addr: '0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6' },
+  { label: 'RiskGuard',      addr: '0x8D99D4F922248852Bc678bd4018F9f3E4576E34B' },
+]
+
 function TrustBar() {
-  const items = [
-    { Icon: Lock,  text: 'SOC2-ready, multisig-protected' },
-    { Icon: Zap,   text: 'Live P&L, updated every block'  },
-    { Icon: Link2, text: 'Every trade hashed on Mantle'   },
-  ]
   return (
     <section className="bg-card border-y border-border">
-      {/* Mobile: vertical stack | sm+: horizontal row with dividers */}
-      <div className="max-w-[1280px] mx-auto px-6 py-4 sm:py-0 sm:h-[64px] flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-0 sm:divide-x sm:divide-border">
-        {items.map(({ Icon, text }) => (
-          <div key={text} className="flex items-center gap-2 sm:px-6 lg:px-12">
-            <Icon className="h-[16px] w-[16px] text-primary shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary whitespace-nowrap">{text}</span>
-          </div>
+      <div className="max-w-[1280px] mx-auto px-6 py-3 sm:py-0 sm:h-[60px] flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-0 sm:divide-x sm:divide-border">
+        {TRUST_CONTRACTS.map(({ label, addr }) => (
+          <a
+            key={label}
+            href={`${EXPLORER}/address/${addr}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 sm:px-6 lg:px-10 group"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+            <span className="text-[12px] font-medium text-text-secondary group-hover:text-text-primary transition-colors whitespace-nowrap">
+              <span className="text-text-primary font-semibold">{label}</span>
+              {' '}
+              <span className="font-mono text-[11px]">{addr.slice(0, 6)}…{addr.slice(-4)}</span>
+            </span>
+            <ExternalLink className="h-3 w-3 text-text-disabled group-hover:text-text-link transition-colors shrink-0" />
+          </a>
         ))}
       </div>
     </section>

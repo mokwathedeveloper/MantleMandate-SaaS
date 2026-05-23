@@ -5,15 +5,15 @@ import type { Address } from 'viem'
 // ── Deployed contract addresses (Mantle Sepolia Testnet) ──────────────────────
 
 export const MANDATE_POLICY_ADDRESS = (
-  process.env.NEXT_PUBLIC_MANDATE_POLICY_CONTRACT || '0xee9FBcb6583B32d0ddC615882d0A03DA8714b952'
+  process.env.NEXT_PUBLIC_MANDATE_POLICY_CONTRACT || '0x690Ab021b40a01E9f3818CdBa149fb5721480871'
 ) as Address
 
 export const AGENT_EXECUTOR_ADDRESS = (
-  process.env.NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT || '0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7'
+  process.env.NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT || '0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6'
 ) as Address
 
 export const RISK_GUARD_ADDRESS = (
-  process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT || '0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258'
+  process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT || '0x8D99D4F922248852Bc678bd4018F9f3E4576E34B'
 ) as Address
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
