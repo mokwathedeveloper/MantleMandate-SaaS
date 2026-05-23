@@ -92,6 +92,20 @@ const ACTION_LABEL: Record<string, string> = {
   'APPROVAL NEEDED':    'Approve',
 }
 
+const ACTION_HREF: Record<string, string> = {
+  'TRADE EXECUTED':     '/dashboard/trades',
+  'MANDATE UPDATED':    '/dashboard/mandates',
+  'AGENT DEPLOYED':     '/dashboard/agents',
+  'LOW GAS WARNING':    '/dashboard/wallets',
+  'DRAWDOWN WARNING':   '/dashboard/risk',
+  'MANDATE BREACH':     '/dashboard/agents',
+  'DRAWDOWN LIMIT HIT': '/dashboard/risk',
+  'INSUFFICIENT GAS':   '/dashboard/wallets',
+  'TRADE FAILED':       '/dashboard/trades',
+  'AGENT ERROR':        '/dashboard/agents',
+  'APPROVAL NEEDED':    '/dashboard/agents',
+}
+
 const AGENT_NAMES: Record<string, string> = {
   'agent-1': 'ETH Conservative Buyer',
   'agent-2': 'BTC Momentum Trader',
@@ -130,6 +144,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
   const dotClass   = SEVERITY_DOT_CLASS[alert.severity] ?? 'bg-text-secondary'
   const badgeClass = SEVERITY_BADGE_CLASS[alert.severity] ?? 'text-text-secondary'
   const action     = ACTION_LABEL[alert.alertType]
+  const actionHref = ACTION_HREF[alert.alertType]
   const agentName  = alert.agentId ? (AGENT_NAMES[alert.agentId] ?? `Agent ${alert.agentId}`) : null
 
   return (
@@ -188,13 +203,14 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: strin
               : <div className="h-2 w-2 rounded-full bg-primary" />
             }
           </div>
-          {action && (
-            <button
+          {action && actionHref && (
+            <NextLink
+              href={actionHref}
               onClick={() => onMarkRead(alert.id)}
-              className="text-xs border border-border text-text-secondary rounded px-2 py-1 h-[26px] transition-colors hover:opacity-80"
+              className="text-xs border border-border text-text-secondary rounded px-2 py-1 h-[26px] transition-colors hover:opacity-80 inline-flex items-center"
             >
               {action}
-            </button>
+            </NextLink>
           )}
         </div>
       </div>
