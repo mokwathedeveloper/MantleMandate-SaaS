@@ -37,11 +37,16 @@ export function useLogin() {
         ensName:     null,
         createdAt:   data.user.created_at,
       })
-      // refresh() forces Next.js to re-run middleware with the new session
-      // cookies before the dashboard RSC payload is fetched, preventing a
-      // stale cache from treating the user as unauthenticated.
-      router.refresh()
-      router.push('/dashboard')
+      // Push first so navigation starts immediately — Supabase has already written
+      // auth cookies, so middleware validates them on the dashboard request.
+      // router.refresh() (returns void, cannot be awaited) clears the client RSC
+      // cache in the background so subsequent navigations use fresh server state.
+      try {
+        router.push('/dashboard')
+        router.refresh()
+      } catch {
+        // navigation errors are non-fatal; the push has already started
+      }
     }
   }
 
@@ -80,8 +85,12 @@ export function useSignup() {
         ensName:     null,
         createdAt:   data.user.created_at,
       })
-      router.refresh()
-      router.push('/dashboard')
+      try {
+        router.push('/dashboard')
+        router.refresh()
+      } catch {
+        // navigation errors are non-fatal; the push has already started
+      }
     } else {
       // Email confirmation required
       router.push('/login?confirmed=1')
