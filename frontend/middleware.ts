@@ -27,13 +27,19 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: use getUser() not getSession().
-  // getSession() reads the JWT from cookies but does NOT validate it with
-  // Supabase servers and does NOT refresh expired tokens — so mobile users
-  // whose access token expires get kicked to /login even though their
-  // refresh token is still valid. getUser() validates server-side and
-  // triggers a refresh automatically.
-  const { data: { user } } = await supabase.auth.getUser()
+  // Prefer getUser() (server-validates the token and triggers a refresh when
+  // the access token is expired but the refresh token is still valid).
+  // If the Supabase auth server is unreachable we fall back to getSession()
+  // which reads the JWT from cookies locally — no network call, no redirect
+  // to /login on a transient network hiccup.
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (!error) user = data.user
+  } catch {
+    const { data: { session } } = await supabase.auth.getSession()
+    user = session?.user ?? null
+  }
 
   const { pathname } = request.nextUrl
 
