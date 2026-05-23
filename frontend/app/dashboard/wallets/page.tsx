@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, ExternalLink, KeyRound, Wallet, Copy, ShieldCheck, Coins,
   X, CheckCircle2, Loader2, AlertTriangle,
@@ -192,10 +193,20 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const MANTLE_EXPLORER = 'https://explorer.sepolia.mantle.xyz/address'
+
 export default function WalletsPage() {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [kind, setKind]     = useState<'all' | WalletKind>('all')
   const [showConnect, setShowConnect] = useState(false)
+  const [copiedAddr, setCopiedAddr] = useState<string | null>(null)
+
+  const handleCopyAddress = useCallback((address: string) => {
+    navigator.clipboard.writeText(address).catch(() => {})
+    setCopiedAddr(address)
+    setTimeout(() => setCopiedAddr(null), 2000)
+  }, [])
 
   const filtered = useMemo(() => {
     return MOCK_WALLETS.filter((w) => {
@@ -234,8 +245,12 @@ export default function WalletsPage() {
       render: (w) => (
         <span className="inline-flex items-center gap-1.5 font-mono text-[12px] text-text-secondary">
           {w.address}
-          <Copy className="h-3 w-3 cursor-pointer hover:text-text-primary" />
-          <ExternalLink className="h-3 w-3 cursor-pointer hover:text-text-primary" />
+          <button onClick={() => handleCopyAddress(w.address)} title="Copy address" className="shrink-0">
+            <Copy className={`h-3 w-3 cursor-pointer ${copiedAddr === w.address ? 'text-success' : 'hover:text-text-primary'}`} />
+          </button>
+          <a href={`${MANTLE_EXPLORER}/${w.address}`} target="_blank" rel="noopener noreferrer" title="View on Mantle Explorer" className="shrink-0">
+            <ExternalLink className="h-3 w-3 cursor-pointer hover:text-text-primary" />
+          </a>
         </span>
       ),
     },
@@ -297,7 +312,7 @@ export default function WalletsPage() {
         subtitle="Treasury wallets, multisigs, and signer keys connected to MantleMandate. Each wallet inherits its mandate's policy."
         actions={
           <>
-            <PrimaryButton variant="secondary" icon={<ShieldCheck className="h-4 w-4" />}>
+            <PrimaryButton variant="secondary" icon={<ShieldCheck className="h-4 w-4" />} onClick={() => router.push('/dashboard/audit')}>
               Audit Permissions
             </PrimaryButton>
             <PrimaryButton variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setShowConnect(true)}>
