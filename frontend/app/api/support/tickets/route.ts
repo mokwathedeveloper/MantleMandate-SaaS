@@ -28,12 +28,12 @@ export async function GET() {
 
     if (error) {
       console.warn('[Support Tickets] fetch error:', error.message)
-      return NextResponse.json({ tickets: [] })
+      return NextResponse.json({ error: 'Failed to fetch tickets' }, { status: 500 })
     }
 
     return NextResponse.json({ tickets: data ?? [] })
   } catch (err) {
     console.warn('[Support Tickets] unexpected error:', err)
-    return NextResponse.json({ tickets: [] })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
