@@ -415,7 +415,7 @@ export default function NewMandatePage() {
                       <Textarea
                         label="Strategy description"
                         placeholder="Write your trading strategy in plain English. Include assets, entry / exit triggers, risk limits, and DeFi protocols you want to use on Mantle Network…"
-                        rows={7}
+                        rows={10}
                         counter
                         maxLength={2000}
                         error={form1.formState.errors.mandate_text?.message}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -295,16 +295,217 @@ function HeroFlow() {
   )
 }
 
-function HeroSection() {
+/* ─────────────────────────────────────────────────────────────────
+   2b. DEMO MODAL
+   ───────────────────────────────────────────────────────────────── */
+
+const DEMO_STEPS = [
+  {
+    label: 'Write Your Mandate',
+    subtitle: 'Plain English — no code required',
+    content: (
+      <div className="rounded-lg bg-page border border-border p-5 space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary">Strategy Description</p>
+        <p className="text-[15px] text-text-primary leading-relaxed font-mono border border-primary/30 bg-primary/5 rounded-md p-3">
+          Buy ETH on Mantle when RSI drops below 30.<br />
+          Never risk more than 5% per trade.<br />
+          Take profit at 15% gain. Avoid trading on weekends.
+        </p>
+      </div>
+    ),
+  },
+  {
+    label: 'AI Parses Your Strategy',
+    subtitle: 'Claude Sonnet reads your rules and compiles them',
+    content: (
+      <div className="rounded-lg bg-page border border-border p-5 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Claude AI Parsing…</p>
+        </div>
+        <div className="space-y-2">
+          {[
+            { key: 'asset',      value: 'ETH / USDC' },
+            { key: 'trigger',    value: 'RSI < 30 (entry)' },
+            { key: 'exit',       value: 'RSI > 70 · Take profit 15%' },
+            { key: 'risk',       value: 'Max 5% per trade' },
+            { key: 'schedule',   value: 'Weekdays only' },
+            { key: 'protocol',   value: 'Merchant Moe (Mantle)' },
+          ].map(({ key, value }) => (
+            <div key={key} className="flex items-center gap-3 text-sm">
+              <span className="w-20 text-text-secondary text-[12px] font-mono shrink-0">{key}</span>
+              <span className="text-success text-[12px] font-medium">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: 'Policy Hash On-Chain',
+    subtitle: 'Your mandate is immutably recorded on Mantle Network',
+    content: (
+      <div className="rounded-lg bg-page border border-border p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-success" />
+          <p className="text-sm font-semibold text-success">Policy submitted to Mantle</p>
+        </div>
+        <div className="space-y-2 text-[12px]">
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary w-24 shrink-0">Policy Hash</span>
+            <span className="font-mono text-text-primary break-all">0x7f3e…c1a2</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary w-24 shrink-0">Block</span>
+            <span className="font-mono text-text-primary">58,234,101</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary w-24 shrink-0">Contract</span>
+            <span className="font-mono text-text-primary">MandatePolicy.sol</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-text-link">
+          <CheckCircle2 className="h-3 w-3" />
+          Verifiable on Mantle Explorer
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: 'Agent Executes',
+    subtitle: 'Live trade on Merchant Moe — verified on-chain',
+    content: (
+      <div className="rounded-lg bg-page border border-border p-5 space-y-4">
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+            <span className="font-semibold text-text-primary">ETH/USDC · Buy</span>
+          </div>
+          <span className="text-success font-bold">+$318.45</span>
+        </div>
+        <div className="space-y-2 text-[12px]">
+          {[
+            { k: 'Amount',   v: '$4,200 USDC' },
+            { k: 'Price',    v: '$2,847.32' },
+            { k: 'Protocol', v: 'Merchant Moe' },
+            { k: 'Trigger',  v: 'RSI hit 28.4' },
+            { k: 'Gas',      v: '0.0012 MNT' },
+          ].map(({ k, v }) => (
+            <div key={k} className="flex justify-between">
+              <span className="text-text-secondary">{k}</span>
+              <span className="text-text-primary font-mono">{v}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-[11px] font-mono text-text-link truncate">
+          TX: 0x3f8a…f9a · Block 58,234,101
+        </div>
+      </div>
+    ),
+  },
+]
+
+function DemoModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0)
+  const overlayRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onClose])
+
   return (
-    <section
-      className="relative overflow-hidden"
-      style={{
-        background: '#0D1117',
-        backgroundImage:
-          'radial-gradient(circle at 20% 30%, rgba(0,102,255,0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0,194,255,0.04) 0%, transparent 50%)',
-      }}
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
+      <div className="w-full max-w-[560px] bg-card border border-border rounded-2xl shadow-modal overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div>
+            <p className="text-sm font-bold text-text-primary">How MantleMandate Works</p>
+            <p className="text-[12px] text-text-secondary">Step {step + 1} of {DEMO_STEPS.length}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-text-secondary hover:text-text-primary transition-colors"
+            aria-label="Close demo"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Step header */}
+        <div className="px-6 pt-5 pb-2">
+          <div className="flex gap-1.5 mb-4">
+            {DEMO_STEPS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setStep(i)}
+                className={cn(
+                  'h-1 flex-1 rounded-full transition-colors',
+                  i <= step ? 'bg-primary' : 'bg-border',
+                )}
+              />
+            ))}
+          </div>
+          <h3 className="text-[20px] font-bold text-text-primary leading-tight">
+            {DEMO_STEPS[step].label}
+          </h3>
+          <p className="text-[13px] text-text-secondary mt-1">{DEMO_STEPS[step].subtitle}</p>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-4">{DEMO_STEPS[step].content}</div>
+
+        {/* Footer nav */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+          <button
+            disabled={step === 0}
+            onClick={() => setStep(s => s - 1)}
+            className="flex items-center gap-1.5 h-9 px-4 text-sm text-text-secondary border border-border rounded-md hover:text-text-primary hover:border-text-disabled disabled:invisible transition-colors"
+          >
+            Back
+          </button>
+          {step < DEMO_STEPS.length - 1 ? (
+            <button
+              onClick={() => setStep(s => s + 1)}
+              className="flex items-center gap-1.5 h-9 px-5 text-sm font-semibold text-white bg-primary rounded-md hover:opacity-90 transition-opacity"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <Link
+              href="/signup"
+              onClick={onClose}
+              className="flex items-center gap-1.5 h-9 px-5 text-sm font-semibold text-white bg-success rounded-md hover:opacity-90 transition-opacity"
+            >
+              Start Free
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HeroSection() {
+  const [showDemo, setShowDemo] = useState(false)
+  return (
+    <>
+      {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
+      <section
+        className="relative overflow-hidden"
+        style={{
+          background: '#0D1117',
+          backgroundImage:
+            'radial-gradient(circle at 20% 30%, rgba(0,102,255,0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0,194,255,0.04) 0%, transparent 50%)',
+        }}
+      >
       <div className="max-w-[1280px] mx-auto px-6 pt-24 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_540px] gap-8 lg:gap-12 items-center">
           {/* Left — headline + CTAs */}
@@ -339,11 +540,11 @@ function HeroSection() {
                 Start Free — No Wallet Required
               </Link>
               <button
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center justify-center gap-2 h-[48px] px-5 text-[14px] font-semibold text-text-primary bg-card border border-border hover:border-text-secondary transition-colors rounded-lg"
+                onClick={() => setShowDemo(true)}
+                className="inline-flex items-center justify-center gap-2 h-[48px] px-5 text-[14px] font-semibold text-text-primary bg-card border border-border hover:border-primary hover:text-primary transition-colors rounded-lg"
               >
                 <Play className="h-4 w-4 text-primary fill-primary" />
-                Watch 2-Min Demo
+                See How It Works
               </button>
             </div>
 
@@ -367,7 +568,8 @@ function HeroSection() {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </>
   )
 }
 
