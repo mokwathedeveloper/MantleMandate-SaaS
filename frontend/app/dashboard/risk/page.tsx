@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, AlertTriangle, ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -414,9 +415,12 @@ export default function RiskPage() {
                       <span className="text-xs text-right text-text-secondary">{p.tvl}</span>
 
                       <div className="flex justify-end">
-                        <button className="text-[11px] px-2 py-0.5 rounded border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors">
+                        <Link
+                          href="/dashboard/protocols"
+                          className="text-[11px] px-2 py-0.5 rounded border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors inline-block"
+                        >
                           Configure
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   )
