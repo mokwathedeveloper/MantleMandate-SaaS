@@ -456,7 +456,7 @@ export default function SupportPage() {
             </p>
           </div>
           <a
-            href="/dashboard/api"
+            href="/dashboard/docs"
             className="text-sm text-text-link hover:underline underline-offset-2 w-fit flex items-center gap-1"
           >
             Browse Docs <ExternalLink className="h-3.5 w-3.5" />
