@@ -44,7 +44,11 @@ export const AGENT_EXECUTOR_ABI = parseAbi([
 
 export const publicClient = createPublicClient({
   chain:     mantleTestnet,
-  transport: http('https://rpc.sepolia.mantle.xyz'),
+  transport: http('https://rpc.sepolia.mantle.xyz', {
+    retryCount:       1,      // stop the infinite retry loop on 400 errors
+    retryDelay:       1000,
+    timeout:          10_000,
+  }),
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

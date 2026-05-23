@@ -378,7 +378,7 @@ export default function AuditPage() {
   const [loadingLive,   setLoadingLive]   = useState(true)
 
   useEffect(() => {
-    fetchOnChainAuditEvents(50_000).then(events => {
+    fetchOnChainAuditEvents().then(events => {
       setLiveEntries(events.map(onChainEventToEntry))
       setLoadingLive(false)
     })

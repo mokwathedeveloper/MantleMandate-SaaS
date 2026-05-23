@@ -264,7 +264,10 @@ export interface OnChainEvent {
   execIndex:   bigint
 }
 
-export async function fetchOnChainAuditEvents(lookbackBlocks = 50_000): Promise<OnChainEvent[]> {
+// Mantle Sepolia RPC caps eth_getLogs at ~2 000 blocks per request
+const MANTLE_MAX_BLOCK_RANGE = 2_000
+
+export async function fetchOnChainAuditEvents(lookbackBlocks = MANTLE_MAX_BLOCK_RANGE): Promise<OnChainEvent[]> {
   try {
     const latestBlock = await publicClient.getBlockNumber()
     const fromBlock   = latestBlock > BigInt(lookbackBlocks)
