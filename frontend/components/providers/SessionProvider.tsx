@@ -10,11 +10,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setSession } = useAuthStore()
 
   useEffect(() => {
-    // Restore session on page load
+    // Restore session on page load, then proactively validate/refresh so
+    // middleware sees fresh cookies on the next navigation rather than
+    // discovering an expired token mid-flight and redirecting to /login.
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
         setSession(session)
         setUser(sessionToUser(session.user))
+        // Fire-and-forget: validates with Supabase and refreshes the access
+        // token if it has expired. The TOKEN_REFRESHED event below picks up
+        // the result and updates the store + cookies.
+        supabase.auth.getUser().catch(() => {})
       }
     }).catch((err: unknown) => {
       console.error('[SessionProvider] Failed to restore session:', err)
