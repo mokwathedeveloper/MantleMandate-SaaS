@@ -97,7 +97,9 @@ const PLAN_SUPPORT: Record<string, { tier: string; response: string }> = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  const ts = new Date(iso).getTime()
+  if (Number.isNaN(ts)) return 'Unknown time'
+  const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000))
   if (diff < 60)    return 'Just now'
   if (diff < 3600)  return `${Math.floor(diff / 60)} min ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`
@@ -141,7 +143,10 @@ function TicketForm({ onClose, onSubmitted }: { onClose: () => void; onSubmitted
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [success,    setSuccess]    = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => setAttachment(e.target.files?.[0] ?? null)
 
@@ -153,22 +158,21 @@ function TicketForm({ onClose, onSubmitted }: { onClose: () => void; onSubmitted
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/support/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from:     (user as { email?: string })?.email ?? '',
-          name:     user?.name  ?? '',
-          subject,
-          category,
-          priority,
-          message,
-        }),
-      })
+      const body = new FormData()
+      body.append('from',     (user as { email?: string })?.email ?? '')
+      body.append('name',     user?.name ?? '')
+      body.append('subject',  subject)
+      body.append('category', category)
+      body.append('priority', priority)
+      body.append('message',  message)
+      if (attachment) body.append('attachment', attachment)
+
+      const res = await fetch('/api/support/email', { method: 'POST', body })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Submission failed')
       setSuccess(true)
-      setTimeout(() => {
+      setAttachment(null)
+      timerRef.current = setTimeout(() => {
         onClose()
         onSubmitted()
       }, 1800)
@@ -316,8 +320,9 @@ export default function SupportPage() {
   const [openFaqIdx,     setOpenFaqIdx]     = useState<number | null>(null)
   const [tickets,        setTickets]        = useState<RealTicket[]>([])
   const [ticketsLoading, setTicketsLoading] = useState(true)
-  const [showAll,        setShowAll]        = useState(false)
-  const [statusLabel,    setStatusLabel]    = useState('Just now')
+  const [showAll,          setShowAll]          = useState(false)
+  const [statusLabel,      setStatusLabel]      = useState('Just now')
+  const [ticketsAuthError, setTicketsAuthError] = useState(false)
 
   const planLabel   = PLAN_LABELS[plan]  ?? 'OPERATOR PLAN'
   const planSupport = PLAN_SUPPORT[plan] ?? PLAN_SUPPORT.operator
@@ -325,6 +330,10 @@ export default function SupportPage() {
   const fetchTickets = useCallback(async () => {
     try {
       const res = await fetch('/api/support/tickets')
+      if (res.status === 401) {
+        setTicketsAuthError(true)
+        return
+      }
       if (res.ok) {
         const { tickets: data } = await res.json()
         setTickets(data ?? [])
@@ -505,6 +514,11 @@ export default function SupportPage() {
               <div className="flex items-center justify-center py-10 gap-2 text-text-secondary">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm">Loading tickets…</span>
+              </div>
+            ) : ticketsAuthError ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <AlertCircle className="h-7 w-7 text-warning" />
+                <p className="text-sm text-text-secondary">Your session has expired. Please refresh the page to continue.</p>
               </div>
             ) : shownTickets.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-10 text-center">
