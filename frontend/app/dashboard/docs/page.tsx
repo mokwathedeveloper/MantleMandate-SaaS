@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Search, X, ArrowLeft, Clock, ChevronRight,
@@ -1026,10 +1026,11 @@ const QUICK_TABS = [
 
 // ─── Article view ─────────────────────────────────────────────────────────────
 
-function ArticleView({ article, onBack }: { article: Article; onBack: () => void }) {
+function ArticleView({ article, onBack, onOpen }: { article: Article; onBack: () => void; onOpen: (a: Article) => void }) {
   return (
     <div className="max-w-2xl mx-auto">
       <button
+        type="button"
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
       >
@@ -1060,7 +1061,8 @@ function ArticleView({ article, onBack }: { article: Article; onBack: () => void
             .map(a => (
               <button
                 key={a.id}
-                onClick={() => {/* handled by parent */}}
+                type="button"
+                onClick={() => onOpen(a)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm text-text-link hover:bg-card transition-colors text-left group"
               >
                 <span className="group-hover:underline underline-offset-2">{a.title}</span>
@@ -1081,6 +1083,7 @@ function ArticleView({ article, onBack }: { article: Article; onBack: () => void
 export default function DocsPage() {
   const [query,    setQuery]    = useState('')
   const [selected, setSelected] = useState<Article | null>(null)
+  const topRef = useRef<HTMLDivElement>(null)
 
   const searchResults = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -1093,16 +1096,23 @@ export default function DocsPage() {
   const showSearch  = query.trim().length > 0
   const showArticle = !!selected && !showSearch
 
-  const openArticle = (article: Article) => {
+  // scrollIntoView reaches the layout's overflow-y-auto container; window.scrollTo cannot
+  const openArticle = useCallback((article: Article) => {
     setQuery('')
     setSelected(article)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
-  const goBack = () => setSelected(null)
+  const goBack = useCallback(() => {
+    setSelected(null)
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   return (
     <div className="p-4 sm:p-6 pb-12 space-y-8 max-w-5xl mx-auto">
+
+      {/* scroll anchor — scrollIntoView reaches the layout's overflow-y-auto container */}
+      <div ref={topRef} />
 
       {/* ── Header ── */}
       <div className="text-center space-y-2 pt-2">
@@ -1134,6 +1144,7 @@ export default function DocsPage() {
           {QUICK_TABS.map(tab => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => openArticle(ALL_ARTICLES.find(a => a.id === tab.articleId)!)}
               className="px-4 py-1.5 rounded-full border border-border text-sm text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
             >
@@ -1158,6 +1169,7 @@ export default function DocsPage() {
               {searchResults.map(a => (
                 <button
                   key={a.id}
+                  type="button"
                   onClick={() => openArticle(a)}
                   className="w-full flex items-center justify-between p-3 rounded-lg bg-card border border-border hover:border-primary transition-colors text-left group"
                 >
@@ -1181,6 +1193,7 @@ export default function DocsPage() {
         <ArticleView
           article={selected}
           onBack={goBack}
+          onOpen={openArticle}
         />
       )}
 
@@ -1203,6 +1216,7 @@ export default function DocsPage() {
                 {cat.articles.map(article => (
                   <button
                     key={article.id}
+                    type="button"
                     onClick={() => openArticle(article)}
                     className="flex items-center justify-between p-3.5 rounded-lg bg-card border border-border hover:border-primary transition-colors text-left group"
                   >
@@ -1218,6 +1232,7 @@ export default function DocsPage() {
               </div>
 
               <button
+                type="button"
                 onClick={() => openArticle(cat.articles[0])}
                 className="flex items-center gap-1 text-xs text-text-link hover:underline underline-offset-2"
               >

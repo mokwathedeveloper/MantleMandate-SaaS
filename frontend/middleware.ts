@@ -27,15 +27,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Prefer getUser() (server-validates the token and triggers a refresh when
-  // the access token is expired but the refresh token is still valid).
-  // If the Supabase auth server is unreachable we fall back to getSession()
-  // which reads the JWT from cookies locally — no network call, no redirect
-  // to /login on a transient network hiccup.
+  // getUser() validates the JWT with Supabase and refreshes if needed.
+  // Hard 4-second timeout: when DNS fails for the Supabase host, Node's
+  // resolver can hang 30+ seconds before rejecting — past Vercel's 10s
+  // function limit, causing a 504. If we lose the race, fall back to
+  // getSession() which decodes the JWT from cookies locally with no network.
   let user = null
   try {
-    const { data, error } = await supabase.auth.getUser()
-    if (!error) user = data.user
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('supabase_timeout')), 4000)
+      ),
+    ])
+    if (!result.error) user = result.data.user
   } catch {
     const { data: { session } } = await supabase.auth.getSession()
     user = session?.user ?? null

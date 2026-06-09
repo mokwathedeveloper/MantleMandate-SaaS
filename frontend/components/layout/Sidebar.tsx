@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileText, TrendingUp, Zap, Shield,
-  Bot, Gauge, Network, Code2,
+  Bot, Gauge, Network, Code2, BookOpen,
   Bell, BarChart2, Settings, HelpCircle, CreditCard,
   Users, Wallet,
   LogOut, X,
@@ -46,6 +46,7 @@ const ACCOUNT: NavItem[] = [
   { href: '/dashboard/reports',        label: 'Reports',  Icon: BarChart2 },
   { href: '/dashboard/billing',        label: 'Billing',  Icon: CreditCard },
   { href: '/dashboard/settings',       label: 'Settings', Icon: Settings },
+  { href: '/dashboard/docs',           label: 'Docs',     Icon: BookOpen },
   { href: '/dashboard/support',        label: 'Support',  Icon: HelpCircle },
 ]
 
