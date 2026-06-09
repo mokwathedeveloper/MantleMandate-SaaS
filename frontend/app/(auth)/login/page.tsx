@@ -19,6 +19,21 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
+function friendlyAuthError(error: unknown, fallback: string): string {
+  const e = error as { message?: string; status?: number }
+  const msg = e?.message ?? ''
+  const status = e?.status ?? 0
+  if (status === 429 || msg.toLowerCase().includes('rate limit'))
+    return 'Too many attempts — please wait a few minutes and try again.'
+  if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials'))
+    return 'Incorrect email or password.'
+  if (msg.includes('Email not confirmed'))
+    return 'Please confirm your email address before signing in.'
+  if (msg.includes('already registered') || msg.includes('already been registered'))
+    return 'An account with this email already exists — try signing in instead.'
+  return msg || fallback
+}
+
 /* ─── Feature list item ─────────────────────────────────────────────── */
 
 function FeatureItem({ emoji, title, body }: { emoji: string; title: string; body: string }) {
@@ -94,10 +109,7 @@ function LoginPageInner() {
     login({ email, password })
   }
 
-  const apiError = error
-    ? ((error as { response?: { data?: { message?: string } } }).response?.data?.message
-        ?? 'Incorrect email or password. Please try again.')
-    : null
+  const apiError = error ? friendlyAuthError(error, 'Incorrect email or password.') : null
 
   return (
     <AuthShell leftPanel={<LoginLeftPanel />}>

@@ -31,6 +31,21 @@ const schema = z
 
 type FormData = z.infer<typeof schema>
 
+function friendlyAuthError(error: unknown, fallback: string): string {
+  const e = error as { message?: string; status?: number }
+  const msg = e?.message ?? ''
+  const status = e?.status ?? 0
+  if (status === 429 || msg.toLowerCase().includes('rate limit'))
+    return 'Too many signup attempts — please wait a few minutes and try again.'
+  if (msg.includes('already registered') || msg.includes('already been registered'))
+    return 'An account with this email already exists — try signing in instead.'
+  if (msg.includes('invalid') && msg.toLowerCase().includes('email'))
+    return 'Please enter a valid email address.'
+  if (msg.includes('weak') || msg.includes('password'))
+    return 'Password is too weak. Use at least 8 characters with uppercase and a number.'
+  return msg || fallback
+}
+
 // ── Password Strength ─────────────────────────────────────────────────────────
 
 function PasswordStrength({ password }: { password: string }) {
@@ -138,9 +153,7 @@ function SignupPageInner() {
   const onSubmit = ({ name, email, password, company }: FormData) =>
     signup({ name, email, password, company })
 
-  const apiError = error
-    ? ((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Signup failed. Please try again.')
-    : null
+  const apiError = error ? friendlyAuthError(error, 'Signup failed. Please try again.') : null
 
   return (
     <AuthShell leftPanel={<SignupLeftPanel />}>
