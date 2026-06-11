@@ -64,10 +64,16 @@ export async function getSpotTicker(bybitSymbol: string): Promise<BybitTicker | 
       `${BASE}/v5/market/tickers?category=spot&symbol=${bybitSymbol}`,
       { next: { revalidate: 30 } }
     )
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.error('[bybit] getSpotTicker non-OK response', bybitSymbol, res.status, await res.text())
+      return null
+    }
     const json = await res.json()
     const item = json?.result?.list?.[0]
-    if (!item) return null
+    if (!item) {
+      console.error('[bybit] getSpotTicker empty result', bybitSymbol, JSON.stringify(json))
+      return null
+    }
     const lastPrice = safeFloat(item.lastPrice)
     if (lastPrice === 0) return null  // unusable ticker — treat as missing
     return {
@@ -77,7 +83,8 @@ export async function getSpotTicker(bybitSymbol: string): Promise<BybitTicker | 
       volume24h:    safeFloat(item.volume24h),
       turnover24h:  safeFloat(item.turnover24h),
     }
-  } catch {
+  } catch (err) {
+    console.error('[bybit] getSpotTicker fetch error', bybitSymbol, err)
     return null
   }
 }
@@ -99,7 +106,10 @@ export async function getKlines(
       `${BASE}/v5/market/kline?category=spot&symbol=${bybitSymbol}&interval=${interval}&limit=${limit}`,
       { next: { revalidate: 60 } }
     )
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.error('[bybit] getKlines non-OK response', bybitSymbol, res.status, await res.text())
+      return []
+    }
     const json = await res.json()
     const list: string[][] = json?.result?.list ?? []
     return list.reverse().map(k => ({
@@ -110,7 +120,8 @@ export async function getKlines(
       close:    safeFloat(k[4]),
       volume:   safeFloat(k[5]),
     }))
-  } catch {
+  } catch (err) {
+    console.error('[bybit] getKlines fetch error', bybitSymbol, err)
     return []
   }
 }
