@@ -19,7 +19,7 @@ export async function chat(messages: Message[], opts?: { temperature?: number })
       model: MODEL,
       messages,
       temperature: opts?.temperature ?? 0.2,
-      max_tokens: 1024,
+      max_tokens: 512,
     }),
   })
 
