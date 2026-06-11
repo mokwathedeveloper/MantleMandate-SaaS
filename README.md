@@ -1,45 +1,59 @@
-# MantleMandate
+<div align="center">
 
-AI-powered trading mandate platform on Mantle Network. Write trading rules in plain English — MantleMandate compiles them into enforceable on-chain policies, deploys AI agents to execute them, and provides a verifiable audit trail of every decision.
+<img src="logo/MantleMandatelogo.png" alt="MantleMandate" width="120" />
 
-**Turing Test Hackathon 2026 — Trading & Strategy track**
+# ⚡ MantleMandate
+
+### Write Trading Rules in Plain English. AI Enforces Them On-Chain.
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-mantle--mandate--saa--s.vercel.app-65B46B?style=for-the-badge)](https://mantle-mandate-saa-s.vercel.app)
+[![Network](https://img.shields.io/badge/Network-Mantle_Sepolia_Testnet-1A1A1A?style=for-the-badge&logo=ethereum&logoColor=white)](https://explorer.sepolia.mantle.xyz)
+[![Track](https://img.shields.io/badge/Track-Trading_%26_Strategy-6366f1?style=for-the-badge)](docs/Turing_Test_Hackathon_Requirements.md)
+[![Contracts](https://img.shields.io/badge/Contracts-Verified_on_Sourcify-10b981?style=for-the-badge)](https://explorer.sepolia.mantle.xyz/address/0x690Ab021b40a01E9f3818CdBa149fb5721480871)
+[![License](https://img.shields.io/badge/License-MIT-f59e0b?style=for-the-badge)](LICENSE)
+
+> **Turing Test Hackathon 2026 — Trading & Strategy Track**
+
+*Write a trading rule in English → Claude AI compiles it into a structured policy → the policy hash is committed on-chain → an AI agent executes it, with every decision — including holds — traceable to a live RSI reading, a Bybit price snapshot, and an on-chain `OrderExecuted` / `Swap` event.*
+
+</div>
 
 ---
 
-## Live Demo
+## 🌐 Live Demo & Contracts
 
 | Resource | Link |
 |----------|------|
-| Frontend | https://mantle-mandate-saa-s.vercel.app |
-| MandatePolicy Contract | [0x690Ab021b40a01E9f3818CdBa149fb5721480871](https://explorer.sepolia.mantle.xyz/address/0x690Ab021b40a01E9f3818CdBa149fb5721480871) |
-| AgentExecutor Contract | [0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6](https://explorer.sepolia.mantle.xyz/address/0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6) |
-| RiskGuard Contract | [0x8D99D4F922248852Bc678bd4018F9f3E4576E34B](https://explorer.sepolia.mantle.xyz/address/0x8D99D4F922248852Bc678bd4018F9f3E4576E34B) |
-| MockSwapPool (mUSD/mWETH AMM) | [0x3440d742bbbAe391b95E40FAF62d7a715582a4ad](https://explorer.sepolia.mantle.xyz/address/0x3440d742bbbAe391b95E40FAF62d7a715582a4ad) |
-| Network | Mantle Sepolia Testnet (Chain ID 5003) |
+| 🖥️ Frontend | [mantle-mandate-saa-s.vercel.app](https://mantle-mandate-saa-s.vercel.app) |
+| 📜 MandatePolicy | [`0x690Ab021b40a01E9f3818CdBa149fb5721480871`](https://explorer.sepolia.mantle.xyz/address/0x690Ab021b40a01E9f3818CdBa149fb5721480871) |
+| 🤖 AgentExecutor | [`0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6`](https://explorer.sepolia.mantle.xyz/address/0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6) |
+| 🛡️ RiskGuard | [`0x8D99D4F922248852Bc678bd4018F9f3E4576E34B`](https://explorer.sepolia.mantle.xyz/address/0x8D99D4F922248852Bc678bd4018F9f3E4576E34B) |
+| 🔄 MockSwapPool (mUSD/mWETH AMM) | [`0x3440d742bbbAe391b95E40FAF62d7a715582a4ad`](https://explorer.sepolia.mantle.xyz/address/0x3440d742bbbAe391b95E40FAF62d7a715582a4ad) |
+| ⛓️ Network | Mantle Sepolia Testnet · Chain ID `5003` |
 
 ---
 
-## The Problem
+## ❓ The Problem
 
 DeFi trading requires constant attention, technical expertise, and emotional discipline. Individual traders and small institutions lack tools to enforce strategy rules systematically — they trade on gut, break their own rules, and have no audit trail.
 
-## The Solution
+## 💡 The Solution
 
 MantleMandate lets you write your investment strategy in plain English. Claude AI parses it into a structured policy, hashes it on-chain (immutable proof), and deploys an AI agent to execute it automatically — every decision recorded on Mantle Network forever.
 
 **One-line pitch:** Write a trading rule in English → AI enforces it on-chain.
 
-### Why this matters (Blockchain-for-Good)
+### 🌱 Why This Matters (Blockchain-for-Good)
 
 Algorithmic, rule-based execution has historically been available only to funds and institutions with engineering teams. MantleMandate compiles a plain-English mandate into the same kind of policy-as-code institutions use — RSI-based entries, position-size caps, stop-loss/take-profit, cooldowns — and **commits it on-chain before any trade runs**, so the rules can't be silently changed after the fact.
 
 This is deliberately not a "maximize PnL" leaderboard. The product is graded on **whether the agent followed its own committed rules**, with every decision (including holds) traceable to a live RSI reading, a Bybit price snapshot, and an on-chain `OrderExecuted`/`Swap` event. That's the same transparency a retail user would otherwise have no way to get from a black-box trading bot — reducing the information gap between retail and institutional execution, not chasing the highest return.
 
-The platform's own subscription fee ($29–$299/mo, see [Plans](#plans)) is flat and disclosed upfront — it does not scale with trade volume or PnL, so there's no incentive for the platform to encourage more or larger trades than a mandate calls for.
+The platform's own subscription fee ($29–$299/mo, see [Plans](#-plans)) is flat and disclosed upfront — it does not scale with trade volume or PnL, so there's no incentive for the platform to encourage more or larger trades than a mandate calls for.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -68,7 +82,7 @@ The platform's own subscription fee ($29–$299/mo, see [Plans](#plans)) is flat
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Core User Flow
+### 🔄 Core User Flow
 
 ```
 1. Write mandate in plain English
@@ -86,7 +100,7 @@ The platform's own subscription fee ($29–$299/mo, see [Plans](#plans)) is flat
 7. Full audit trail readable from on-chain OrderExecuted events
 ```
 
-### AI Decision Pipeline
+### 🧠 AI Decision Pipeline
 
 Each trading cycle (`runAgentTick` in `frontend/lib/agentTick.ts`) is a deterministic pipeline, not a single opaque LLM call:
 
@@ -106,20 +120,20 @@ shown in the dashboard for every cycle — including cycles where the agent deci
 to trade — so a user can audit whether the agent is actually following the mandate's
 trigger condition, not just trust that it is.
 
-### Smart Contracts
+### ⛓️ Smart Contracts
 
 | Contract | Address (Mantle Sepolia) | Purpose |
 |----------|--------------------------|---------|
-| `MandatePolicy` | `0x690Ab021b40a01E9f3818CdBa149fb5721480871` | Immutable policy hash registry |
-| `AgentExecutor` | `0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6` | Agent lifecycle + trade execution |
-| `RiskGuard` | `0x8D99D4F922248852Bc678bd4018F9f3E4576E34B` | On-chain risk parameter enforcement |
-| `MockSwapPool` | `0x3440d742bbbAe391b95E40FAF62d7a715582a4ad` | mUSD/mWETH constant-product AMM — agents execute real on-chain swaps here (Merchant Moe / Agni Finance have no Sepolia deployment to swap against) |
-| `mUSD` (mock ERC20) | `0x61806e0D29b0aa200dC26e9C1F0380707a3210c9` | Test USD token, 6 decimals |
-| `mWETH` (mock ERC20) | `0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF` | Test ETH token, 18 decimals |
+| 📜 `MandatePolicy` | `0x690Ab021b40a01E9f3818CdBa149fb5721480871` | Immutable policy hash registry |
+| 🤖 `AgentExecutor` | `0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6` | Agent lifecycle + trade execution |
+| 🛡️ `RiskGuard` | `0x8D99D4F922248852Bc678bd4018F9f3E4576E34B` | On-chain risk parameter enforcement |
+| 🔄 `MockSwapPool` | `0x3440d742bbbAe391b95E40FAF62d7a715582a4ad` | mUSD/mWETH constant-product AMM — agents execute real on-chain swaps here (Merchant Moe / Agni Finance have no Sepolia deployment to swap against) |
+| 💵 `mUSD` (mock ERC20) | `0x61806e0D29b0aa200dC26e9C1F0380707a3210c9` | Test USD token, 6 decimals |
+| Ξ `mWETH` (mock ERC20) | `0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF` | Test ETH token, 18 decimals |
 
 All six contracts are verified on Sourcify (full match), synced to Mantle Explorer.
 
-### AI Integration (Claude)
+### 🤖 AI Integration (Claude)
 
 The mandate parser (`/api/mandates/parse`) calls Anthropic Claude with a structured prompt. It extracts:
 - `asset` — which token to trade
@@ -131,31 +145,120 @@ The mandate parser (`/api/mandates/parse`) calls Anthropic Claude with a structu
 
 The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic commitment to the strategy.
 
-### Strategy Design & Risk Management
+### 🛡️ Strategy Design & Risk Management
 
 - **The mandate's bound wins, not the model's.** The AI recommends a position size (`amount_pct`), but `runAgentTick` clamps it to the mandate's own `riskPerTrade` ceiling before any execution — a confident "buy 80%" from Claude cannot exceed what the user's mandate allows, regardless of the AI's recommendation (`agentTick.ts`).
 - **Fail closed on bad data.** If Bybit data is unavailable or the RSI can't be computed, the agent records "no trade" rather than guessing — an LLM is never asked to trade on data it doesn't have (`agentTick.ts`, "Live market data unavailable" path).
 - **Confidence floor.** Claude's own confidence score must clear 65/100 before any trade is considered, and every "hold" or sub-threshold decision is still recorded and visible — so a user can see the agent *choosing not to act* as evidence it isn't over-trading.
 - **On-chain kill switch.** `AgentExecutor.sol` models each agent as `Inactive → Active ⇄ Paused → Stopped`, enforced in the contract itself: `executeOrder()` reverts with `"AgentExecutor: agent not active"` for any agent that isn't `Active`. A user can pause an agent on-chain at any time.
-- **`RiskGuard.sol`** (deployed and verified at the address above) implements full on-chain enforcement of drawdown limits, max concurrent positions, per-trade cooldowns, and position-size bounds via `checkOrder()`. It is not yet called from the live tick path — today those bounds are enforced in `agentTick.ts` itself (drawdown is read from Supabase and fed to the AI as context; position sizing is hard-capped as above). Wiring `checkOrder()` into `runAgentTick` so these bounds are enforced on-chain, not just in application code, is the top item under [Future Improvements](#future-improvements).
+- **`RiskGuard.sol`** (deployed and verified at the address above) implements full on-chain enforcement of drawdown limits, max concurrent positions, per-trade cooldowns, and position-size bounds via `checkOrder()`. It is not yet called from the live tick path — today those bounds are enforced in `agentTick.ts` itself (drawdown is read from Supabase and fed to the AI as context; position sizing is hard-capped as above). Wiring `checkOrder()` into `runAgentTick` so these bounds are enforced on-chain, not just in application code, is the top item under [Future Improvements](#-future-improvements).
 - **Known limitation:** market-data inputs (Bybit price/volume/RSI) are read but not cross-validated against a second source. A manipulated or stale feed could still produce a misleading — though position-size-bounded — recommendation.
 
 ---
 
-## Stack
+## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 · TypeScript · Tailwind CSS · wagmi · viem |
-| Backend | Flask 3.x · Python 3.12 · SQLAlchemy · Celery · Flask-SocketIO |
-| AI | Anthropic Claude 3.5 (mandate parsing) · Bybit API (market data) |
-| Blockchain | Solidity 0.8.24 · Hardhat · Mantle Sepolia Testnet |
-| Database | PostgreSQL 15 (Supabase) · Redis 7 |
-| Auth | Supabase Auth |
+### ⛓️ Blockchain & Smart Contracts
+![Solidity](https://img.shields.io/badge/Solidity_0.8.x-363636?style=flat-square&logo=solidity)
+![Hardhat](https://img.shields.io/badge/Hardhat-FFF100?style=flat-square&logo=hardhat&logoColor=black)
+![Mantle](https://img.shields.io/badge/Mantle_Sepolia-65B46B?style=flat-square)
+![Sourcify](https://img.shields.io/badge/Verified-Sourcify-10b981?style=flat-square)
+
+- 5 production contracts deployed + verified on Mantle Sepolia (Chain ID `5003`)
+- `MandatePolicy` — immutable on-chain policy hash registry
+- `AgentExecutor` — agent lifecycle (`Inactive → Active ⇄ Paused → Stopped`) + `executeOrder()`
+- `RiskGuard` — drawdown, position-size, cooldown and max-position checks via `checkOrder()`
+- `MockSwapPool` + `mUSD`/`mWETH` — constant-product AMM for real on-chain swap execution
+
+### 🌐 Frontend
+![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![wagmi](https://img.shields.io/badge/wagmi_v3-000000?style=flat-square)
+![viem](https://img.shields.io/badge/viem_v2-000000?style=flat-square)
+![TanStack Query](https://img.shields.io/badge/TanStack_Query_v5-FF4154?style=flat-square&logo=reactquery&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod_v4-3E67B1?style=flat-square&logo=zod&logoColor=white)
+
+- 22+ dashboard pages: agents, mandates, portfolio, trades, on-chain audit, risk engine, docs, support
+- `ChatWidget` — Claude-powered support chat grounded in the docs hub (lite-RAG)
+- MetaMask / wagmi wallet integration for on-chain mandate anchoring
+
+### 🔧 Backend
+![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask_3-000000?style=flat-square&logo=flask)
+![Celery](https://img.shields.io/badge/Celery-37814A?style=flat-square&logo=celery&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat-square)
+![Flask--SocketIO](https://img.shields.io/badge/Flask--SocketIO-000000?style=flat-square&logo=socket.io&logoColor=white)
+
+- Flask 3.x REST API with JWT auth, rate limiting (Flask-Limiter), and CORS
+- Celery + Celery Beat for scheduled agent ticks
+- 49/49 backend tests passing (`pytest`)
+
+### 🗄️ Database & Auth
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis_7-DC382D?style=flat-square&logo=redis&logoColor=white)
+
+- Supabase Postgres for relational data (mandates, agents, trades, users)
+- Supabase Auth for email/password sessions
+- Redis as the Celery broker/result backend
+
+### 🤖 AI & Market Data
+![Claude](https://img.shields.io/badge/Claude_Sonnet_4.5-D97757?style=flat-square)
+![Bybit](https://img.shields.io/badge/Bybit_API-F7A600?style=flat-square)
+
+- Anthropic Claude Sonnet 4.5 (via OpenRouter) — mandate parsing + per-cycle trade decisions
+- Bybit public spot API — live ticker + klines for RSI computation
 
 ---
 
-## Quick Start
+## 📁 Project Structure
+
+```
+MantleMandate-SaaS/
+│
+├── 🌐 frontend/                    # Next.js 14 · TypeScript · Tailwind
+│   ├── app/
+│   │   ├── (auth)/                 # Login / signup
+│   │   ├── api/
+│   │   │   ├── agents/[id]/tick/   # On-chain trading-cycle execution
+│   │   │   ├── agents/decide/      # AI decision pipeline (RSI + Bybit + Claude)
+│   │   │   └── support/chat/       # Docs-grounded support chat (lite-RAG)
+│   │   └── dashboard/              # 22+ pages: agents, mandates, portfolio, risk, docs...
+│   ├── lib/
+│   │   ├── agentDecision.ts        # getTradeDecision() — RSI + live data → Claude
+│   │   ├── agentTick.ts            # runAgentTick() — gate, swap, executeOrder
+│   │   ├── indicators.ts           # calculateRSI() — Wilder's RSI(14)
+│   │   ├── bybit.ts                # Bybit spot ticker + klines client
+│   │   ├── contracts.ts            # ABIs + deployed addresses
+│   │   └── serverWallet.ts         # Service wallet (shadow agent execution)
+│   └── hooks/                      # useAgents, useMandates, etc. (TanStack Query)
+│
+├── 🔧 backend/                     # Flask 3.x · Python 3.12 · Celery
+│   ├── app/                        # Routes, models, services
+│   ├── ai/                         # Mandate parsing (Claude)
+│   ├── migrations/                 # Flask-Migrate / Alembic
+│   └── tests/                      # 49/49 passing
+│
+├── ⛓️ blockchain/                  # Solidity 0.8.x · Hardhat
+│   ├── contracts/
+│   │   ├── MandatePolicy.sol       # Policy hash registry
+│   │   ├── AgentExecutor.sol       # Agent lifecycle + executeOrder
+│   │   ├── RiskGuard.sol           # On-chain risk parameter checks
+│   │   ├── MockSwapPool.sol        # mUSD/mWETH constant-product AMM
+│   │   └── MockERC20.sol           # mUSD / mWETH test tokens
+│   └── scripts/                    # deploy.ts / verify.ts
+│
+├── 🗄️ supabase/
+│   └── migrations/                 # SQL schema migrations
+│
+└── 📚 docs/                        # Architecture, audits, hackathon strategy docs
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -163,13 +266,13 @@ The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic 
 - Python 3.12+
 - Docker + Docker Compose
 
-### 1. Start infrastructure
+### 1️⃣ Start infrastructure
 
 ```bash
 docker compose up -d
 ```
 
-### 2. Backend
+### 2️⃣ Backend
 
 ```bash
 cd backend
@@ -181,7 +284,7 @@ flask db upgrade
 python run.py
 ```
 
-### 3. Frontend
+### 3️⃣ Frontend
 
 ```bash
 cd frontend
@@ -192,7 +295,7 @@ npm run dev
 
 Open http://localhost:3000
 
-### 4. Smart contracts (already deployed — for local dev only)
+### 4️⃣ Smart contracts (already deployed — for local dev only)
 
 ```bash
 cd blockchain
@@ -205,10 +308,10 @@ npx hardhat run scripts/deploy.ts --network mantle_testnet
 npx hardhat run scripts/verify.ts --network mantle_testnet
 ```
 
-### Environment Variables
+### 🔑 Environment Variables
 
 **Frontend** (`frontend/.env.local`):
-```
+```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_MANTLE_RPC_URL=https://rpc.sepolia.mantle.xyz
@@ -222,7 +325,7 @@ NEXT_PUBLIC_SWAP_POOL_CONTRACT=0x3440d742bbbAe391b95E40FAF62d7a715582a4ad
 ```
 
 **Backend** (`.env`):
-```
+```env
 ANTHROPIC_API_KEY=
 DATABASE_URL=postgresql://...
 MANTLE_PRIVATE_KEY=
@@ -231,7 +334,7 @@ MANTLE_TESTNET_RPC_URL=https://rpc.sepolia.mantle.xyz
 
 ---
 
-## Demo Flow (for judges)
+## 🎬 Demo Flow (for Judges)
 
 1. **Login** at the live demo URL
 2. **Create a mandate** — type: `"Buy ETH when RSI drops below 30. Max 20% position. Stop loss at 2%."`
@@ -239,12 +342,12 @@ MANTLE_TESTNET_RPC_URL=https://rpc.sepolia.mantle.xyz
 4. **Anchor on-chain** — click "Anchor Policy On-Chain", sign with MetaMask
 5. **Deploy agent** — select the mandate, deploy AI agent
 6. **Register on Mantle** — agent registered in AgentExecutor contract on-chain
-7. **Run Trading Cycle** — agent fetches live Bybit market data, Claude makes a buy/sell/hold decision, and for ETH the agent swaps mUSD↔mWETH on the on-chain MockSwapPool, then records the order via `AgentExecutor.executeOrder()` referencing the swap's tx hash
+7. **Run Trading Cycle** — agent fetches live Bybit market data + RSI(14), Claude makes a buy/sell/hold decision, and for ETH the agent swaps mUSD↔mWETH on the on-chain MockSwapPool, then records the order via `AgentExecutor.executeOrder()` referencing the swap's tx hash
 8. **View audit trail** — live OrderExecuted + Swap events from Mantle Sepolia
 
 ---
 
-## Hackathon Tracks
+## 🏆 Hackathon Tracks
 
 This project is submitted under the **Trading & Strategy** track:
 
@@ -255,27 +358,27 @@ This project is submitted under the **Trading & Strategy** track:
 
 Also eligible for:
 - **Best UI/UX Award** — premium dark dashboard, glassmorphic auth, 30+ screens
-- **20 Project Deployment Award** — 3 contracts deployed + verified, public frontend, AI callable on-chain
+- **20 Project Deployment Award** — 5 contracts deployed + verified, public frontend, AI callable on-chain
 
 ---
 
-## Plans
+## 💳 Plans
 
 | Plan | Price | Target |
 |------|-------|--------|
-| Operator | $29/mo | Individual DeFi traders |
-| Strategist | $99/mo | Active quant traders |
-| Institution | $299/mo | Funds and DAOs |
+| 🧑‍💻 Operator | $29/mo | Individual DeFi traders |
+| 📈 Strategist | $99/mo | Active quant traders |
+| 🏛️ Institution | $299/mo | Funds and DAOs |
 
 ---
 
-## Known Limitations (Hackathon MVP)
+## ⚠️ Known Limitations (Hackathon MVP)
 
 - Agent execution swaps against a project-deployed mUSD/mWETH MockSwapPool, not Merchant Moe / Agni Finance — those DEXes have no Mantle Sepolia deployment to integrate against on testnet
 - Demo uses Mantle Sepolia Testnet (not Mainnet)
 - OAuth (Google/Microsoft) is UI-only; email/password auth is fully functional
 
-## Future Improvements
+## 🗺️ Future Improvements
 
 - Wire `RiskGuard.checkOrder()` into `runAgentTick` so drawdown, cooldown, max-position, and position-size bounds are enforced on-chain per trade, not only in application code
 - Cross-validate Bybit market data against a second price source before acting on it
@@ -283,3 +386,17 @@ Also eligible for:
 - Byreal Agent Skills integration for advanced LP strategies
 - Mainnet deployment with multisig agent treasury
 - Mobile app for real-time alerts and mandate management
+
+---
+
+<div align="center">
+
+Built for the Turing Test Hackathon 2026
+
+`#TuringTestHackathon` · `#MantleNetwork` · `#AITrading`
+
+**[🌐 Live Demo](https://mantle-mandate-saa-s.vercel.app)** · **[📜 Contracts](https://explorer.sepolia.mantle.xyz/address/0x690Ab021b40a01E9f3818CdBa149fb5721480871)** · **[📚 Docs](frontend/app/dashboard/docs)**
+
+⚖️ MIT License
+
+</div>
