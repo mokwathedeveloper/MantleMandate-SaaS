@@ -89,7 +89,7 @@ celerybeat.pid
 *.sqlite3
 
 # Logs
-logs/
+/logs/
 
 # Memory/scratch files
 memory/
