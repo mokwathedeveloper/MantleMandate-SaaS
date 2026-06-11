@@ -356,6 +356,8 @@ export default function NewMandatePage() {
         capital_cap:   capital_cap ?? undefined,
         risk_params:   { maxDrawdown, maxPosition, stopLoss, maxPositions, cooldownHours },
         status:        'active',
+        parsed_policy: parseResult ?? null,
+        policy_hash:   policyHash  ?? null,
       },
       { onSuccess: (m) => router.push(`/dashboard/mandates/${m.id}`) },
     )

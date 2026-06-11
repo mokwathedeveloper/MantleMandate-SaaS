@@ -186,6 +186,8 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
         base_currency: baseCurrency,
         capital_cap: capitalCap ? Number(capitalCap) : undefined,
         risk_params: { maxDrawdown, maxPosition, stopLoss, maxPositions, cooldownHours },
+        parsed_policy: parseResult ?? undefined,
+        policy_hash:   policyHash  ?? undefined,
       },
       { onSuccess: () => router.push(`/dashboard/mandates/${id}`) },
     )

@@ -108,6 +108,8 @@ interface CreatePayload {
   capital_cap?:   number
   risk_params?:   Record<string, number>
   status?:        'draft' | 'active'
+  parsed_policy?: Record<string, unknown> | null
+  policy_hash?:   string | null
 }
 
 export function useCreateMandate() {
@@ -127,6 +129,8 @@ export function useCreateMandate() {
           capital_cap:   payload.capital_cap   ?? null,
           risk_params:   payload.risk_params   ?? {},
           status:        payload.status ?? 'draft',
+          parsed_policy: payload.parsed_policy ?? null,
+          policy_hash:   payload.policy_hash   ?? null,
         })
         .select()
         .single()
@@ -151,6 +155,8 @@ export function useUpdateMandate(id: string) {
           ...(payload.capital_cap   !== undefined && { capital_cap: payload.capital_cap }),
           ...(payload.risk_params   && { risk_params: payload.risk_params }),
           ...(payload.status        && { status: payload.status as Mandate['status'] }),
+          ...(payload.parsed_policy !== undefined && { parsed_policy: payload.parsed_policy }),
+          ...(payload.policy_hash   !== undefined && { policy_hash: payload.policy_hash }),
         })
         .eq('id', id)
         .select()
