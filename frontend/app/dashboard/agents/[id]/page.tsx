@@ -8,18 +8,19 @@ import {
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import {
   ChevronLeft, Pause, Play, Square, Activity, Hash, FileText,
-  Shield, Settings2, ClipboardList, Copy, CheckCircle2, ExternalLink,
+  Shield, Settings2, ClipboardList, Copy, CheckCircle2, ExternalLink, Zap,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AlertBanner } from '@/components/ui/AlertBanner'
-import { useAgent, usePauseAgent, useResumeAgent, useStopAgent } from '@/hooks/useAgents'
+import { useAgent, usePauseAgent, useResumeAgent, useStopAgent, useRunAgentTick } from '@/hooks/useAgents'
 import { useMandate } from '@/hooks/useMandates'
 import { useQuery } from '@tanstack/react-query'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { MANTLE_TESTNET_EXPLORER } from '@/lib/constants'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Trade, AuditLog } from '@/types/trade'
 import type { Agent } from '@/types/agent'
@@ -428,7 +429,7 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
                     <td className="px-4 py-2.5">
                       {t.txHash ? (
                         <a
-                          href={`https://explorer.mantle.xyz/tx/${t.txHash}`}
+                          href={`${MANTLE_TESTNET_EXPLORER}/tx/${t.txHash}`}
                           target="_blank"
                           rel="noreferrer"
                           className="flex items-center gap-1 text-text-secondary hover:text-primary transition-colors"
@@ -568,7 +569,7 @@ function MandateTab({ mandateId }: { mandateId: string }) {
                 </button>
                 {mandate.onChainTx && (
                   <a
-                    href={`https://explorer.mantle.xyz/tx/${mandate.onChainTx}`}
+                    href={`${MANTLE_TESTNET_EXPLORER}/tx/${mandate.onChainTx}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
@@ -635,7 +636,7 @@ function AuditTrailTab({ logs, total }: { logs: AuditLog[]; total: number }) {
                   )}
                   {log.txHash && (
                     <a
-                      href={`https://explorer.mantle.xyz/tx/${log.txHash}`}
+                      href={`${MANTLE_TESTNET_EXPLORER}/tx/${log.txHash}`}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-1 text-[10px] text-text-secondary hover:text-primary transition-colors mt-0.5 w-fit"
@@ -768,9 +769,10 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   const { mutate: pause,  isPending: pausing  } = usePauseAgent()
   const { mutate: resume, isPending: resuming } = useResumeAgent()
   const { mutate: stop,   isPending: stopping } = useStopAgent()
+  const { mutate: runTick, isPending: ticking, data: tickResult, error: tickError, reset: resetTick } = useRunAgentTick()
 
-  const rawTrades = (tradesData?.data ?? []) as Trade[]
-  const rawLogs   = (logsData?.data ?? []) as AuditLog[]
+  const rawTrades = (Array.isArray(tradesData) ? tradesData : []) as Trade[]
+  const rawLogs   = (Array.isArray(logsData) ? logsData : []) as AuditLog[]
 
   // Fall back to mock data when backend is offline / agent not seeded
   const isMock   = !isLoading && !agent
@@ -828,6 +830,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
         <div className="flex items-center gap-2 sm:shrink-0 self-start sm:self-auto">
           {display.status === 'active' && !isMock && (
             <>
+              <Button variant="primary" size="sm" loading={ticking} onClick={() => runTick(id)}>
+                <Zap className="h-3.5 w-3.5" /> Run Trading Cycle
+              </Button>
               <Button variant="secondary" size="sm" loading={pausing} onClick={() => pause(id)}>
                 <Pause className="h-3.5 w-3.5" /> Pause
               </Button>
@@ -848,6 +853,45 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           )}
         </div>
       </div>
+
+      {/* Trading cycle result */}
+      {tickError && (
+        <AlertBanner severity="error" title="Trading cycle failed" onDismiss={() => resetTick()}>
+          {tickError.message}
+        </AlertBanner>
+      )}
+      {tickResult && (
+        <AlertBanner
+          severity={tickResult.executed ? 'success' : 'info'}
+          title={
+            tickResult.executed
+              ? `Order executed on-chain: ${tickResult.decision.action.toUpperCase()} ${tickResult.decision.asset}`
+              : `AI recommendation: ${tickResult.decision.action.toUpperCase()} (no on-chain trade)`
+          }
+          onDismiss={() => resetTick()}
+        >
+          <p>{tickResult.decision.reasoning}</p>
+          {!tickResult.executed && tickResult.reason && (
+            <p className="mt-1 opacity-80">{tickResult.reason}</p>
+          )}
+          {tickResult.executed && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {tickResult.pnl != null && <span>Estimated P&amp;L: {formatCurrency(tickResult.pnl)}</span>}
+              {tickResult.txHash && (
+                <a
+                  href={`${MANTLE_TESTNET_EXPLORER}/tx/${tickResult.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 underline hover:opacity-80 transition-opacity"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View transaction on Mantle Explorer
+                </a>
+              )}
+            </div>
+          )}
+        </AlertBanner>
+      )}
 
       {/* Tab bar */}
       <div className="flex items-center gap-0 border-b border-border overflow-x-auto">
@@ -874,7 +918,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       )}
 
       {activeTab === 'trades' && (
-        <TradeHistoryTab trades={trades} total={tradesData?.total ?? trades.length} />
+        <TradeHistoryTab trades={trades} total={trades.length} />
       )}
 
       {activeTab === 'mandate' && (

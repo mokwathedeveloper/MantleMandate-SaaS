@@ -197,6 +197,45 @@ export function usePauseAgent()  { return useAgentStatusMutation('paused')  }
 export function useResumeAgent() { return useAgentStatusMutation('active')  }
 export function useStopAgent()   { return useAgentStatusMutation('stopped') }
 
+// ── On-chain trading cycle ────────────────────────────────────────────────────
+
+export interface TickResult {
+  decision: {
+    action:       'buy' | 'sell' | 'hold'
+    confidence:   number
+    reasoning:    string
+    amount_pct:   number
+    urgency:      'low' | 'medium' | 'high'
+    live_price:   number | null
+    price_change: number | null
+    asset:        string
+    source:       'bybit'
+  }
+  executed:        boolean
+  txHash?:         string
+  onchainAgentId?: string
+  pnl?:            number
+  reason?:         string
+}
+
+export function useRunAgentTick() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/agents/${id}/tick`, { method: 'POST' })
+      const json = await res.json() as { data?: TickResult; error?: string }
+      if (!res.ok) throw new Error(json.error ?? 'Trading cycle failed')
+      return json.data!
+    },
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['agents'] })
+      qc.invalidateQueries({ queryKey: ['agents', id] })
+      qc.invalidateQueries({ queryKey: ['agent-trades', id] })
+      qc.invalidateQueries({ queryKey: ['agent-logs', id] })
+    },
+  })
+}
+
 // ── Deploy ────────────────────────────────────────────────────────────────────
 
 interface DeployPayload { name: string; mandateId: string; capitalCap?: number }
