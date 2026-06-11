@@ -2,10 +2,11 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, ArrowRight, Loader2, MailCheck } from 'lucide-react'
 import { useLogin } from '@/hooks/useAuth'
 import {
   AuthShell, BrandLogo, MantleBadge, OrDivider, OAuthButtons,
@@ -99,6 +100,8 @@ const inputBase: React.CSSProperties = {
 function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false)
   const { mutate: login, isPending, error } = useLogin()
+  const searchParams = useSearchParams()
+  const justConfirmed = searchParams.get('confirmed') === '1'
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -126,6 +129,22 @@ function LoginPageInner() {
           Sign in to your MantleMandate account
         </p>
       </div>
+
+      {justConfirmed && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+          padding: '0.75rem 1rem',
+          borderRadius: '10px',
+          border: '1px solid rgba(34,197,94,0.4)',
+          background: 'rgba(15,45,25,0.8)',
+          marginBottom: '1rem',
+        }}>
+          <MailCheck style={{ width: 15, height: 15, color: '#22C55E', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: '13px', color: '#4ADE80', margin: 0, lineHeight: 1.5 }}>
+            Account created — check your email to confirm your address, then sign in below.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} noValidate>
         {/* Email */}
