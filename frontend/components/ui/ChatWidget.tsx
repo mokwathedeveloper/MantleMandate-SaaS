@@ -1,12 +1,18 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Bot, Loader2 } from 'lucide-react'
+import { X, Send, Bot, Loader2, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+interface RelatedDoc {
+  id:    string
+  title: string
+}
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  relatedDocs?: RelatedDoc[]
 }
 
 const SUGGESTED = [
@@ -52,11 +58,12 @@ export function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next }),
       })
-      const data = await res.json() as { reply?: string; error?: string }
+      const data = await res.json() as { reply?: string; error?: string; relatedDocs?: RelatedDoc[] }
       if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`)
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.reply ?? 'Sorry, something went wrong. Please try again.',
+        relatedDocs: data.relatedDocs,
       }])
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Connection error.'
@@ -134,15 +141,33 @@ export function ChatWidget() {
                   <Bot className="h-3.5 w-3.5 text-primary" />
                 </div>
               )}
-              <div className={cn(
-                'max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed',
-                m.role === 'user'
-                  ? 'bg-primary text-white rounded-tr-sm'
-                  : 'text-text-primary rounded-tl-sm',
-              )}
-                style={m.role === 'assistant' ? { background: '#1C2128', border: '1px solid #21262D' } : {}}
-              >
-                {m.content}
+              <div className={cn('flex flex-col gap-1.5', m.role === 'user' ? 'items-end' : 'items-start', 'max-w-[82%]')}>
+                <div className={cn(
+                  'rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed',
+                  m.role === 'user'
+                    ? 'bg-primary text-white rounded-tr-sm'
+                    : 'text-text-primary rounded-tl-sm',
+                )}
+                  style={m.role === 'assistant' ? { background: '#1C2128', border: '1px solid #21262D' } : {}}
+                >
+                  {m.content}
+                </div>
+                {m.relatedDocs && m.relatedDocs.length > 0 && (
+                  <div className="flex flex-col gap-1 w-full">
+                    {m.relatedDocs.map(doc => (
+                      <a
+                        key={doc.id}
+                        href={`/dashboard/docs?article=${doc.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-[12px] text-text-link hover:text-text-link-hover transition-colors"
+                      >
+                        <FileText className="h-3 w-3 shrink-0" />
+                        {doc.title}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}

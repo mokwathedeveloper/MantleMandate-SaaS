@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Search, X, ArrowLeft, Clock, ChevronRight,
@@ -1080,10 +1081,11 @@ function ArticleView({ article, onBack, onOpen }: { article: Article; onBack: ()
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function DocsPage() {
+function DocsPageInner() {
   const [query,    setQuery]    = useState('')
   const [selected, setSelected] = useState<Article | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
 
   const searchResults = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -1107,6 +1109,15 @@ export default function DocsPage() {
     setSelected(null)
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
+
+  // Deep-link support: /dashboard/docs?article=<id> opens that article directly
+  // (used by the support chat's "related docs" links)
+  useEffect(() => {
+    const articleId = searchParams.get('article')
+    if (!articleId) return
+    const article = ALL_ARTICLES.find(a => a.id === articleId)
+    if (article) openArticle(article)
+  }, [searchParams, openArticle])
 
   return (
     <div className="p-4 sm:p-6 pb-12 space-y-8 max-w-5xl mx-auto">
@@ -1265,5 +1276,13 @@ export default function DocsPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function DocsPage() {
+  return (
+    <Suspense>
+      <DocsPageInner />
+    </Suspense>
   )
 }

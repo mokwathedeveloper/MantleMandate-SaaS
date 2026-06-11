@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chat } from '@/lib/openrouter'
+import { findRelevantDocs } from '@/lib/docsKnowledgeBase'
 
 const SYSTEM = `You are a helpful support agent for MantleMandate — an AI-powered DeFi mandate execution platform built on Mantle Network.
 
@@ -48,12 +49,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No valid messages provided' }, { status: 400 })
     }
 
+    // Ground the reply in the docs hub (/dashboard/docs) by retrieving
+    // articles relevant to the user's latest message and injecting their
+    // summaries into the system prompt.
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+    const relevantDocs = lastUserMessage ? findRelevantDocs(lastUserMessage.content, 2) : []
+
+    let system = SYSTEM
+    if (relevantDocs.length > 0) {
+      const context = relevantDocs
+        .map(d => `### ${d.title} (${d.category})\n${d.summary}`)
+        .join('\n\n')
+      system += `\n\nRelevant documentation for this question:\n\n${context}\n\nUse this documentation to ground your answer where relevant. If it doesn't apply to the question, ignore it and answer normally.`
+    }
+
     const reply = await chat(
-      [{ role: 'system', content: SYSTEM }, ...messages],
+      [{ role: 'system', content: system }, ...messages],
       { temperature: 0.7 }
     )
 
-    return NextResponse.json({ reply })
+    return NextResponse.json({
+      reply,
+      relatedDocs: relevantDocs.map(d => ({ id: d.id, title: d.title })),
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })
