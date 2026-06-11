@@ -370,8 +370,8 @@ export default function AuditPage() {
   const [status,   setStatus]   = useState('All Status')
   const [agent,    setAgent]    = useState('All Agents')
   const [mandate,  setMandate]  = useState('All Mandates')
-  const [dateFrom, setDateFrom] = useState('2026-04-01')
-  const [dateTo,   setDateTo]   = useState('2026-04-30')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo,   setDateTo]   = useState('')
   const [toast,    setToast]    = useState<string | null>(null)
   const [activeFilters, setActiveFilters] = useState<{ key: string; label: string }[]>([])
   const [liveEntries,   setLiveEntries]   = useState<AuditEntry[]>([])
@@ -432,8 +432,8 @@ export default function AuditPage() {
     }
   }
 
-  const totalPages = Math.ceil(displayTotal / perPage)
-  const visiblePages = [1, 2, 3]
+  const totalPages = Math.max(1, Math.ceil(displayTotal / perPage))
+  const visiblePages = Array.from({ length: Math.min(totalPages, 3) }, (_, i) => i + 1)
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -769,17 +769,21 @@ export default function AuditPage() {
             </button>
           ))}
 
-          <span className="text-text-disabled px-1">...</span>
+          {totalPages > visiblePages.length && (
+            <>
+              <span className="text-text-disabled px-1">...</span>
 
-          <button
-            onClick={() => setPage(totalPages)}
-            className={cn(
-              'h-8 w-8 rounded-full text-xs font-medium transition-colors',
-              page === totalPages ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
-            )}
-          >
-            {totalPages}
-          </button>
+              <button
+                onClick={() => setPage(totalPages)}
+                className={cn(
+                  'h-8 w-8 rounded-full text-xs font-medium transition-colors',
+                  page === totalPages ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
+                )}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}

@@ -19,8 +19,13 @@ function getAccount(): PrivateKeyAccount {
   return _account
 }
 
-export function getServiceWalletAddress() {
-  return getAccount().address
+// Full local account (with signing capability) — pass this as the `account`
+// param to writeContract/sendTransaction so viem signs locally and submits
+// via eth_sendRawTransaction. Passing just the address makes viem treat it
+// as a JSON-RPC account, which public RPCs reject (eth_sendTransaction is
+// not whitelisted).
+export function getServiceAccount(): PrivateKeyAccount {
+  return getAccount()
 }
 
 export function getServiceWalletClient(): WalletClient {

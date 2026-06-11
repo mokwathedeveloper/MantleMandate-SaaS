@@ -12,7 +12,7 @@ import {
   SWAP_POOL_ABI,
   assetToBytes32,
 } from '@/lib/contracts'
-import { getServiceWalletClient, getServiceWalletAddress } from '@/lib/serverWallet'
+import { getServiceWalletClient, getServiceAccount } from '@/lib/serverWallet'
 import { getTradeDecision, type TradeDecision } from '@/lib/agentDecision'
 
 interface AgentRow {
@@ -55,7 +55,7 @@ const SWAP_SLIPPAGE_BPS = 100n // 1% tolerance
  */
 async function trySwap(
   wallet: ReturnType<typeof getServiceWalletClient>,
-  account: ReturnType<typeof getServiceWalletAddress>,
+  account: ReturnType<typeof getServiceAccount>,
   decision: TradeDecision,
   isBuy: boolean,
   amountUsd: number,
@@ -112,7 +112,7 @@ export async function ensureShadowAgent(
   if (!mandatePolicyHash) throw new Error('Mandate has no policy hash — deploy the mandate on-chain first')
 
   const wallet = getServiceWalletClient()
-  const account = getServiceWalletAddress()
+  const account = getServiceAccount()
 
   // Derive a distinct policy hash owned by the service wallet, traceable back
   // to the user's mandate policy hash + this agent's id.
@@ -167,7 +167,7 @@ export async function ensureShadowAgent(
     .update({
       onchain_agent_id: Number(onchainAgentId),
       onchain_policy_hash: shadowHash,
-      onchain_owner: account,
+      onchain_owner: account.address,
     })
     .eq('id', agent.id)
 
@@ -211,7 +211,7 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
   const isBuy = decision.action === 'buy'
 
   const wallet = getServiceWalletClient()
-  const account = getServiceWalletAddress()
+  const account = getServiceAccount()
 
   // For ETH/WETH, perform a real on-chain swap against the mUSD/mWETH pool
   // first, then anchor the audit record (executeOrder) to that swap's tx hash.
