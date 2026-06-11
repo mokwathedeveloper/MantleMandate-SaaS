@@ -62,12 +62,12 @@ The platform's own subscription fee ($29–$299/mo, see [Plans](#-plans)) is fla
 └─────────────────────┬───────────────────────────────────────────┘
                       │ HTTPS
 ┌─────────────────────▼───────────────────────────────────────────┐
-│                      BACKEND API                                │
-│  Flask 3.x · Python 3.12 · SQLAlchemy · Celery workers         │
+│        LIVE BACKEND: NEXT.JS API ROUTES (frontend/app/api)     │
+│  Supabase Auth · Supabase Postgres · server wallet (viem)      │
 │                                                                  │
 │  ┌─────────────────┐   ┌──────────────────┐   ┌─────────────┐  │
-│  │  Mandate Parser │   │  Agent Scheduler │   │  Risk Guard │  │
-│  │  (Claude AI)    │   │  (Celery Beat)   │   │  Engine     │  │
+│  │  Mandate Parser │   │  Agent Tick      │   │  Support    │  │
+│  │  (Claude AI)    │   │  (RSI + Claude)  │   │  Chat (RAG) │  │
 │  └────────┬────────┘   └────────┬─────────┘   └──────┬──────┘  │
 └───────────┼────────────────────┼────────────────────┼──────────┘
             │                    │                     │
@@ -156,6 +156,22 @@ The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic 
 
 ---
 
+## 🔀 Backend Implementations: Live vs. Reference
+
+This repo contains **two backend implementations**, built during architecture exploration:
+
+| | **Live (used by the deployed demo)** | **Reference (`backend/`)** |
+|---|---|---|
+| Stack | Next.js 14 Route Handlers (`frontend/app/api/*`) | Flask 3.x · Python 3.12 · Celery |
+| Auth | Supabase Auth | Flask-JWT-Extended |
+| Database | Supabase Postgres | Separate Postgres (own schema + Alembic migrations) |
+| Contract addresses | `.env.example` — matches the deployed contracts above | `render.yaml` — different deployment |
+| Status | ✅ Live — every dashboard action calls these routes | Complete, with its own `pytest` suite · ❌ not called by the live demo |
+
+The Flask backend reflects the project's original planned architecture (see [`docs/Final_Architecture_for_MantleMandate_SaaS.md`](docs/Final_Architecture_for_MantleMandate_SaaS.md)). The team later consolidated the live product onto Next.js API routes + Supabase — fewer moving parts to deploy and demo within the hackathon timeline. The Flask implementation remains in [`backend/`](backend/) as a complete, independently-built alternative (and a candidate base for a future Python agent-execution service using Celery for scheduled ticks), but it uses its own database/auth/contract configuration and **is not part of the live request path**.
+
+---
+
 ## 🛠️ Tech Stack
 
 ### ⛓️ Blockchain & Smart Contracts
@@ -164,7 +180,7 @@ The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic 
 ![Mantle](https://img.shields.io/badge/Mantle_Sepolia-65B46B?style=flat-square)
 ![Sourcify](https://img.shields.io/badge/Verified-Sourcify-10b981?style=flat-square)
 
-- 5 production contracts deployed + verified on Mantle Sepolia (Chain ID `5003`)
+- 6 contracts deployed + verified on Mantle Sepolia (Chain ID `5003`)
 - `MandatePolicy` — immutable on-chain policy hash registry
 - `AgentExecutor` — agent lifecycle (`Inactive → Active ⇄ Paused → Stopped`) + `executeOrder()`
 - `RiskGuard` — drawdown, position-size, cooldown and max-position checks via `checkOrder()`
@@ -184,16 +200,25 @@ The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic 
 - `ChatWidget` — Claude-powered support chat grounded in the docs hub (lite-RAG)
 - MetaMask / wagmi wallet integration for on-chain mandate anchoring
 
-### 🔧 Backend
+### 🔧 Backend (Live)
+
+The live demo's backend is entirely Next.js Route Handlers — no separate server to deploy or run:
+
+- `frontend/app/api/mandates/parse` — Claude-powered mandate parsing
+- `frontend/app/api/agents/[id]/tick` — on-chain trading-cycle execution (`runAgentTick`)
+- `frontend/app/api/agents/decide` — AI decision pipeline (RSI + Bybit + Claude)
+- `frontend/app/api/support/chat` — docs-grounded support chat (lite-RAG)
+- Supabase Auth (session cookies) + Supabase Postgres for all relational data
+- Server-side wallet (`frontend/lib/serverWallet.ts`, viem) signs on-chain transactions on the agent's behalf
+
+### 🔧 Backend (Reference Implementation)
 ![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask_3-000000?style=flat-square&logo=flask)
 ![Celery](https://img.shields.io/badge/Celery-37814A?style=flat-square&logo=celery&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat-square)
 ![Flask--SocketIO](https://img.shields.io/badge/Flask--SocketIO-000000?style=flat-square&logo=socket.io&logoColor=white)
 
-- Flask 3.x REST API with JWT auth, rate limiting (Flask-Limiter), and CORS
-- Celery + Celery Beat for scheduled agent ticks
-- 49/49 backend tests passing (`pytest`)
+A separately-built Flask 3.x backend in [`backend/`](backend/) — JWT auth, rate limiting (Flask-Limiter), CORS, SQLAlchemy + Alembic migrations, Celery + Celery Beat for scheduled agent ticks, and its own `pytest` suite. **Not used by the live demo** — see [Backend Implementations: Live vs. Reference](#-backend-implementations-live-vs-reference) above.
 
 ### 🗄️ Database & Auth
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-4169E1?style=flat-square&logo=postgresql&logoColor=white)
@@ -202,7 +227,7 @@ The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic 
 
 - Supabase Postgres for relational data (mandates, agents, trades, users)
 - Supabase Auth for email/password sessions
-- Redis as the Celery broker/result backend
+- Redis as the Celery broker/result backend (reference Flask backend only)
 
 ### 🤖 AI & Market Data
 ![Claude](https://img.shields.io/badge/Claude_Sonnet_4.5-D97757?style=flat-square)
@@ -235,11 +260,11 @@ MantleMandate-SaaS/
 │   │   └── serverWallet.ts         # Service wallet (shadow agent execution)
 │   └── hooks/                      # useAgents, useMandates, etc. (TanStack Query)
 │
-├── 🔧 backend/                     # Flask 3.x · Python 3.12 · Celery
+├── 🔧 backend/                     # Flask 3.x · Python 3.12 · Celery — REFERENCE IMPL, not used by live demo
 │   ├── app/                        # Routes, models, services
 │   ├── ai/                         # Mandate parsing (Claude)
 │   ├── migrations/                 # Flask-Migrate / Alembic
-│   └── tests/                      # 49/49 passing
+│   └── tests/                      # pytest suite
 │
 ├── ⛓️ blockchain/                  # Solidity 0.8.x · Hardhat
 │   ├── contracts/
@@ -260,31 +285,15 @@ MantleMandate-SaaS/
 
 ## 🚀 Quick Start
 
+The live demo runs on the frontend alone (Next.js + Supabase + Mantle Sepolia) — **no backend server required.**
+
 ### Prerequisites
 
 - Node.js 20 LTS
-- Python 3.12+
-- Docker + Docker Compose
+- Python 3.12+ (only for the optional Flask reference backend)
+- Docker + Docker Compose (only for the optional Flask reference backend)
 
-### 1️⃣ Start infrastructure
-
-```bash
-docker compose up -d
-```
-
-### 2️⃣ Backend
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # fill in ANTHROPIC_API_KEY, MANTLE_RPC_URL, etc.
-flask db upgrade
-python run.py
-```
-
-### 3️⃣ Frontend
+### 1️⃣ Frontend (live demo)
 
 ```bash
 cd frontend
@@ -295,7 +304,7 @@ npm run dev
 
 Open http://localhost:3000
 
-### 4️⃣ Smart contracts (already deployed — for local dev only)
+### 2️⃣ Smart contracts (already deployed — for local dev only)
 
 ```bash
 cd blockchain
@@ -306,6 +315,22 @@ npx hardhat test
 npx hardhat run scripts/deploy.ts --network mantle_testnet
 # Verify on explorer:
 npx hardhat run scripts/verify.ts --network mantle_testnet
+```
+
+### 🧪 Optional: Flask reference backend
+
+Not called by the frontend or the live demo — see [Backend Implementations: Live vs. Reference](#-backend-implementations-live-vs-reference). Run it only to explore the standalone Flask implementation.
+
+```bash
+docker compose up -d   # Postgres + Redis for the Flask backend
+
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill in ANTHROPIC_API_KEY, MANTLE_RPC_URL, etc.
+flask db upgrade
+python run.py
 ```
 
 ### 🔑 Environment Variables
@@ -324,7 +349,7 @@ NEXT_PUBLIC_MOCK_WETH_CONTRACT=0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF
 NEXT_PUBLIC_SWAP_POOL_CONTRACT=0x3440d742bbbAe391b95E40FAF62d7a715582a4ad
 ```
 
-**Backend** (`.env`):
+**Backend** (`.env`, Flask reference implementation only):
 ```env
 ANTHROPIC_API_KEY=
 DATABASE_URL=postgresql://...
@@ -358,7 +383,7 @@ This project is submitted under the **Trading & Strategy** track:
 
 Also eligible for:
 - **Best UI/UX Award** — premium dark dashboard, glassmorphic auth, 30+ screens
-- **20 Project Deployment Award** — 5 contracts deployed + verified, public frontend, AI callable on-chain
+- **20 Project Deployment Award** — 6 contracts deployed + verified, public frontend, AI callable on-chain
 
 ---
 
@@ -377,6 +402,7 @@ Also eligible for:
 - Agent execution swaps against a project-deployed mUSD/mWETH MockSwapPool, not Merchant Moe / Agni Finance — those DEXes have no Mantle Sepolia deployment to integrate against on testnet
 - Demo uses Mantle Sepolia Testnet (not Mainnet)
 - OAuth (Google/Microsoft) is UI-only; email/password auth is fully functional
+- The `backend/` Flask implementation is a separate, independently-built reference architecture — not called by the live demo (see [Backend Implementations: Live vs. Reference](#-backend-implementations-live-vs-reference))
 
 ## 🗺️ Future Improvements
 

@@ -1,6 +1,8 @@
 # Final Architecture — MantleMandate
 ## Flask · Next.js 14 TypeScript · PostgreSQL · Mantle Network
 
+> ⚠️ **This document describes the project's original planned architecture**, implemented as the reference backend in [`backend/`](../backend/). **The live demo does not use this Flask backend** — it runs entirely on Next.js API routes + Supabase + direct calls to Mantle Network. For the live architecture, see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) and the architecture diagram in the [root README](../README.md#-architecture).
+
 > For the full reference with code examples, folder structure, DB schema, TypeScript types,
 > environment variables, and install commands — see `MASTER_Architecture_and_Stack.md`.
 

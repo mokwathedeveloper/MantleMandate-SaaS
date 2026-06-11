@@ -1,5 +1,7 @@
 # MantleMandate — Project Folder Structure
 
+> ⚠️ **Superseded for the live demo.** The `backend/` folder structure below is the reference Flask implementation, not used by the live demo — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 > **Stack: Flask (Python) · Next.js 14 TypeScript · PostgreSQL · Hardhat**
 > See `MASTER_Architecture_and_Stack.md` for the authoritative reference.
 

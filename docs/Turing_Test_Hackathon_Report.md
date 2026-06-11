@@ -1,6 +1,8 @@
 
 # Turing Test Hackathon 2026 Report
 
+> ⚠️ **Superseded for the live demo.** The "Backend — Flask" section below describes the original plan, implemented as the reference backend in [`backend/`](../backend/). The live demo's backend is Next.js API routes + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 ## **Introduction:**
 The **Turing Test Hackathon 2026** challenges participants to build a decentralized, AI-powered application within the **Mantle Network** ecosystem. With a grand prize pool of **$100,000**, the goal of the hackathon is to create innovative solutions that showcase the future potential of **AI**, **Blockchain**, and **Web3 technologies** in practical applications.
 

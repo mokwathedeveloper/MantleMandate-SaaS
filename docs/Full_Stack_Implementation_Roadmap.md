@@ -1,5 +1,7 @@
 # Full-Stack Implementation Roadmap — MantleMandate
 
+> ⚠️ **Superseded for the live demo.** This roadmap's backend phases describe the reference Flask implementation in [`backend/`](../backend/). The live demo's backend is Next.js API routes + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 > **Stack: Flask (Python) · Next.js 14 TypeScript · PostgreSQL · Redis · Mantle Network**
 > Authoritative reference: `MASTER_Architecture_and_Stack.md`
 

@@ -1,6 +1,8 @@
 # Backend Architecture — MantleMandate
 ## Stack: Flask (Python) · PostgreSQL · Redis · Celery · Flask-SocketIO
 
+> ⚠️ **This describes the reference Flask implementation in [`backend/`](../backend/), not the live demo.** The deployed app's backend is Next.js API routes + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 > **Backend language is Python/Flask — NOT Node.js/Express.**
 > For the complete stack reference see `MASTER_Architecture_and_Stack.md`.
 

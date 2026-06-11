@@ -2,6 +2,8 @@
 
 > **Stack: Flask (Python) backend · Next.js 14 TypeScript frontend · PostgreSQL · Mantle Network**
 
+> ⚠️ **The "Flask backend logic" described per step below is the reference implementation in [`backend/`](../backend/), not the live demo.** In the live app, the same user-facing steps are served by Next.js API routes (`frontend/app/api/*`) + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README. The frontend steps and screen-by-screen flow below are accurate for both; only the "backend logic" callouts refer to the reference implementation.
+
 ---
 
 ## 1. User Registration

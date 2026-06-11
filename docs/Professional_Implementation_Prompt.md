@@ -1,5 +1,7 @@
 # MantleMandate — Master Implementation Prompt
 
+> ⚠️ **Superseded for the live demo.** The Flask/Python backend rules and templates below target the reference implementation in [`backend/`](../backend/). The live demo's backend is Next.js API routes (`frontend/app/api/*`) + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README. Frontend rules still apply to both.
+
 > Copy this entire prompt at the start of every coding session.
 > Every rule here is mandatory. No exceptions.
 

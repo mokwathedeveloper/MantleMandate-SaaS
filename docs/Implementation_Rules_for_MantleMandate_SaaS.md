@@ -1,5 +1,7 @@
 # Implementation Rules for MantleMandate
 
+> ⚠️ **Superseded for the live demo.** "Backend = Flask" below applies to the reference implementation in [`backend/`](../backend/) only. The live demo's backend is Next.js API routes + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 > **Authoritative stack reference: `MASTER_Architecture_and_Stack.md`**
 > Backend = Flask (Python) · Frontend = Next.js 14 TypeScript · DB = PostgreSQL · Chain = Mantle Network
 

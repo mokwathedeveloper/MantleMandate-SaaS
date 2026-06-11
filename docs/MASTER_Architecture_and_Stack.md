@@ -2,8 +2,10 @@
 ## Turing Test Hackathon 2026 | Authoritative Reference Document
 ### Stack: Flask (Python) · Next.js 14 (TypeScript) · PostgreSQL · Mantle Network
 
-> **This is the single source of truth.** All other architecture/roadmap docs defer to this file.
-> If any other doc contradicts this one, this one is correct.
+> ⚠️ **This describes the reference Flask implementation in [`backend/`](../backend/), not the live demo.** The deployed app's backend is Next.js API routes + Supabase — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README, which is now the authoritative source for the live architecture. This document remains the source of truth for `backend/` itself.
+
+> **This is the single source of truth for the reference Flask backend.** All other architecture/roadmap docs describing that backend defer to this file.
+> If any other doc contradicts this one **about `backend/`**, this one is correct — but for the live demo's architecture, defer to the root README instead.
 
 ---
 

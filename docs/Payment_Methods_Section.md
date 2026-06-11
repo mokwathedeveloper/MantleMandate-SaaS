@@ -3,6 +3,8 @@
 > Design reference: `uiux-v2/17_Payment_Methods.md`
 > Full pricing page spec: `uiux-v2/14_Pricing_Page.md`
 
+> ⚠️ **Note:** The "Flask backend"/"Flask webhook" references below describe the reference implementation in [`backend/`](../backend/). Billing is not yet wired up in the live demo — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 ---
 
 ## Purpose

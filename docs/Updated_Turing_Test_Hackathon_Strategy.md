@@ -1,5 +1,7 @@
 # MantleMandate — Turing Test Hackathon 2026 Tech Stack
 
+> ⚠️ **Superseded for the live demo.** "Flask is the primary backend" reflects the original plan, implemented as the reference backend in [`backend/`](../backend/). The live demo's backend is Next.js API routes + Supabase, with Claude called via OpenRouter (no local AI/ML layer) — see [Backend Implementations: Live vs. Reference](../README.md#-backend-implementations-live-vs-reference) in the root README.
+
 > **This is the confirmed, corrected tech stack for MantleMandate.**
 > See `docs/MASTER_Architecture_and_Stack.md` for the complete authoritative reference.
 
