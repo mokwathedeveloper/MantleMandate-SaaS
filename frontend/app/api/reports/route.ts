@@ -26,9 +26,13 @@ export async function GET() {
       }
     )
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json(FALLBACK)
+
     const { data, error } = await supabase
       .from('reports')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error || !data || data.length === 0) {

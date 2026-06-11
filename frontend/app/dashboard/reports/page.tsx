@@ -579,8 +579,8 @@ export default function ReportsPage() {
   const [showExport,   setExport]       = useState(false)
   const [toast,        setToast]        = useState<string | null>(null)
   const [showExtra,    setShowExtra]    = useState(false)
-  const [dateFrom,     setDateFrom]     = useState('2026-04-01')
-  const [dateTo,       setDateTo]       = useState('2026-04-30')
+  const [dateFrom,     setDateFrom]     = useState('')
+  const [dateTo,       setDateTo]       = useState('')
   const [viewReport,   setViewReport]   = useState<Report | null>(null)
 
   const { data, isLoading, isError } = useQuery<Report[]>({

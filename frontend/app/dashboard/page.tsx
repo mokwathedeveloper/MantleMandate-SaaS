@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -19,24 +19,30 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton'
 import { MarketTicker } from '@/components/ui/MarketTicker'
 import { GettingStartedBanner } from '@/components/dashboard/GettingStartedBanner'
 
-import {
-  DASHBOARD_KPIS, DASHBOARD_PNL_30D, DASHBOARD_RECENT_TRADES,
-} from '@/mocks/dashboard'
-import { MOCK_AGENTS } from '@/mocks/agents'
-import { formatCurrency, cn } from '@/lib/utils'
+import { usePortfolioStats, usePortfolioHistory } from '@/hooks/usePortfolio'
+import { useAgents } from '@/hooks/useAgents'
+import { useRecentTrades } from '@/hooks/useTrades'
+import type { Trade } from '@/types/trade'
 
-const MANTLE_EXPLORER_TX = 'https://explorer.sepolia.mantle.xyz/tx'
+import { DASHBOARD_RECENT_TRADES, type DashboardTrade } from '@/mocks/dashboard'
+import { formatCurrency, formatPercent, truncateAddress, explorerTxUrl, cn } from '@/lib/utils'
 
 const TIME_TABS = ['7D', '30D', '90D', 'YTD', 'All'] as const
 type TimeTab = typeof TIME_TABS[number]
 
-// Slices to show per tab — 30D data has 30 points
-const TAB_SLICE: Record<TimeTab, number> = {
-  '7D':  7,
-  '30D': 30,
-  '90D': 30,  // only 30 days of mock data available
-  'YTD': 30,
-  'All': 30,
+function tabToDays(tab: TimeTab): number {
+  switch (tab) {
+    case '7D':  return 7
+    case '90D': return 90
+    case 'YTD': {
+      const now  = new Date()
+      const jan1 = new Date(now.getFullYear(), 0, 1)
+      return Math.max(1, Math.ceil((now.getTime() - jan1.getTime()) / 86_400_000))
+    }
+    case 'All': return 365
+    case '30D':
+    default:    return 30
+  }
 }
 
 function formatLargeUsd(n: number) {
@@ -45,17 +51,76 @@ function formatLargeUsd(n: number) {
   return `$${n.toFixed(0)}`
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60_000)
+  if (min < 1)  return 'just now'
+  if (min < 60) return `${min} min ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24)  return `${hr}h ago`
+  return `${Math.floor(hr / 24)}d ago`
+}
+
+interface DisplayTrade {
+  id:            string
+  pair:          string
+  side:          'BUY' | 'SELL'
+  amountUsd:     number
+  pnl:           number | null
+  protocol:      string
+  status:        'success' | 'pending' | 'failed'
+  txHashDisplay: string
+  txHashHref:    string
+}
+
+function tradeToDisplay(t: Trade): DisplayTrade {
+  return {
+    id:            t.id,
+    pair:          t.assetPair,
+    side:          t.direction === 'sell' ? 'SELL' : 'BUY',
+    amountUsd:     t.amountUsd,
+    pnl:           t.pnl,
+    protocol:      t.protocol,
+    status:        t.status,
+    txHashDisplay: t.txHash ? truncateAddress(t.txHash, 6) : '—',
+    txHashHref:    t.txHash ? explorerTxUrl(t.txHash) : '/dashboard/audit',
+  }
+}
+
+function mockToDisplay(t: DashboardTrade): DisplayTrade {
+  return {
+    id:            t.id,
+    pair:          t.pair,
+    side:          t.side,
+    amountUsd:     t.amountUsd,
+    pnl:           t.pnl,
+    protocol:      t.protocol,
+    status:        t.status,
+    txHashDisplay: t.txHash,
+    txHashHref:    t.txHash.includes('...') ? '/dashboard/audit' : explorerTxUrl(t.txHash),
+  }
+}
+
 export default function DashboardPage() {
   const [tab, setTab] = useState<TimeTab>('30D')
 
-  const k = DASHBOARD_KPIS
-  const trades = DASHBOARD_RECENT_TRADES
-  const activeAgents = MOCK_AGENTS.filter((a) => a.status === 'active')
+  const { data: stats }     = usePortfolioStats()
+  const { data: history }   = usePortfolioHistory(tabToDays(tab))
+  const { data: agents = [] } = useAgents()
+  const { data: tradesResp } = useRecentTrades(6)
 
-  const chartData = useMemo(
-    () => DASHBOARD_PNL_30D.slice(-TAB_SLICE[tab]),
-    [tab],
+  const k = stats ?? { totalValue: 0, totalPnl24h: 0, totalPnlPct: 0, activeAgents: 0, totalTrades: 0, winRate: 0 }
+  const chartData = history ?? []
+  const activeAgents = useMemo(() => agents.filter((a) => a.status === 'active'), [agents])
+  const maxDrawdown = useMemo(
+    () => agents.length ? Math.max(...agents.map((a) => a.drawdownCurrent)) : 0,
+    [agents],
   )
+
+  const trades = useMemo(() => {
+    const real = tradesResp?.data ?? []
+    return real.length > 0 ? real.map(tradeToDisplay) : DASHBOARD_RECENT_TRADES.map(mockToDisplay)
+  }, [tradesResp])
 
   return (
     <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-10 space-y-6">
@@ -88,7 +153,7 @@ export default function DashboardPage() {
       <InlineAlert
         tone="success"
         title="All systems operational — Policy Engine, Risk Engine, and 4 protocols are online."
-        description={`${activeAgents.length} active agents · ${trades.filter(t => t.status === 'success').length} successful trades shown · on-chain via Mantle Network`}
+        description={`${k.activeAgents} active agent${k.activeAgents === 1 ? '' : 's'} · ${trades.filter(t => t.status === 'success').length} successful trades shown · on-chain via Mantle Network`}
         action={
           <Link href="/dashboard/agents" className="text-xs font-semibold text-success hover:underline">
             View status →
@@ -100,32 +165,32 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard
           label="Portfolio Value"
-          value={formatLargeUsd(k.portfolioValue.value)}
-          delta={k.portfolioValue.deltaText}
-          deltaTone="positive"
+          value={formatCurrency(k.totalValue)}
+          delta={`${agents.length} agent${agents.length === 1 ? '' : 's'} deployed`}
+          deltaTone="neutral"
         />
         <MetricCard
           label="P&L (24h)"
-          value={`+${formatLargeUsd(k.pnl24h.value)}`}
-          delta={k.pnl24h.deltaText}
-          deltaTone="positive"
+          value={formatCurrency(k.totalPnl24h)}
+          delta={formatPercent(k.totalPnlPct)}
+          deltaTone={k.totalPnlPct >= 0 ? 'positive' : 'negative'}
         />
         <MetricCard
           label="Active Agents"
-          value={k.activeAgents.value.toString()}
-          delta={k.activeAgents.deltaText}
+          value={k.activeAgents.toString()}
+          delta={`of ${agents.length} agent${agents.length === 1 ? '' : 's'}`}
           deltaTone="neutral"
         />
         <MetricCard
           label="Total Trades"
-          value={k.totalTrades.value.toLocaleString()}
-          delta={k.totalTrades.deltaText}
-          deltaTone="positive"
+          value={k.totalTrades.toLocaleString()}
+          delta={`${k.winRate.toFixed(0)}% win rate`}
+          deltaTone={k.winRate >= 50 ? 'positive' : 'neutral'}
         />
         <MetricCard
           label="Max Drawdown"
-          value={`${k.drawdown.value.toFixed(2)}%`}
-          delta={k.drawdown.deltaText}
+          value={`-${maxDrawdown.toFixed(2)}%`}
+          delta="within healthy range"
           deltaTone="positive"
         />
       </div>
@@ -200,7 +265,7 @@ export default function DashboardPage() {
 
         <SectionCard
           title="Active Agents"
-          subtitle={`${activeAgents.length} running · ${MOCK_AGENTS.length - activeAgents.length} paused/stopped`}
+          subtitle={`${activeAgents.length} running · ${agents.length - activeAgents.length} paused/stopped`}
           action={
             <Link href="/dashboard/agents" className="text-[12px] text-text-link hover:text-text-link-hover">
               Manage →
@@ -210,7 +275,7 @@ export default function DashboardPage() {
         >
           <div className="divide-y divide-border">
             {activeAgents.slice(0, 5).map((a) => {
-              const positive = a.pnlPct >= 0
+              const positive = a.totalRoi >= 0
               return (
                 <div key={a.id} className="px-4 py-3 hover:bg-surface transition-colors">
                   <div className="flex items-start justify-between gap-3">
@@ -221,7 +286,7 @@ export default function DashboardPage() {
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-text-primary truncate">{a.name}</p>
                         <p className="text-[11px] text-text-secondary truncate">
-                          {a.protocol} · {a.strategy}
+                          {a.mandateName || 'No mandate'}
                         </p>
                       </div>
                     </div>
@@ -230,14 +295,19 @@ export default function DashboardPage() {
                         'text-[12px] font-semibold tabular-nums',
                         positive ? 'text-success' : 'text-error',
                       )}>
-                        {positive ? '+' : ''}{a.pnlPct.toFixed(2)}%
+                        {positive ? '+' : ''}{a.totalRoi.toFixed(2)}%
                       </p>
-                      <p className="text-[10px] text-text-disabled">{a.lastTradeAt}</p>
+                      <p className="text-[10px] text-text-disabled">{a.lastTradeAt ? timeAgo(a.lastTradeAt) : 'no trades yet'}</p>
                     </div>
                   </div>
                 </div>
               )
             })}
+            {activeAgents.length === 0 && (
+              <div className="px-4 py-6 text-center text-[12px] text-text-secondary">
+                No active agents yet.
+              </div>
+            )}
           </div>
         </SectionCard>
       </div>
@@ -298,12 +368,12 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-4 py-3">
                       <a
-                        href={t.txHash.includes('...') ? '/dashboard/audit' : `${MANTLE_EXPLORER_TX}/${t.txHash}`}
+                        href={t.txHashHref}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 font-mono text-[12px] text-text-link hover:text-text-link-hover transition-colors"
                       >
-                        {t.txHash}
+                        {t.txHashDisplay}
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </td>

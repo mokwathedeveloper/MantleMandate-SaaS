@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Download, UserPlus, Search, Filter, ChevronDown,
   TrendingUp, Users as UsersIcon, ShieldAlert, Timer,
@@ -19,12 +20,64 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton'
 import { SectionCard } from '@/components/ui/SectionCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
-import { cn } from '@/lib/utils'
+import { cn, truncateAddress } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
 
 import {
   MOCK_USERS, USER_KPIS, USER_ACTIVATION_TREND,
   type MockUser, type UserStatus, type UserPlan,
 } from '@/mocks/users'
+
+const PLAN_LABEL: Record<string, UserPlan> = {
+  operator:    'Operator',
+  strategist:  'Strategist',
+  institution: 'Institutional',
+}
+
+function useRealUser(): MockUser | null {
+  const { user } = useAuthStore()
+
+  const { data } = useQuery<MockUser | null>({
+    queryKey: ['real-user-row', user?.id],
+    queryFn: async () => {
+      if (!user) return null
+      const [{ data: profile }, { data: agents }] = await Promise.all([
+        supabase.from('profiles').select('id, email, name, plan, created_at').eq('id', user.id).maybeSingle(),
+        supabase.from('agents').select('status, drawdown_current, onchain_owner').eq('user_id', user.id),
+      ])
+      if (!profile) return null
+
+      const agentRows = (agents ?? []) as { status: string; drawdown_current: number | null; onchain_owner: string | null }[]
+      const isActive   = agentRows.some((a) => a.status === 'active')
+      const owner      = agentRows.find((a) => a.onchain_owner)?.onchain_owner ?? undefined
+      const riskScore  = agentRows.length
+        ? Math.round(agentRows.reduce((s, a) => s + (a.drawdown_current ?? 0), 0) / agentRows.length) || 12
+        : 12
+      const initials   = (profile.name || profile.email).split(/\s+/).map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+
+      return {
+        id:          profile.id,
+        name:        profile.name || profile.email,
+        email:       profile.email,
+        walletAddr:  owner ? truncateAddress(owner) : 'Not connected',
+        plan:        PLAN_LABEL[profile.plan] ?? 'Operator',
+        status:      isActive ? 'active' : 'pending',
+        agents:      agentRows.length,
+        riskScore,
+        lastLogin:   'Active now',
+        joinedAt:    profile.created_at.slice(0, 10),
+        region:      '—',
+        initials,
+        avatarColor: 'bg-primary',
+      }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  })
+
+  return data ?? null
+}
 
 // ── Add User Modal ─────────────────────────────────────────────────────────────
 
@@ -227,8 +280,13 @@ export default function UsersPage() {
   const [planFilter]            = useState<'all' | string>('all')
   const [showAddUser, setShowAddUser] = useState(false)
   const [extraUsers, setExtraUsers]   = useState<MockUser[]>([])
+  const realUser = useRealUser()
 
-  const allUsers = useMemo(() => [...extraUsers, ...MOCK_USERS], [extraUsers])
+  const allUsers = useMemo(() => {
+    const real = realUser ? [realUser] : []
+    const rest = MOCK_USERS.filter((u) => u.id !== realUser?.id)
+    return [...real, ...extraUsers, ...rest]
+  }, [extraUsers, realUser])
 
   const filtered = useMemo(() => {
     return allUsers.filter((u) => {

@@ -24,7 +24,8 @@ Rules:
 - Only recommend "buy" or "sell" when confidence >= 65
 - amount_pct is % of available capital (max capped by mandate riskPerTrade)
 - Be conservative — protecting capital is priority #1
-- Consider the mandate constraints strictly`
+- Consider the mandate constraints strictly
+- Respond with ONLY the JSON object — no markdown code fences, no explanation, no text before or after it`
 
 export const DecisionSchema = z.object({
   action:     z.enum(['buy', 'sell', 'hold']),
@@ -33,6 +34,21 @@ export const DecisionSchema = z.object({
   amount_pct: z.number().min(0).max(100),
   urgency:    z.enum(['low', 'medium', 'high']),
 })
+
+/**
+ * Extract a JSON object from a raw LLM response that may be wrapped in
+ * markdown code fences and/or followed by trailing prose.
+ */
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced) return fenced[1].trim()
+
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start !== -1 && end !== -1 && end > start) return raw.slice(start, end + 1)
+
+  return raw.trim()
+}
 
 export interface TradeDecision extends z.infer<typeof DecisionSchema> {
   live_price:   number | null
@@ -84,13 +100,11 @@ Based on the live data above, should I execute a trade right now?`
     { role: 'user',   content: userMsg },
   ], { temperature: 0.1 })
 
-  const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
-
   let parsed: Record<string, unknown>
   try {
-    parsed = JSON.parse(cleaned)
+    parsed = JSON.parse(extractJson(raw))
   } catch {
-    console.error('[agentDecision] Claude returned invalid JSON')
+    console.error('[agentDecision] Claude returned invalid JSON:', raw)
     return { error: 'AI returned invalid JSON', status: 502 }
   }
 

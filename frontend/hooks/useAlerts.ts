@@ -28,7 +28,7 @@ function rowToAlert(row: Record<string, any>): Alert {
   return {
     id:        row.id,
     agentId:   row.agent_id ?? null,
-    alertType: row.alert_type,
+    alertType: row.type,
     severity:  row.severity === 'critical' ? 'high' : row.severity === 'warning' ? 'medium' : 'low',
     title:     row.title,
     message:   row.message,

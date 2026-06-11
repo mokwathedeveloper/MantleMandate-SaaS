@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import {
   Plus, ExternalLink, KeyRound, Wallet, Copy, ShieldCheck, Coins,
   X, CheckCircle2, Loader2, AlertTriangle,
@@ -19,7 +20,73 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 
 import { MOCK_WALLETS, WALLET_KPIS, type MockWallet, type WalletKind } from '@/mocks/wallets'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, truncateAddress } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
+
+function useRealWallets(): MockWallet[] {
+  const { user } = useAuthStore()
+  const { address: connectedAddress, isConnected } = useWallet()
+
+  const { data: agentWallets = [] } = useQuery<MockWallet[]>({
+    queryKey: ['real-agent-wallets', user?.id],
+    queryFn: async () => {
+      if (!user) return []
+      const { data: agents } = await supabase
+        .from('agents')
+        .select('status, capital_cap, onchain_owner, deployed_at, created_at, last_trade_at')
+        .eq('user_id', user.id)
+
+      const byOwner = new Map<string, MockWallet>()
+      for (const a of agents ?? []) {
+        const owner = a.onchain_owner as string | null
+        if (!owner) continue
+        const existing = byOwner.get(owner)
+        if (existing) {
+          existing.balanceUsd += a.capital_cap ?? 0
+          existing.agents     += 1
+        } else {
+          byOwner.set(owner, {
+            id:         `agent-wallet-${owner}`,
+            label:      'Agent Service Wallet',
+            address:    owner,
+            kind:       'EOA',
+            network:    'Mantle Sepolia',
+            balanceUsd: a.capital_cap ?? 0,
+            status:     a.status === 'active' ? 'connected' : 'pending',
+            signers:    1,
+            agents:     1,
+            lastActive: a.last_trade_at ? 'Recently' : '—',
+            createdAt:  (a.deployed_at ?? a.created_at ?? '').slice(0, 10),
+          })
+        }
+      }
+      return Array.from(byOwner.values())
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  })
+
+  return useMemo(() => {
+    const wallets = [...agentWallets]
+    if (isConnected && connectedAddress && !wallets.some((w) => w.address.toLowerCase() === connectedAddress.toLowerCase())) {
+      wallets.push({
+        id:         `connected-${connectedAddress}`,
+        label:      'Connected Wallet',
+        address:    truncateAddress(connectedAddress),
+        kind:       'EOA',
+        network:    'Mantle Sepolia',
+        balanceUsd: 0,
+        status:     'connected',
+        signers:    1,
+        agents:     0,
+        lastActive: 'Active now',
+        createdAt:  new Date().toISOString().slice(0, 10),
+      })
+    }
+    return wallets
+  }, [agentWallets, isConnected, connectedAddress])
+}
 
 const KIND_FILTERS: Array<{ key: 'all' | WalletKind; label: string }> = [
   { key: 'all',           label: 'All' },
@@ -201,6 +268,9 @@ export default function WalletsPage() {
   const [kind, setKind]     = useState<'all' | WalletKind>('all')
   const [showConnect, setShowConnect] = useState(false)
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null)
+  const realWallets = useRealWallets()
+
+  const allWallets = useMemo(() => [...realWallets, ...MOCK_WALLETS], [realWallets])
 
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address).catch(() => {})
@@ -209,7 +279,7 @@ export default function WalletsPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    return MOCK_WALLETS.filter((w) => {
+    return allWallets.filter((w) => {
       if (kind !== 'all' && w.kind !== kind) return false
       if (search) {
         const q = search.toLowerCase()
@@ -221,7 +291,7 @@ export default function WalletsPage() {
       }
       return true
     })
-  }, [search, kind])
+  }, [search, kind, allWallets])
 
   const columns: DataTableColumn<MockWallet>[] = [
     {
@@ -374,7 +444,7 @@ export default function WalletsPage() {
 
       <SectionCard
         title="Connected Wallets"
-        subtitle={`${filtered.length} of ${MOCK_WALLETS.length} wallets`}
+        subtitle={`${filtered.length} of ${allWallets.length} wallets`}
         padding="none"
       >
         <div className="border-t border-border">
