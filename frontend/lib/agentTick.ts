@@ -201,7 +201,13 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
   const onchainAgentId = await ensureShadowAgent(supabase, agent)
 
   const capital = agent.capital_cap || 1000
-  const amountUsd = Math.min(capital, capital * (decision.amount_pct / 100))
+  // Hard cap position size at the mandate's riskPerTrade, regardless of what
+  // the AI recommended — the mandate's bound wins, not the model's.
+  const riskPerTrade = typeof parsedPolicy.riskPerTrade === 'number'
+    ? Math.min(Math.max(parsedPolicy.riskPerTrade, 0), 100)
+    : 100
+  const sizePct = Math.min(decision.amount_pct, riskPerTrade)
+  const amountUsd = Math.min(capital, capital * (sizePct / 100))
   const isBuy = decision.action === 'buy'
 
   const wallet = getServiceWalletClient()

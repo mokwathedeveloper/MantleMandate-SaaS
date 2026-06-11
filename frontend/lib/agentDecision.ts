@@ -1,10 +1,14 @@
 import { chat } from '@/lib/openrouter'
-import { getSpotTicker, BYBIT_SYMBOLS } from '@/lib/bybit'
+import { getSpotTicker, getKlines, BYBIT_SYMBOLS } from '@/lib/bybit'
+import { calculateRSI } from '@/lib/indicators'
 import { z } from 'zod'
+
+const RSI_PERIOD = 14
+const RSI_INTERVAL = '60' // 1h candles
 
 const SYSTEM = `You are an AI trading agent running on MantleMandate on Mantle Network.
 
-You are given a trading mandate policy and live market data. Decide whether to execute a trade.
+You are given a trading mandate policy, a computed technical indicator (RSI), and live market data. Decide whether to execute a trade.
 
 Respond ONLY with valid JSON:
 {
@@ -16,6 +20,7 @@ Respond ONLY with valid JSON:
 }
 
 Rules:
+- Weigh the computed RSI value against the mandate's trigger condition (e.g. "RSI < 30") — do not override a clear RSI signal without strong justification in "reasoning"
 - Only recommend "buy" or "sell" when confidence >= 65
 - amount_pct is % of available capital (max capped by mandate riskPerTrade)
 - Be conservative — protecting capital is priority #1
@@ -32,6 +37,7 @@ export const DecisionSchema = z.object({
 export interface TradeDecision extends z.infer<typeof DecisionSchema> {
   live_price:   number | null
   price_change: number | null
+  rsi:          number | null
   asset:        string
   source:       'bybit'
 }
@@ -50,10 +56,13 @@ export async function getTradeDecision(
   const asset = (typeof policy.asset === 'string' ? policy.asset : 'MNT').slice(0, 10).toUpperCase()
   const bybitSymbol = BYBIT_SYMBOLS[asset]
   const ticker = bybitSymbol ? await getSpotTicker(bybitSymbol) : null
+  const klines = bybitSymbol ? await getKlines(bybitSymbol, RSI_INTERVAL, RSI_PERIOD * 2) : []
+  const rsi = klines.length ? calculateRSI(klines.map(k => k.close), RSI_PERIOD) : null
 
   const priceDisplay  = ticker ? `$${ticker.lastPrice.toLocaleString()}`     : 'unknown'
   const changeDisplay = ticker ? `${ticker.change24hPct.toFixed(2)}%`        : 'unknown'
   const volumeDisplay = ticker ? `$${ticker.turnover24h.toLocaleString()}`   : 'unknown'
+  const rsiDisplay    = rsi != null ? rsi.toFixed(2) : 'unavailable'
 
   const userMsg = `
 Mandate policy:
@@ -64,6 +73,7 @@ Live market data (Bybit spot, just fetched):
 - Current price: ${priceDisplay}
 - 24h price change: ${changeDisplay}
 - 24h USD volume: ${volumeDisplay}
+- RSI(${RSI_PERIOD}, 1h candles): ${rsiDisplay}
 - Portfolio value: $${portfolioValue.toLocaleString()}
 - Current drawdown: ${currentDrawdown}%
 
@@ -95,6 +105,7 @@ Based on the live data above, should I execute a trade right now?`
       ...result.data,
       live_price:   ticker?.lastPrice    ?? null,
       price_change: ticker?.change24hPct ?? null,
+      rsi,
       asset,
       source: 'bybit',
     },

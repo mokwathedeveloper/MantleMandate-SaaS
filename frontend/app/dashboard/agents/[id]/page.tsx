@@ -898,6 +898,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           onDismiss={() => resetTick()}
         >
           <p>{tickResult.decision.reasoning}</p>
+          {tickResult.decision.rsi != null && (
+            <p className="mt-1 opacity-80">
+              RSI(14, 1h): {tickResult.decision.rsi.toFixed(2)} · Confidence: {tickResult.decision.confidence}%
+            </p>
+          )}
           {!tickResult.executed && tickResult.reason && (
             <p className="mt-1 opacity-80">{tickResult.reason}</p>
           )}

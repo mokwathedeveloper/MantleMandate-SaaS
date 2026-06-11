@@ -208,6 +208,7 @@ export interface TickResult {
     urgency:      'low' | 'medium' | 'high'
     live_price:   number | null
     price_change: number | null
+    rsi:          number | null
     asset:        string
     source:       'bybit'
   }

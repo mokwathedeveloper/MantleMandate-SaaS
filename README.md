@@ -29,6 +29,14 @@ MantleMandate lets you write your investment strategy in plain English. Claude A
 
 **One-line pitch:** Write a trading rule in English → AI enforces it on-chain.
 
+### Why this matters (Blockchain-for-Good)
+
+Algorithmic, rule-based execution has historically been available only to funds and institutions with engineering teams. MantleMandate compiles a plain-English mandate into the same kind of policy-as-code institutions use — RSI-based entries, position-size caps, stop-loss/take-profit, cooldowns — and **commits it on-chain before any trade runs**, so the rules can't be silently changed after the fact.
+
+This is deliberately not a "maximize PnL" leaderboard. The product is graded on **whether the agent followed its own committed rules**, with every decision (including holds) traceable to a live RSI reading, a Bybit price snapshot, and an on-chain `OrderExecuted`/`Swap` event. That's the same transparency a retail user would otherwise have no way to get from a black-box trading bot — reducing the information gap between retail and institutional execution, not chasing the highest return.
+
+The platform's own subscription fee ($29–$299/mo, see [Plans](#plans)) is flat and disclosed upfront — it does not scale with trade volume or PnL, so there's no incentive for the platform to encourage more or larger trades than a mandate calls for.
+
 ---
 
 ## Architecture
@@ -78,6 +86,26 @@ MantleMandate lets you write your investment strategy in plain English. Claude A
 7. Full audit trail readable from on-chain OrderExecuted events
 ```
 
+### AI Decision Pipeline
+
+Each trading cycle (`runAgentTick` in `frontend/lib/agentTick.ts`) is a deterministic pipeline, not a single opaque LLM call:
+
+```
+1. Fetch live Bybit ticker (price, 24h change, volume) for the mandate's asset
+2. Fetch recent Bybit klines and compute RSI(14, 1h) — frontend/lib/indicators.ts
+3. Send mandate policy + computed RSI + live market data to Claude
+       ↓ Claude returns { action, confidence, reasoning, amount_pct, urgency }
+4. Hard gate: hold or confidence < 65 → no trade, decision still recorded
+5. Hard gate: live price/RSI unavailable → no trade (fail closed, not open)
+6. For ETH/WETH: real on-chain swap on MockSwapPool, sized by mandate's riskPerTrade
+7. AgentExecutor.executeOrder() — immutable on-chain record, referencing the swap tx
+```
+
+The computed RSI value, Claude's confidence score, and its one-sentence reasoning are all
+shown in the dashboard for every cycle — including cycles where the agent decided **not**
+to trade — so a user can audit whether the agent is actually following the mandate's
+trigger condition, not just trust that it is.
+
 ### Smart Contracts
 
 | Contract | Address (Mantle Sepolia) | Purpose |
@@ -102,6 +130,15 @@ The mandate parser (`/api/mandates/parse`) calls Anthropic Claude with a structu
 - `schedule` — execution frequency
 
 The output is hashed (SHA-256) and submitted on-chain, creating a cryptographic commitment to the strategy.
+
+### Strategy Design & Risk Management
+
+- **The mandate's bound wins, not the model's.** The AI recommends a position size (`amount_pct`), but `runAgentTick` clamps it to the mandate's own `riskPerTrade` ceiling before any execution — a confident "buy 80%" from Claude cannot exceed what the user's mandate allows, regardless of the AI's recommendation (`agentTick.ts`).
+- **Fail closed on bad data.** If Bybit data is unavailable or the RSI can't be computed, the agent records "no trade" rather than guessing — an LLM is never asked to trade on data it doesn't have (`agentTick.ts`, "Live market data unavailable" path).
+- **Confidence floor.** Claude's own confidence score must clear 65/100 before any trade is considered, and every "hold" or sub-threshold decision is still recorded and visible — so a user can see the agent *choosing not to act* as evidence it isn't over-trading.
+- **On-chain kill switch.** `AgentExecutor.sol` models each agent as `Inactive → Active ⇄ Paused → Stopped`, enforced in the contract itself: `executeOrder()` reverts with `"AgentExecutor: agent not active"` for any agent that isn't `Active`. A user can pause an agent on-chain at any time.
+- **`RiskGuard.sol`** (deployed and verified at the address above) implements full on-chain enforcement of drawdown limits, max concurrent positions, per-trade cooldowns, and position-size bounds via `checkOrder()`. It is not yet called from the live tick path — today those bounds are enforced in `agentTick.ts` itself (drawdown is read from Supabase and fed to the AI as context; position sizing is hard-capped as above). Wiring `checkOrder()` into `runAgentTick` so these bounds are enforced on-chain, not just in application code, is the top item under [Future Improvements](#future-improvements).
+- **Known limitation:** market-data inputs (Bybit price/volume/RSI) are read but not cross-validated against a second source. A manipulated or stale feed could still produce a misleading — though position-size-bounded — recommendation.
 
 ---
 
@@ -240,6 +277,8 @@ Also eligible for:
 
 ## Future Improvements
 
+- Wire `RiskGuard.checkOrder()` into `runAgentTick` so drawdown, cooldown, max-position, and position-size bounds are enforced on-chain per trade, not only in application code
+- Cross-validate Bybit market data against a second price source before acting on it
 - Mainnet deployment routing real swaps through Merchant Moe + Agni Finance liquidity
 - Byreal Agent Skills integration for advanced LP strategies
 - Mainnet deployment with multisig agent treasury
