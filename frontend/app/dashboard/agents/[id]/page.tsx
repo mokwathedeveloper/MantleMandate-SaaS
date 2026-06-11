@@ -888,6 +888,17 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   View transaction on Mantle Explorer
                 </a>
               )}
+              {tickResult.swapTxHash && (
+                <a
+                  href={`${MANTLE_TESTNET_EXPLORER}/tx/${tickResult.swapTxHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 underline hover:opacity-80 transition-opacity"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View swap on Mantle Explorer
+                </a>
+              )}
             </div>
           )}
         </AlertBanner>

@@ -4,8 +4,12 @@ import {
   publicClient,
   MANDATE_POLICY_ADDRESS,
   AGENT_EXECUTOR_ADDRESS,
+  MOCK_USD_ADDRESS,
+  MOCK_WETH_ADDRESS,
+  SWAP_POOL_ADDRESS,
   MANDATE_POLICY_ABI,
   AGENT_EXECUTOR_ABI,
+  SWAP_POOL_ABI,
   assetToBytes32,
 } from '@/lib/contracts'
 import { getServiceWalletClient, getServiceWalletAddress } from '@/lib/serverWallet'
@@ -31,9 +35,63 @@ export interface TickResult {
   decision:       TradeDecision
   executed:       boolean
   txHash?:        `0x${string}`
+  swapTxHash?:    `0x${string}`
   onchainAgentId?: string
   pnl?:           number
   reason?:        string
+}
+
+const MOCK_USD_DECIMALS  = 6
+const MOCK_WETH_DECIMALS = 18
+const SWAPPABLE_ASSETS = new Set(['ETH', 'WETH'])
+const SWAP_SLIPPAGE_BPS = 100n // 1% tolerance
+
+/**
+ * Execute a real on-chain swap against the project's mUSD/mWETH MockSwapPool
+ * on Mantle Sepolia (Merchant Moe / Agni Finance have no testnet deployment).
+ * Returns the swap's tx hash on success, or null if the asset isn't swappable
+ * or the swap fails — in which case the tick falls back to a record-only
+ * executeOrder call.
+ */
+async function trySwap(
+  wallet: ReturnType<typeof getServiceWalletClient>,
+  account: ReturnType<typeof getServiceWalletAddress>,
+  decision: TradeDecision,
+  isBuy: boolean,
+  amountUsd: number,
+): Promise<`0x${string}` | null> {
+  if (!SWAPPABLE_ASSETS.has(decision.asset) || decision.live_price == null) return null
+
+  try {
+    const tokenIn = isBuy ? MOCK_USD_ADDRESS : MOCK_WETH_ADDRESS
+    const amountIn = isBuy
+      ? BigInt(Math.round(amountUsd * 10 ** MOCK_USD_DECIMALS))
+      : BigInt(Math.round((amountUsd / decision.live_price) * 10 ** MOCK_WETH_DECIMALS))
+    if (amountIn <= 0n) return null
+
+    const expectedOut = await publicClient.readContract({
+      address: SWAP_POOL_ADDRESS,
+      abi: SWAP_POOL_ABI,
+      functionName: 'getAmountOut',
+      args: [tokenIn, amountIn],
+    })
+    const minAmountOut = (expectedOut * (10000n - SWAP_SLIPPAGE_BPS)) / 10000n
+
+    const swapHash = await wallet.writeContract({
+      address: SWAP_POOL_ADDRESS,
+      abi: SWAP_POOL_ABI,
+      functionName: 'swap',
+      args: [tokenIn, amountIn, minAmountOut],
+      account,
+      chain: wallet.chain,
+    })
+    const swapReceipt = await publicClient.waitForTransactionReceipt({ hash: swapHash })
+    return swapReceipt.transactionHash
+  } catch {
+    // Best-effort: pool may lack liquidity for this size — fall back to a
+    // record-only executeOrder call with a tick-derived txRef.
+    return null
+  }
 }
 
 /**
@@ -145,10 +203,14 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
   const capital = agent.capital_cap || 1000
   const amountUsd = Math.min(capital, capital * (decision.amount_pct / 100))
   const isBuy = decision.action === 'buy'
-  const txRef = keccak256(toHex(`tick:${agent.id}:${Date.now()}`))
 
   const wallet = getServiceWalletClient()
   const account = getServiceWalletAddress()
+
+  // For ETH/WETH, perform a real on-chain swap against the mUSD/mWETH pool
+  // first, then anchor the audit record (executeOrder) to that swap's tx hash.
+  const swapTxHash = await trySwap(wallet, account, decision, isBuy, amountUsd)
+  const txRef = swapTxHash ?? keccak256(toHex(`tick:${agent.id}:${Date.now()}`))
 
   let receipt: Awaited<ReturnType<typeof publicClient.waitForTransactionReceipt>>
   try {
@@ -166,9 +228,10 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     return { decision, executed: false, reason: `On-chain execution failed: ${message}` }
   }
 
-  // Mark-to-market PnL estimate from the live 24h price change — there is no
-  // DEX fill to settle against, so this is an honest, data-driven estimate
-  // (not a fabricated number), clearly distinct from an executed swap.
+  // Mark-to-market PnL estimate from the live 24h price change — even when a
+  // real swap fills, the AMM's quoted price differs from the CEX mark price,
+  // so this remains an honest, data-driven estimate rather than the swap's
+  // realized fill price.
   const pnl = Math.round(amountUsd * (decision.price_change / 100) * (isBuy ? 1 : -1) * 100) / 100
 
   await supabase.from('trades').insert({
@@ -180,7 +243,7 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     amount_usd: amountUsd,
     price: decision.live_price,
     pnl,
-    protocol: 'onchain-audit',
+    protocol: swapTxHash ? 'mantle-testnet-amm' : 'onchain-audit',
     tx_hash: receipt.transactionHash,
     block_number: Number(receipt.blockNumber),
     status: 'success',
@@ -203,6 +266,7 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     decision,
     executed: true,
     txHash: receipt.transactionHash,
+    swapTxHash: swapTxHash ?? undefined,
     onchainAgentId: onchainAgentId.toString(),
     pnl,
   }

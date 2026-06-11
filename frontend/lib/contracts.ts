@@ -16,6 +16,22 @@ export const RISK_GUARD_ADDRESS = (
   process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT || '0x8D99D4F922248852Bc678bd4018F9f3E4576E34B'
 ) as Address
 
+// ── Testnet AMM (Mantle Sepolia) ───────────────────────────────────────────────
+// Merchant Moe / Agni Finance have no Sepolia deployment, so the agent swaps
+// against this project-deployed mUSD/mWETH pool to execute real on-chain trades.
+
+export const MOCK_USD_ADDRESS = (
+  process.env.NEXT_PUBLIC_MOCK_USD_CONTRACT || '0x61806e0D29b0aa200dC26e9C1F0380707a3210c9'
+) as Address
+
+export const MOCK_WETH_ADDRESS = (
+  process.env.NEXT_PUBLIC_MOCK_WETH_CONTRACT || '0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF'
+) as Address
+
+export const SWAP_POOL_ADDRESS = (
+  process.env.NEXT_PUBLIC_SWAP_POOL_CONTRACT || '0x3440d742bbbAe391b95E40FAF62d7a715582a4ad'
+) as Address
+
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
 export const MANDATE_POLICY_ABI = parseAbi([
@@ -38,6 +54,22 @@ export const AGENT_EXECUTOR_ABI = parseAbi([
   'event AgentRegistered(address indexed owner, uint256 indexed agentId, bytes32 policyHash)',
   'event AgentStatusChanged(uint256 indexed agentId, uint8 status)',
   'event OrderExecuted(uint256 indexed agentId, bytes32 indexed asset, uint256 amount, bool isBuy, uint256 execIndex)',
+])
+
+export const ERC20_ABI = parseAbi([
+  'function balanceOf(address account) external view returns (uint256)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function decimals() external view returns (uint8)',
+])
+
+export const SWAP_POOL_ABI = parseAbi([
+  'function swap(address tokenIn, uint256 amountIn, uint256 minAmountOut) external returns (uint256 amountOut)',
+  'function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut)',
+  'function getReserves() external view returns (uint256 reserveA, uint256 reserveB)',
+  'function tokenA() external view returns (address)',
+  'function tokenB() external view returns (address)',
+  'event Swap(address indexed trader, address indexed tokenIn, uint256 amountIn, address indexed tokenOut, uint256 amountOut)',
 ])
 
 // ── Read-only public client (no wallet needed) ────────────────────────────────

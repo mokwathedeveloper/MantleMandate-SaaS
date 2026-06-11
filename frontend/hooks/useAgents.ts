@@ -213,6 +213,7 @@ export interface TickResult {
   }
   executed:        boolean
   txHash?:         string
+  swapTxHash?:     string
   onchainAgentId?: string
   pnl?:            number
   reason?:         string

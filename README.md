@@ -2,7 +2,7 @@
 
 AI-powered trading mandate platform on Mantle Network. Write trading rules in plain English — MantleMandate compiles them into enforceable on-chain policies, deploys AI agents to execute them, and provides a verifiable audit trail of every decision.
 
-**Turing Test Hackathon 2026 — AI Trading & Strategy track**
+**Turing Test Hackathon 2026 — Trading & Strategy track**
 
 ---
 
@@ -11,9 +11,10 @@ AI-powered trading mandate platform on Mantle Network. Write trading rules in pl
 | Resource | Link |
 |----------|------|
 | Frontend | https://mantle-mandate-saa-s.vercel.app |
-| MandatePolicy Contract | [0xee9FBcb6583B32d0ddC615882d0A03DA8714b952](https://explorer.sepolia.mantle.xyz/address/0xee9FBcb6583B32d0ddC615882d0A03DA8714b952) |
-| AgentExecutor Contract | [0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7](https://explorer.sepolia.mantle.xyz/address/0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7) |
-| RiskGuard Contract | [0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258](https://explorer.sepolia.mantle.xyz/address/0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258) |
+| MandatePolicy Contract | [0x690Ab021b40a01E9f3818CdBa149fb5721480871](https://explorer.sepolia.mantle.xyz/address/0x690Ab021b40a01E9f3818CdBa149fb5721480871) |
+| AgentExecutor Contract | [0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6](https://explorer.sepolia.mantle.xyz/address/0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6) |
+| RiskGuard Contract | [0x8D99D4F922248852Bc678bd4018F9f3E4576E34B](https://explorer.sepolia.mantle.xyz/address/0x8D99D4F922248852Bc678bd4018F9f3E4576E34B) |
+| MockSwapPool (mUSD/mWETH AMM) | [0x3440d742bbbAe391b95E40FAF62d7a715582a4ad](https://explorer.sepolia.mantle.xyz/address/0x3440d742bbbAe391b95E40FAF62d7a715582a4ad) |
 | Network | Mantle Sepolia Testnet (Chain ID 5003) |
 
 ---
@@ -81,9 +82,14 @@ MantleMandate lets you write your investment strategy in plain English. Claude A
 
 | Contract | Address (Mantle Sepolia) | Purpose |
 |----------|--------------------------|---------|
-| `MandatePolicy` | `0xee9FBcb6583B32d0ddC615882d0A03DA8714b952` | Immutable policy hash registry |
-| `AgentExecutor` | `0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7` | Agent lifecycle + trade execution |
-| `RiskGuard` | `0x5d7E824D8A374aA2b8ACe225220Ad7246a81e258` | On-chain risk parameter enforcement |
+| `MandatePolicy` | `0x690Ab021b40a01E9f3818CdBa149fb5721480871` | Immutable policy hash registry |
+| `AgentExecutor` | `0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6` | Agent lifecycle + trade execution |
+| `RiskGuard` | `0x8D99D4F922248852Bc678bd4018F9f3E4576E34B` | On-chain risk parameter enforcement |
+| `MockSwapPool` | `0x3440d742bbbAe391b95E40FAF62d7a715582a4ad` | mUSD/mWETH constant-product AMM — agents execute real on-chain swaps here (Merchant Moe / Agni Finance have no Sepolia deployment to swap against) |
+| `mUSD` (mock ERC20) | `0x61806e0D29b0aa200dC26e9C1F0380707a3210c9` | Test USD token, 6 decimals |
+| `mWETH` (mock ERC20) | `0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF` | Test ETH token, 18 decimals |
+
+All six contracts are verified on Sourcify (full match), synced to Mantle Explorer.
 
 ### AI Integration (Claude)
 
@@ -170,8 +176,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_MANTLE_RPC_URL=https://rpc.sepolia.mantle.xyz
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
-NEXT_PUBLIC_MANDATE_POLICY_CONTRACT=0xee9FBcb6583B32d0ddC615882d0A03DA8714b952
-NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT=0xEa15a627e1EADf5c3D09b641295CFD037BaaA4B7
+NEXT_PUBLIC_MANDATE_POLICY_CONTRACT=0x690Ab021b40a01E9f3818CdBa149fb5721480871
+NEXT_PUBLIC_AGENT_EXECUTOR_CONTRACT=0xbC8419baDaa69649940F2D4dDC01a2CFDEb408f6
+NEXT_PUBLIC_RISK_GUARD_CONTRACT=0x8D99D4F922248852Bc678bd4018F9f3E4576E34B
+NEXT_PUBLIC_MOCK_USD_CONTRACT=0x61806e0D29b0aa200dC26e9C1F0380707a3210c9
+NEXT_PUBLIC_MOCK_WETH_CONTRACT=0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF
+NEXT_PUBLIC_SWAP_POOL_CONTRACT=0x3440d742bbbAe391b95E40FAF62d7a715582a4ad
 ```
 
 **Backend** (`.env`):
@@ -192,16 +202,17 @@ MANTLE_TESTNET_RPC_URL=https://rpc.sepolia.mantle.xyz
 4. **Anchor on-chain** — click "Anchor Policy On-Chain", sign with MetaMask
 5. **Deploy agent** — select the mandate, deploy AI agent
 6. **Register on Mantle** — agent registered in AgentExecutor contract on-chain
-7. **View audit trail** — live OrderExecuted events from Mantle Sepolia
+7. **Run Trading Cycle** — agent fetches live Bybit market data, Claude makes a buy/sell/hold decision, and for ETH the agent swaps mUSD↔mWETH on the on-chain MockSwapPool, then records the order via `AgentExecutor.executeOrder()` referencing the swap's tx hash
+8. **View audit trail** — live OrderExecuted + Swap events from Mantle Sepolia
 
 ---
 
 ## Hackathon Tracks
 
-This project is submitted under the **Alpha & Data Track — AI-Driven Trading Strategy** path:
+This project is submitted under the **Trading & Strategy** track:
 
-- ✅ AI trading agents with on-chain execution
-- ✅ Strategy verifiability via on-chain OrderExecuted events
+- ✅ AI trading agents with real on-chain execution (mUSD/mWETH swaps via MockSwapPool)
+- ✅ Strategy verifiability via on-chain OrderExecuted + Swap events
 - ✅ Mandate policy hashes as immutable strategy commitments
 - ✅ Deployed on Mantle Sepolia Testnet (Chain ID 5003)
 
@@ -223,13 +234,13 @@ Also eligible for:
 
 ## Known Limitations (Hackathon MVP)
 
-- Agent execution is simulated; full autonomous execution requires further integration with Mantle DeFi protocols
+- Agent execution swaps against a project-deployed mUSD/mWETH MockSwapPool, not Merchant Moe / Agni Finance — those DEXes have no Mantle Sepolia deployment to integrate against on testnet
 - Demo uses Mantle Sepolia Testnet (not Mainnet)
 - OAuth (Google/Microsoft) is UI-only; email/password auth is fully functional
 
 ## Future Improvements
 
-- Live autonomous agent execution via Merchant Moe + Agni Finance SDKs
+- Mainnet deployment routing real swaps through Merchant Moe + Agni Finance liquidity
 - Byreal Agent Skills integration for advanced LP strategies
 - Mainnet deployment with multisig agent treasury
 - Mobile app for real-time alerts and mandate management
