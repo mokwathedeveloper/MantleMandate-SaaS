@@ -24,6 +24,7 @@ import { MANTLE_TESTNET_EXPLORER } from '@/lib/constants'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Trade, AuditLog } from '@/types/trade'
 import type { Agent } from '@/types/agent'
+import type { Mandate } from '@/types/mandate'
 
 // ── mock fallback data ────────────────────────────────────────────────────────
 
@@ -40,6 +41,29 @@ const MOCK_AGENT: Agent = {
   drawdownCurrent: 2.3,
   deployedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
   lastTradeAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+}
+
+const MOCK_MANDATE: Mandate = {
+  id: 'mandate-demo',
+  name: 'ETH Conservative Strategy',
+  mandateText: 'Buy ETH when RSI drops below 30. Max 20% position size. Stop loss at 5%. Take profit at 12%.',
+  parsedPolicy: {
+    asset: 'ETH',
+    trigger: 'RSI < 30',
+    riskPerTrade: 20,
+    takeProfit: 12,
+    schedule: 'Every 5 minutes',
+    venue: 'Merchant Moe',
+  },
+  policyHash: '0x8f3a2b1c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a',
+  baseCurrency: 'USDC',
+  strategyType: 'Mean Reversion',
+  riskParams: { maxDrawdown: 15, maxPosition: 20, stopLoss: 5, maxPositions: 5, cooldownHours: 1 },
+  capitalCap: 50000,
+  status: 'active',
+  onChainTx: null,
+  createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
 }
 
 const MOCK_TRADES: Trade[] = [
@@ -454,8 +478,9 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
 
 // ── Mandate Tab ───────────────────────────────────────────────────────────────
 
-function MandateTab({ mandateId }: { mandateId: string }) {
-  const { data: mandate, isLoading } = useMandate(mandateId)
+function MandateTab({ mandateId, isMock }: { mandateId: string; isMock: boolean }) {
+  const { data: fetchedMandate, isLoading } = useMandate(mandateId)
+  const mandate = isMock ? MOCK_MANDATE : fetchedMandate
   const [copied, setCopied] = useState(false)
 
   const copyHash = () => {
@@ -465,7 +490,7 @@ function MandateTab({ mandateId }: { mandateId: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (isLoading) {
+  if (isLoading && !isMock) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-6 w-48" />
@@ -493,13 +518,15 @@ function MandateTab({ mandateId }: { mandateId: string }) {
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold text-text-primary">{mandate.name}</h3>
         <Badge variant={mandate.status === 'active' ? 'success' : 'default'}>{mandate.status}</Badge>
-        <Link
-          href={`/dashboard/mandates/${mandate.id}`}
-          className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Edit mandate
-        </Link>
+        {!isMock && (
+          <Link
+            href={`/dashboard/mandates/${mandate.id}`}
+            className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Edit mandate
+          </Link>
+        )}
       </div>
 
       {/* Plain-English mandate text */}
@@ -933,7 +960,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       )}
 
       {activeTab === 'mandate' && (
-        <MandateTab mandateId={display.mandateId} />
+        <MandateTab mandateId={isMock ? '' : display.mandateId} isMock={isMock} />
       )}
 
       {activeTab === 'audit' && (
