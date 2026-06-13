@@ -4,64 +4,12 @@ import { useState } from 'react'
 import { Bell, ChevronDown, Check, X } from 'lucide-react'
 import NextLink from 'next/link'
 import { useAlerts, useMarkAllRead, type Alert } from '@/hooks/useAlerts'
+import { useAgents } from '@/hooks/useAgents'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Filter = 'all' | 'unread' | 'high' | 'medium' | 'low'
-
-// ─── Mock fallback data ───────────────────────────────────────────────────────
-
-const MOCK_ALERTS: Alert[] = [
-  {
-    id: '1', agentId: 'agent-1', alertType: 'DRAWDOWN LIMIT HIT', severity: 'high',
-    title: 'DRAWDOWN LIMIT HIT',
-    message: 'Agent "ETH Conservative" was paused because the drawdown threshold was reached before execution.',
-    isRead: false, createdAt: '2026-05-06T09:45:21Z',
-  },
-  {
-    id: '2', agentId: 'agent-1', alertType: 'MANDATE BREACH', severity: 'high',
-    title: 'MANDATE BREACH',
-    message: 'Agent paused after reaching 12.3% drawdown of 15% mandate limit.',
-    isRead: false, createdAt: '2026-05-06T08:22:10Z',
-  },
-  {
-    id: '3', agentId: 'agent-2', alertType: 'TRADE FAILED', severity: 'high',
-    title: 'TRADE FAILED',
-    message: 'WBTC/ETH trade failed due to slippage exceeding mandate tolerance at 67.3%.',
-    isRead: false, createdAt: '2026-05-05T22:10:45Z',
-  },
-  {
-    id: '4', agentId: 'agent-3', alertType: 'LOW GAS WARNING', severity: 'medium',
-    title: 'LOW GAS WARNING',
-    message: 'ETH Agent 8 has only 0.002 ETH gas remaining and may pause soon.',
-    isRead: true, createdAt: '2026-05-05T18:30:00Z',
-  },
-  {
-    id: '5', agentId: 'agent-4', alertType: 'DRAWDOWN WARNING', severity: 'medium',
-    title: 'DRAWDOWN WARNING',
-    message: 'ETH Momentum is approaching its drawdown limit. 12.2% used out of 15%.',
-    isRead: true, createdAt: '2026-05-05T14:00:33Z',
-  },
-  {
-    id: '6', agentId: 'agent-5', alertType: 'APPROVAL NEEDED', severity: 'high',
-    title: 'APPROVAL NEEDED',
-    message: 'Stablecoin Yield Drone Agent requires approval before deploying $12,000 in new pool.',
-    isRead: false, createdAt: '2026-05-05T10:15:09Z',
-  },
-  {
-    id: '7', agentId: 'agent-6', alertType: 'AGENT DEPLOYED', severity: 'low',
-    title: 'AGENT DEPLOYED',
-    message: 'ETH Momentum Strategy was successfully deployed with a $25,000 mandate.',
-    isRead: true, createdAt: '2026-05-04T16:00:00Z',
-  },
-  {
-    id: '8', agentId: 'agent-7', alertType: 'TRADE EXECUTED', severity: 'low',
-    title: 'TRADE EXECUTED',
-    message: '+$2,450 | ETH/USDT via Merchant Moe — Position opened successfully.',
-    isRead: true, createdAt: '2026-05-04T12:30:55Z',
-  },
-]
 
 // ─── Severity styles (exact hex) ──────────────────────────────────────────────
 
@@ -106,16 +54,6 @@ const ACTION_HREF: Record<string, string> = {
   'APPROVAL NEEDED':    '/dashboard/agents',
 }
 
-const AGENT_NAMES: Record<string, string> = {
-  'agent-1': 'ETH Conservative Buyer',
-  'agent-2': 'BTC Momentum Trader',
-  'agent-3': 'ETH Agent 8',
-  'agent-4': 'ETH Momentum Strategy',
-  'agent-5': 'Stablecoin Yield Drone',
-  'agent-6': 'ETH Momentum Strategy',
-  'agent-7': 'WBTC Arb Bot',
-}
-
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
 function Toggle({ on, locked }: { on: boolean; locked?: boolean }) {
@@ -140,12 +78,12 @@ function Toggle({ on, locked }: { on: boolean; locked?: boolean }) {
 
 // ─── Alert Card ───────────────────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: (id: string) => void }) {
+function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead: (id: string) => void; agentNames: Record<string, string> }) {
   const dotClass   = SEVERITY_DOT_CLASS[alert.severity] ?? 'bg-text-secondary'
   const badgeClass = SEVERITY_BADGE_CLASS[alert.severity] ?? 'text-text-secondary'
   const action     = ACTION_LABEL[alert.alertType]
   const actionHref = ACTION_HREF[alert.alertType]
-  const agentName  = alert.agentId ? (AGENT_NAMES[alert.agentId] ?? `Agent ${alert.agentId}`) : null
+  const agentName  = alert.agentId ? (agentNames[alert.agentId] ?? `Agent ${alert.agentId.slice(0, 8)}`) : null
 
   return (
     <div className={cn(
@@ -260,9 +198,13 @@ export default function AlertsPage() {
 
   const { alerts: apiAlerts, isLoading } = useAlerts()
   const { mutate: markAllRead } = useMarkAllRead()
+  const { data: agents } = useAgents()
 
-  // Use mock fallback if API returned nothing
-  const allAlerts = apiAlerts.length > 0 ? apiAlerts : MOCK_ALERTS
+  const agentNames = Object.fromEntries(
+    (agents ?? []).map(a => [a.id, a.name])
+  )
+
+  const allAlerts = apiAlerts
 
   const [localAlerts, setLocalAlerts] = useState<Alert[] | null>(null)
   const displayAlerts = localAlerts ?? allAlerts
@@ -373,7 +315,7 @@ export default function AlertsPage() {
               className="appearance-none bg-input border border-border rounded-md pl-3 pr-7 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             >
               <option value="all">All Agents</option>
-              {Object.entries(AGENT_NAMES).map(([id, name]) => (
+              {Object.entries(agentNames).map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
             </select>
@@ -403,7 +345,7 @@ export default function AlertsPage() {
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-2">
           {filtered.map(a => (
-            <AlertCard key={a.id} alert={a} onMarkRead={handleMarkRead} />
+            <AlertCard key={a.id} alert={a} onMarkRead={handleMarkRead} agentNames={agentNames} />
           ))}
         </div>
       )}

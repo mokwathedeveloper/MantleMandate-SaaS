@@ -23,222 +23,6 @@ import { cn } from '@/lib/utils'
 import { MANTLE_TESTNET_EXPLORER } from '@/lib/constants'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Trade, AuditLog } from '@/types/trade'
-import type { Agent } from '@/types/agent'
-import type { Mandate } from '@/types/mandate'
-
-// ── mock fallback data ────────────────────────────────────────────────────────
-
-const MOCK_AGENT: Agent = {
-  id: 'agent-demo',
-  mandateId: 'mandate-demo',
-  mandateName: 'ETH Conservative Strategy',
-  name: 'ETH Conservative Buyer',
-  status: 'active' as const,
-  capitalCap: 50000,
-  totalPnl: 3847.22,
-  totalRoi: 7.69,
-  totalVolume: 284500,
-  drawdownCurrent: 2.3,
-  deployedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  lastTradeAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-}
-
-const MOCK_MANDATE: Mandate = {
-  id: 'mandate-demo',
-  name: 'ETH Conservative Strategy',
-  mandateText: 'Buy ETH when RSI drops below 30. Max 20% position size. Stop loss at 5%. Take profit at 12%.',
-  parsedPolicy: {
-    asset: 'ETH',
-    trigger: 'RSI < 30',
-    riskPerTrade: 20,
-    takeProfit: 12,
-    schedule: 'Every 5 minutes',
-    venue: 'Merchant Moe',
-  },
-  policyHash: '0x8f3a2b1c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a',
-  baseCurrency: 'USDC',
-  strategyType: 'Mean Reversion',
-  riskParams: { maxDrawdown: 15, maxPosition: 20, stopLoss: 5, maxPositions: 5, cooldownHours: 1 },
-  capitalCap: 50000,
-  status: 'active',
-  onChainTx: null,
-  createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-}
-
-const MOCK_TRADES: Trade[] = [
-  {
-    id: 'trade-1',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'ETH/USDT',
-    direction: 'buy',
-    amountUsd: 4200,
-    price: 2184.5,
-    pnl: 312.8,
-    protocol: 'merchant_moe',
-    txHash: '0xabc123def456789abc123def456789abc123def456789abc123def456789abc1',
-    blockNumber: 14823910,
-    status: 'success',
-    mandateRuleApplied: 'Max 10% position size',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'trade-2',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'MNT/USDT',
-    direction: 'buy',
-    amountUsd: 2800,
-    price: 0.682,
-    pnl: 187.4,
-    protocol: 'agni',
-    txHash: '0xdef456abc789def456abc789def456abc789def456abc789def456abc789def4',
-    blockNumber: 14823750,
-    status: 'success',
-    mandateRuleApplied: 'Diversify across assets',
-    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'trade-3',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'ETH/USDT',
-    direction: 'sell',
-    amountUsd: 3500,
-    price: 2240.1,
-    pnl: 428.6,
-    protocol: 'merchant_moe',
-    txHash: '0x789abc123def789abc123def789abc123def789abc123def789abc123def7891',
-    blockNumber: 14823590,
-    status: 'success',
-    mandateRuleApplied: 'Take profit at +5%',
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'trade-4',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'USDC/USDT',
-    direction: 'buy',
-    amountUsd: 5000,
-    price: 1.0,
-    pnl: -12.4,
-    protocol: 'fluxion',
-    txHash: null,
-    blockNumber: null,
-    status: 'failed',
-    mandateRuleApplied: 'Stable coin hedge',
-    createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'trade-5',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'ETH/USDT',
-    direction: 'buy',
-    amountUsd: 6100,
-    price: 2118.9,
-    pnl: 544.2,
-    protocol: 'merchant_moe',
-    txHash: '0x321cba987fed321cba987fed321cba987fed321cba987fed321cba987fed3214',
-    blockNumber: 14823100,
-    status: 'success',
-    mandateRuleApplied: 'Dip buy at -3%',
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'trade-6',
-    agentId: 'agent-demo',
-    mandateId: 'mandate-demo',
-    mandateName: 'ETH Conservative Strategy',
-    assetPair: 'MNT/USDT',
-    direction: 'sell',
-    amountUsd: 1900,
-    price: 0.71,
-    pnl: 94.1,
-    protocol: 'agni',
-    txHash: '0x654fed321abc654fed321abc654fed321abc654fed321abc654fed321abc6545',
-    blockNumber: 14822870,
-    status: 'success',
-    mandateRuleApplied: 'Take profit at +4%',
-    createdAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
-  },
-]
-
-const MOCK_AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 'log-1',
-    agentId: 'agent-demo',
-    tradeId: 'trade-1',
-    eventType: 'trade_executed',
-    decisionHash: '0x8f3a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-    txHash: '0xabc123def456789abc123def456789abc123def456789abc123def456789abc1',
-    blockNumber: 14823910,
-    details: { reason: 'ETH dipped 2.1% below 7-day MA. Mandate allows dip-buy entry.' },
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'log-2',
-    agentId: 'agent-demo',
-    tradeId: null,
-    eventType: 'mandate_check',
-    decisionHash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
-    txHash: null,
-    blockNumber: null,
-    details: { reason: 'All mandate rules verified. Drawdown at 2.3%, within 10% limit.' },
-    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'log-3',
-    agentId: 'agent-demo',
-    tradeId: 'trade-2',
-    eventType: 'trade_executed',
-    decisionHash: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3',
-    txHash: '0xdef456abc789def456abc789def456abc789def456abc789def456abc789def4',
-    blockNumber: 14823750,
-    details: { reason: 'Portfolio diversification threshold triggered MNT allocation.' },
-    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'log-4',
-    agentId: 'agent-demo',
-    tradeId: 'trade-3',
-    eventType: 'trade_executed',
-    decisionHash: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4',
-    txHash: '0x789abc123def789abc123def789abc123def789abc123def789abc123def7891',
-    blockNumber: 14823590,
-    details: { reason: 'Take-profit rule triggered at +5.2% from entry. Position closed.' },
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'log-5',
-    agentId: 'agent-demo',
-    tradeId: 'trade-4',
-    eventType: 'trade_failed',
-    decisionHash: null,
-    txHash: null,
-    blockNumber: null,
-    details: { reason: 'Insufficient liquidity on Fluxion. Retrying on next cycle.' },
-    createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'log-6',
-    agentId: 'agent-demo',
-    tradeId: null,
-    eventType: 'agent_deployed',
-    decisionHash: '0x9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
-    txHash: null,
-    blockNumber: null,
-    details: { reason: 'Agent initialized and mandate policy hash verified on-chain.' },
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-]
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -478,9 +262,8 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
 
 // ── Mandate Tab ───────────────────────────────────────────────────────────────
 
-function MandateTab({ mandateId, isMock }: { mandateId: string; isMock: boolean }) {
-  const { data: fetchedMandate, isLoading } = useMandate(mandateId)
-  const mandate = isMock ? MOCK_MANDATE : fetchedMandate
+function MandateTab({ mandateId }: { mandateId: string }) {
+  const { data: mandate, isLoading } = useMandate(mandateId)
   const [copied, setCopied] = useState(false)
 
   const copyHash = () => {
@@ -490,7 +273,7 @@ function MandateTab({ mandateId, isMock }: { mandateId: string; isMock: boolean 
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (isLoading && !isMock) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-6 w-48" />
@@ -518,15 +301,13 @@ function MandateTab({ mandateId, isMock }: { mandateId: string; isMock: boolean 
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold text-text-primary">{mandate.name}</h3>
         <Badge variant={mandate.status === 'active' ? 'success' : 'default'}>{mandate.status}</Badge>
-        {!isMock && (
-          <Link
-            href={`/dashboard/mandates/${mandate.id}`}
-            className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Edit mandate
-          </Link>
-        )}
+        <Link
+          href={`/dashboard/mandates/${mandate.id}`}
+          className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Edit mandate
+        </Link>
       </div>
 
       {/* Plain-English mandate text */}
@@ -798,14 +579,8 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   const { mutate: stop,   isPending: stopping } = useStopAgent()
   const { mutate: runTick, isPending: ticking, data: tickResult, error: tickError, reset: resetTick } = useRunAgentTick()
 
-  const rawTrades = (Array.isArray(tradesData) ? tradesData : []) as Trade[]
-  const rawLogs   = (Array.isArray(logsData) ? logsData : []) as AuditLog[]
-
-  // Fall back to mock data when backend is offline / agent not seeded
-  const isMock   = !isLoading && !agent
-  const display  = agent ?? MOCK_AGENT
-  const trades   = rawTrades.length > 0 ? rawTrades : (isMock ? MOCK_TRADES : [])
-  const logs     = rawLogs.length > 0   ? rawLogs   : (isMock ? MOCK_AUDIT_LOGS : [])
+  const trades = (Array.isArray(tradesData) ? tradesData : []) as Trade[]
+  const logs   = (Array.isArray(logsData) ? logsData : []) as AuditLog[]
 
   // Build cumulative P&L sparkline from trade history
   const pnlPoints = (() => {
@@ -836,6 +611,24 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
     )
   }
 
+  // ── not found ──
+  if (!agent) {
+    return (
+      <div className="p-4 sm:p-6">
+        <AlertBanner severity="warning" title="Agent not found">
+          This agent doesn&apos;t exist or you don&apos;t have access to it.
+        </AlertBanner>
+        <Link
+          href="/dashboard/agents"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Agents
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
@@ -846,16 +639,16 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           </Link>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold text-text-primary">{display.name}</h1>
-              <Badge variant={STATUS_VARIANT[display.status]} dot>{display.status}</Badge>
+              <h1 className="text-xl font-bold text-text-primary">{agent.name}</h1>
+              <Badge variant={STATUS_VARIANT[agent.status]} dot>{agent.status}</Badge>
             </div>
-            <p className="text-sm text-text-secondary mt-0.5">Running: {display.mandateName}</p>
+            <p className="text-sm text-text-secondary mt-0.5">Running: {agent.mandateName}</p>
           </div>
         </div>
 
         {/* Quick action buttons in header */}
         <div className="flex items-center gap-2 sm:shrink-0 self-start sm:self-auto">
-          {display.status === 'active' && !isMock && (
+          {agent.status === 'active' && (
             <>
               <Button variant="primary" size="sm" loading={ticking} onClick={() => runTick(id)}>
                 <Zap className="h-3.5 w-3.5" /> Run Trading Cycle
@@ -868,7 +661,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
               </Button>
             </>
           )}
-          {display.status === 'paused' && !isMock && (
+          {agent.status === 'paused' && (
             <>
               <Button variant="primary" size="sm" loading={resuming} onClick={() => resume(id)}>
                 <Play className="h-3.5 w-3.5" /> Resume
@@ -957,7 +750,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <OverviewTab agent={display} trades={trades} pnlPoints={pnlPoints} />
+        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} />
       )}
 
       {activeTab === 'trades' && (
@@ -965,7 +758,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
       )}
 
       {activeTab === 'mandate' && (
-        <MandateTab mandateId={isMock ? '' : display.mandateId} isMock={isMock} />
+        <MandateTab mandateId={agent.mandateId} />
       )}
 
       {activeTab === 'audit' && (
@@ -974,10 +767,10 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {activeTab === 'settings' && (
         <SettingsTab
-          agent={display}
-          onPause={() => !isMock && pause(id)}
-          onResume={() => !isMock && resume(id)}
-          onStop={() => !isMock && stop(id)}
+          agent={agent}
+          onPause={() => pause(id)}
+          onResume={() => resume(id)}
+          onStop={() => stop(id)}
           pausing={pausing}
           resuming={resuming}
           stopping={stopping}

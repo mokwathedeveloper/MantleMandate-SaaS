@@ -19,7 +19,7 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 
-import { MOCK_WALLETS, WALLET_KPIS, type MockWallet, type WalletKind } from '@/mocks/wallets'
+import { type MockWallet, type WalletKind } from '@/mocks/wallets'
 import { formatCurrency, truncateAddress } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
@@ -270,7 +270,20 @@ export default function WalletsPage() {
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null)
   const realWallets = useRealWallets()
 
-  const allWallets = useMemo(() => [...realWallets, ...MOCK_WALLETS], [realWallets])
+  const allWallets = realWallets
+
+  const totalCustody = useMemo(
+    () => allWallets.reduce((sum, w) => sum + w.balanceUsd, 0),
+    [allWallets],
+  )
+  const connectedCount = useMemo(
+    () => allWallets.filter((w) => w.status === 'connected').length,
+    [allWallets],
+  )
+  const totalLinkedAgents = useMemo(
+    () => allWallets.reduce((sum, w) => sum + w.agents, 0),
+    [allWallets],
+  )
 
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address).catch(() => {})
@@ -396,31 +409,22 @@ export default function WalletsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Total Custody"
-          value={formatCurrency(WALLET_KPIS.totalCustody.value)}
-          delta={WALLET_KPIS.totalCustody.deltaText}
-          deltaTone="positive"
+          value={formatCurrency(totalCustody)}
           icon={<Coins className="h-4 w-4" />}
         />
         <MetricCard
           label="Connected"
-          value={WALLET_KPIS.connected.value.toString()}
-          delta={WALLET_KPIS.connected.deltaText}
-          deltaTone="neutral"
+          value={connectedCount.toString()}
           icon={<Wallet className="h-4 w-4" />}
         />
         <MetricCard
-          label="Multisig Coverage"
-          value={WALLET_KPIS.multisigCoverage.value.toString()}
-          unit="%"
-          delta={WALLET_KPIS.multisigCoverage.deltaText}
-          deltaTone="neutral"
+          label="Linked Agents"
+          value={totalLinkedAgents.toString()}
           icon={<ShieldCheck className="h-4 w-4" />}
         />
         <MetricCard
-          label="Signer Keys"
-          value={WALLET_KPIS.signerKeys.value.toString()}
-          delta={WALLET_KPIS.signerKeys.deltaText}
-          deltaTone="neutral"
+          label="Total Wallets"
+          value={allWallets.length.toString()}
           icon={<KeyRound className="h-4 w-4" />}
         />
       </div>
@@ -448,7 +452,16 @@ export default function WalletsPage() {
         padding="none"
       >
         <div className="border-t border-border">
-          <DataTable columns={columns} rows={filtered} rowKey={(w) => w.id} />
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            rowKey={(w) => w.id}
+            empty={
+              allWallets.length === 0
+                ? 'No wallets yet — connect a wallet or deploy an agent to get started.'
+                : 'No wallets match your filters.'
+            }
+          />
         </div>
       </SectionCard>
     </div>

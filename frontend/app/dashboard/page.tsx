@@ -22,6 +22,7 @@ import { GettingStartedBanner } from '@/components/dashboard/GettingStartedBanne
 import { usePortfolioStats, usePortfolioHistory } from '@/hooks/usePortfolio'
 import { useAgents } from '@/hooks/useAgents'
 import { useRecentTrades } from '@/hooks/useTrades'
+import { useRiskSummary } from '@/hooks/useRiskSummary'
 import type { Trade } from '@/types/trade'
 
 import { formatCurrency, formatPercent, truncateAddress, explorerTxUrl, cn } from '@/lib/utils'
@@ -93,6 +94,7 @@ export default function DashboardPage() {
   const { data: history }   = usePortfolioHistory(tabToDays(tab))
   const { data: agents = [] } = useAgents()
   const { data: tradesResp } = useRecentTrades(6)
+  const { data: riskSummary } = useRiskSummary()
 
   const k = stats ?? { totalValue: 0, totalPnl24h: 0, totalPnlPct: 0, activeAgents: 0, totalTrades: 0, winRate: 0 }
   const chartData = history ?? []
@@ -378,39 +380,63 @@ export default function DashboardPage() {
           subtitle="Current exposure across mandates"
           action={<ShieldCheck className="h-4 w-4 text-success" />}
         >
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-bold text-success leading-none tabular-nums">23</span>
-                <span className="text-text-secondary text-xs">/ 100</span>
-                <StatusBadge status="active" label="Low Risk" className="ml-auto" />
-              </div>
-              <div className="h-2 rounded-full bg-page overflow-hidden">
-                <div className="h-full bg-success" style={{ width: '23%' }} />
-              </div>
+          {!riskSummary?.hasData ? (
+            <div className="space-y-4">
+              <p className="text-sm text-text-secondary">
+                No active agents yet — risk metrics will appear once an agent is deployed.
+              </p>
+              <Link
+                href="/dashboard/risk"
+                className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
+              >
+                Open Risk Engine →
+              </Link>
             </div>
-
-            <div className="space-y-2 pt-2 border-t border-border">
-              {[
-                { label: 'Concentration risk',    value: 'Low',     tone: 'text-success' },
-                { label: 'Liquidity depth',       value: 'Healthy', tone: 'text-success' },
-                { label: 'Volatility (30d)',      value: 'Normal',  tone: 'text-text-primary' },
-                { label: 'Counterparty exposure', value: 'Low',     tone: 'text-success' },
-              ].map((r) => (
-                <div key={r.label} className="flex items-center justify-between text-[12px]">
-                  <span className="text-text-secondary">{r.label}</span>
-                  <span className={cn('font-semibold', r.tone)}>{r.value}</span>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className={cn(
+                    'text-3xl font-bold leading-none tabular-nums',
+                    riskSummary.score < 30 ? 'text-success' : riskSummary.score < 60 ? 'text-warning' : 'text-error',
+                  )}>
+                    {riskSummary.score}
+                  </span>
+                  <span className="text-text-secondary text-xs">/ 100</span>
+                  <StatusBadge
+                    status={riskSummary.score < 30 ? 'active' : riskSummary.score < 60 ? 'pending' : 'failed'}
+                    label={riskSummary.level}
+                    className="ml-auto"
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="h-2 rounded-full bg-page overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full',
+                      riskSummary.score < 30 ? 'bg-success' : riskSummary.score < 60 ? 'bg-warning' : 'bg-error',
+                    )}
+                    style={{ width: `${riskSummary.score}%` }}
+                  />
+                </div>
+              </div>
 
-            <Link
-              href="/dashboard/risk"
-              className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
-            >
-              Open Risk Engine →
-            </Link>
-          </div>
+              <div className="space-y-2 pt-2 border-t border-border">
+                {riskSummary.drivers.map((d) => (
+                  <div key={d.label} className="flex items-center justify-between text-[12px]">
+                    <span className="text-text-secondary">{d.label}</span>
+                    <span className="font-semibold text-text-primary">{d.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/dashboard/risk"
+                className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
+              >
+                Open Risk Engine →
+              </Link>
+            </div>
+          )}
         </SectionCard>
       </div>
 

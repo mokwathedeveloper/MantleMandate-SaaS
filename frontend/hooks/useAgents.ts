@@ -3,25 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import { MOCK_AGENTS } from '@/mocks/agents'
 import type { Agent } from '@/types/agent'
-
-// ── Mock fallback ─────────────────────────────────────────────────────────────
-
-const MOCK_AS_AGENTS: Agent[] = MOCK_AGENTS.map(m => ({
-  id:              m.id,
-  mandateId:       '',
-  mandateName:     m.strategy,
-  name:            m.name,
-  status:          m.status === 'error' ? 'failed' : m.status === 'stopped' ? 'stopped' : m.status as Agent['status'],
-  capitalCap:      m.capitalUsd,
-  totalPnl:        m.pnl24h,
-  totalRoi:        m.pnlPct,
-  totalVolume:     m.capitalUsd * 0.45,
-  drawdownCurrent: m.riskScore / 5,
-  deployedAt:      m.createdAt,
-  lastTradeAt:     m.lastTradeAt,
-}))
 
 // ── Row mapper ────────────────────────────────────────────────────────────────
 
@@ -42,85 +24,6 @@ function rowToAgent(row: Record<string, unknown>): Agent {
   }
 }
 
-// ── Metric simulation ─────────────────────────────────────────────────────────
-//
-// When an agent is newly deployed its metric columns in Supabase are all 0
-// because the backend agent-loop (Flask/PostgreSQL) is a separate system.
-// Until the two are fully wired together, we simulate a realistic accumulated
-// P&L / volume history based on the agent's deploy timestamp and ID.
-// The simulation is:
-//  - deterministic (same numbers every render/refresh)
-//  - proportional to time running (metrics accumulate over time)
-//  - only applied when all metrics are genuinely 0 (never overrides real data)
-
-function lcg(seed: number): () => number {
-  let s = seed
-  return () => {
-    s = Math.imul(s, 1664525) + 1013904223
-    return (s >>> 0) / 0xffffffff
-  }
-}
-
-function simulateAgentMetrics(agent: Agent): Agent {
-  // Skip simulation if real metrics exist or agent isn't running
-  if (
-    agent.totalPnl !== 0 ||
-    agent.totalVolume !== 0 ||
-    !agent.deployedAt ||
-    agent.status === 'stopped' ||
-    agent.status === 'failed'
-  ) return agent
-
-  const capital     = agent.capitalCap || 10_000
-  const deployedAt  = new Date(agent.deployedAt).getTime()
-  const elapsedMs   = Math.max(0, Date.now() - deployedAt)
-  const TICK_MS     = 5 * 60 * 1000           // 5-min trading ticks
-  const ticks       = Math.min(Math.floor(elapsedMs / TICK_MS), 2016) // cap at ~7 days
-
-  if (ticks === 0) return agent
-
-  // Deterministic seed from agent ID
-  const idSeed = agent.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  const rand   = lcg(idSeed)
-
-  // Strategy bias: agent ID → slight directional edge (-0.5% … +1.5%)
-  const edge   = (rand() * 2 - 0.5) / 100
-
-  let totalPnl    = 0
-  let totalVolume = 0
-  let peakPnl     = 0
-  let maxDrawdown = 0
-
-  for (let t = 0; t < ticks; t++) {
-    if (rand() < 0.32) {                        // ~32% trade probability per tick
-      const sizePct    = 0.04 + rand() * 0.14  // 4 – 18% of capital per trade
-      const amount     = capital * sizePct
-      const pnlPct     = edge + (rand() - 0.47) * 0.035 // edge ± noise
-      const pnl        = amount * pnlPct
-      totalPnl        += pnl
-      totalVolume     += amount
-      if (totalPnl > peakPnl) peakPnl = totalPnl
-      if (peakPnl > 0) {
-        const dd = ((peakPnl - totalPnl) / capital) * 100
-        if (dd > maxDrawdown) maxDrawdown = dd
-      }
-    }
-  }
-
-  // Synthesise a realistic lastTradeAt: somewhere in the last 30 minutes
-  const lastTradeOffset = Math.floor(rand() * 30 * 60 * 1000)
-  const lastTradeAt = new Date(Date.now() - lastTradeOffset).toISOString()
-
-  return {
-    ...agent,
-    totalPnl:        Math.round(totalPnl * 100) / 100,
-    totalRoi:        Math.round((totalPnl / capital) * 10000) / 100,
-    totalVolume:     Math.round(totalVolume * 100) / 100,
-    drawdownCurrent: Math.round(Math.min(maxDrawdown, 12) * 100) / 100,
-    lastTradeAt,
-  }
-}
-
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export function useAgents() {
@@ -129,19 +32,13 @@ export function useAgents() {
   return useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('agents')
-          .select('*, mandate:mandates(name)')
-          .order('created_at', { ascending: false })
-        if (error) throw error
-        const rows = (data ?? []).map(rowToAgent).map(simulateAgentMetrics)
-        return rows.length > 0 ? rows : MOCK_AS_AGENTS
-      } catch {
-        return MOCK_AS_AGENTS
-      }
+      const { data, error } = await supabase
+        .from('agents')
+        .select('*, mandate:mandates(name)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []).map(rowToAgent)
     },
-    retry: false,
     enabled: !!user,
     refetchInterval: 15_000,
   })
@@ -159,7 +56,7 @@ export function useAgent(id: string) {
         .eq('id', id)
         .single()
       if (error) throw error
-      return simulateAgentMetrics(rowToAgent(data))
+      return rowToAgent(data)
     },
     enabled: !!id && !!user,
     refetchInterval: 15_000,
