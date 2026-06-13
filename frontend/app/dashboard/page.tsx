@@ -205,6 +205,14 @@ export default function DashboardPage() {
           }
           bodyClassName="px-2 py-2"
         >
+          {chartData.length === 0 ? (
+            <div className="flex h-[260px] flex-col items-center justify-center gap-1 text-center">
+              <p className="text-sm font-semibold text-text-primary">No portfolio history yet</p>
+              <p className="text-xs text-text-secondary">
+                Snapshots accumulate daily once your agents start trading.
+              </p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <defs>
@@ -245,6 +253,7 @@ export default function DashboardPage() {
               />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </SectionCard>
 
         <SectionCard

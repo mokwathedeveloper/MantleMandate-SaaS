@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils'
 import { TokenIcon } from '@/components/ui/TokenIcon'
+import { usePortfolioHistory } from '@/hooks/usePortfolio'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ interface PortfolioSnapshot {
   dayPnl: number
   dayPnlPct: number
   maxDrawdown: number
-  sharpeRatio: number
+  sharpeRatio: number | null
   winRate: number
 }
 
@@ -37,49 +38,18 @@ interface PositionRow {
   status: 'open' | 'closed'
 }
 
-interface PnlPoint { date: string; value: number }
+// ── empty data ────────────────────────────────────────────────────────────────
 
-// ── mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_SNAPSHOT: PortfolioSnapshot = {
-  totalValue:  52_847.22,
-  totalPnl:    3_847.22,
-  totalRoi:    7.84,
-  dayPnl:      312.45,
-  dayPnlPct:   0.60,
-  maxDrawdown: 3.2,
-  sharpeRatio: 1.87,
-  winRate:     74.2,
+const EMPTY_SNAPSHOT: PortfolioSnapshot = {
+  totalValue:  0,
+  totalPnl:    0,
+  totalRoi:    0,
+  dayPnl:      0,
+  dayPnlPct:   0,
+  maxDrawdown: 0,
+  sharpeRatio: null,
+  winRate:     0,
 }
-
-const MOCK_POSITIONS: PositionRow[] = [
-  { id: 'pos-1', asset: 'ETH',  protocol: 'merchant_moe', direction: 'long',  size: 12_400, entryPrice: 2847.32, currentPrice: 3041.50, pnl: 318.45,  pnlPct: 2.57,  status: 'open' },
-  { id: 'pos-2', asset: 'USDC', protocol: 'agni',         direction: 'long',  size: 18_500, entryPrice: 1.0001,  currentPrice: 1.0003,  pnl: 42.30,   pnlPct: 0.23,  status: 'open' },
-  { id: 'pos-3', asset: 'MNT',  protocol: 'fluxion',      direction: 'long',  size: 3_200,  entryPrice: 0.8234,  currentPrice: 0.8480,  pnl: 95.60,   pnlPct: 2.99,  status: 'open' },
-  { id: 'pos-4', asset: 'WBTC', protocol: 'merchant_moe', direction: 'long',  size: 8_100,  entryPrice: 62_430,  currentPrice: 63_180,  pnl: 97.40,   pnlPct: 1.20,  status: 'open' },
-  { id: 'pos-5', asset: 'ETH',  protocol: 'fluxion',      direction: 'short', size: 5_200,  entryPrice: 3089.00, currentPrice: 3041.50, pnl: 79.80,   pnlPct: 1.54,  status: 'open' },
-  { id: 'pos-6', asset: 'USDT', protocol: 'agni',         direction: 'long',  size: 9_000,  entryPrice: 1.0000,  currentPrice: 0.9998,  pnl: -18.00,  pnlPct: -0.20, status: 'closed' },
-  { id: 'pos-7', asset: 'ETH',  protocol: 'merchant_moe', direction: 'long',  size: 4_500,  entryPrice: 2690.14, currentPrice: 3041.50, pnl: 585.20,  pnlPct: 13.06, status: 'closed' },
-]
-
-function generatePnlHistory(): PnlPoint[] {
-  const points: PnlPoint[] = []
-  let val = 49_000
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(2026, 4, 6)
-    d.setDate(d.getDate() - i)
-    val += (Math.random() - 0.42) * 800
-    val = Math.max(47_000, val)
-    points.push({
-      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: Math.round(val * 100) / 100,
-    })
-  }
-  points[points.length - 1].value = 52_847.22
-  return points
-}
-
-const MOCK_PNL_HISTORY = generatePnlHistory()
 
 // Protocol colors are brand-specific — kept as data to avoid arbitrary Tailwind
 const PROTOCOL_LABELS: Record<string, string> = {
@@ -158,20 +128,35 @@ export default function PortfolioPage() {
     refetchInterval: 60_000,
   })
 
+  const { data: pnlHistory } = usePortfolioHistory(chartDays)
+
   const isLoading = loadingSnap || loadingPos
   const hasError  = snapError || posError
-  const snap      = snapshot ?? MOCK_SNAPSHOT
-  const pos       = positions?.length ? positions : MOCK_POSITIONS
+  const snap      = snapshot ?? EMPTY_SNAPSHOT
+  const pos       = positions ?? []
 
   const openPositions   = pos.filter(p => p.status === 'open')
   const closedPositions = pos.filter(p => p.status === 'closed')
+
+  const activeProtocols = useMemo(
+    () => Array.from(new Set(openPositions.map(p => p.protocol))),
+    [openPositions],
+  )
+
+  const pnlChartData = useMemo(
+    () => (pnlHistory ?? []).map(p => ({
+      date: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: p.value,
+    })),
+    [pnlHistory],
+  )
 
   const allocationByProtocol = useMemo(() => {
     const totals: Record<string, number> = {}
     openPositions.forEach(p => { totals[p.protocol] = (totals[p.protocol] ?? 0) + p.size })
     const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0)
     return Object.entries(totals).map(([k, v]) => ({
-      protocol: k, pct: Math.round((v / grandTotal) * 100),
+      protocol: k, pct: grandTotal > 0 ? Math.round((v / grandTotal) * 100) : 0,
     }))
   }, [openPositions])
 
@@ -230,7 +215,7 @@ export default function PortfolioPage() {
         />
         <StatCard
           label="Sharpe Ratio"
-          value={snap.sharpeRatio.toFixed(2)}
+          value={snap.sharpeRatio !== null ? snap.sharpeRatio.toFixed(2) : '—'}
           sub={`Win rate: ${snap.winRate.toFixed(1)}%`}
         />
       </div>
@@ -244,7 +229,13 @@ export default function PortfolioPage() {
         />
         <StatCard label="Active Positions" value={String(openPositions.length)} />
         <StatCard label="Closed Positions" value={String(closedPositions.length)} />
-        <StatCard label="Protocols Active" value="3" sub="Merchant Moe · Agni · Fluxion" />
+        <StatCard
+          label="Protocols Active"
+          value={String(activeProtocols.length)}
+          sub={activeProtocols.length > 0
+            ? activeProtocols.map(p => PROTOCOL_LABELS[p] ?? p).join(' · ')
+            : 'No open positions'}
+        />
       </div>
 
       {/* PnL Chart */}
@@ -268,9 +259,17 @@ export default function PortfolioPage() {
             ))}
           </div>
         </div>
+        {pnlChartData.length === 0 ? (
+          <div className="flex h-[200px] flex-col items-center justify-center gap-1 text-center">
+            <p className="text-sm font-semibold text-text-primary">No portfolio history yet</p>
+            <p className="text-xs text-text-secondary">
+              Snapshots accumulate daily once your agents start trading.
+            </p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart
-            data={MOCK_PNL_HISTORY.slice(-chartDays)}
+            data={pnlChartData}
             margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
           >
             <defs>
@@ -306,6 +305,7 @@ export default function PortfolioPage() {
             />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* Positions table */}
@@ -432,6 +432,9 @@ export default function PortfolioPage() {
         {/* Allocation by protocol */}
         <div className="bg-card border border-border rounded-lg p-5">
           <h4 className="text-sm font-semibold text-text-primary mb-4">Allocation by Protocol</h4>
+          {allocationByProtocol.length === 0 ? (
+            <p className="text-xs text-text-secondary">No open positions to allocate.</p>
+          ) : (
           <div className="flex flex-col gap-3">
             {allocationByProtocol.map(({ protocol, pct }) => (
               <div key={protocol} className="flex items-center gap-3">
@@ -451,6 +454,7 @@ export default function PortfolioPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
 
         {/* Risk exposure */}
@@ -465,7 +469,7 @@ export default function PortfolioPage() {
               },
               {
                 label: 'Sharpe Ratio',
-                value: snap.sharpeRatio.toFixed(2),
+                value: snap.sharpeRatio !== null ? snap.sharpeRatio.toFixed(2) : '—',
                 valueClass: 'text-text-primary',
               },
               {
