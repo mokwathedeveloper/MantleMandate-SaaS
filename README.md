@@ -231,10 +231,44 @@ A separately-built Flask 3.x backend in [`backend/`](backend/) — JWT auth, rat
 
 ### 🤖 AI & Market Data
 ![Claude](https://img.shields.io/badge/Claude_Sonnet_4.5-D97757?style=flat-square)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=flat-square&logo=langchain&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP_Server-000000?style=flat-square)
 ![Bybit](https://img.shields.io/badge/Bybit_API-F7A600?style=flat-square)
 
-- Anthropic Claude Sonnet 4.5 (via OpenRouter) — mandate parsing + per-cycle trade decisions
+- Anthropic Claude Sonnet 4.5 (via OpenRouter, wrapped with LangChain's `ChatOpenAI`) — mandate parsing + per-cycle trade decisions + support chat
 - Bybit public spot API — live ticker + klines for RSI computation
+- MCP (Model Context Protocol) server — exposes platform docs, contract addresses, and mandate schema to MCP clients (see [MCP Server](#-mcp-server) below)
+
+---
+
+## 🔌 MCP Server
+
+MantleMandate exposes a read-only [Model Context Protocol](https://modelcontextprotocol.io) server at **`/api/mcp`**, so any MCP client (Claude Desktop, etc.) can query platform information directly — useful for an AI assistant helping a user draft a mandate or look up contract addresses.
+
+- **Endpoint**: `POST /api/mcp` (JSON-RPC 2.0 over Streamable HTTP, stateless — no session required)
+- **Implementation**: `frontend/app/api/mcp/route.ts`, built with `@modelcontextprotocol/sdk`'s `WebStandardStreamableHTTPServerTransport`
+- **Auth**: none — only public, non-sensitive data is exposed
+
+### Available tools
+
+| Tool | Description |
+|---|---|
+| `search_docs` | Search the 28-article docs hub for content relevant to a query (e.g. "how do I write a mandate with RSI conditions") |
+| `get_contract_addresses` | Returns deployed contract addresses + chain info for Mantle Sepolia (`MandatePolicy`, `AgentExecutor`, `RiskGuard`, `MockSwapPool`, mUSD/mWETH) |
+| `get_mandate_policy_schema` | Returns the structured field schema (`asset`, `trigger`, `riskPerTrade`, `stopLoss`, etc.) used to parse plain-English mandates |
+
+### Connecting from Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "mantlemandate": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mantle-mandate-saa-s.vercel.app/api/mcp"]
+    }
+  }
+}
+```
 
 ---
 
@@ -249,6 +283,8 @@ MantleMandate-SaaS/
 │   │   ├── api/
 │   │   │   ├── agents/[id]/tick/   # On-chain trading-cycle execution
 │   │   │   ├── agents/decide/      # AI decision pipeline (RSI + Bybit + Claude)
+│   │   │   ├── mandates/parse/     # Claude-powered mandate parsing
+│   │   │   ├── mcp/                # MCP server — docs/contracts/schema tools (see MCP Server)
 │   │   │   └── support/chat/       # Docs-grounded support chat (lite-RAG)
 │   │   └── dashboard/              # 22+ pages: agents, mandates, portfolio, risk, docs...
 │   ├── lib/
@@ -257,6 +293,8 @@ MantleMandate-SaaS/
 │   │   ├── indicators.ts           # calculateRSI() — Wilder's RSI(14)
 │   │   ├── bybit.ts                # Bybit spot ticker + klines client
 │   │   ├── contracts.ts            # ABIs + deployed addresses
+│   │   ├── openrouter.ts           # LangChain ChatOpenAI wrapper for OpenRouter/Claude
+│   │   ├── docsKnowledgeBase.ts    # Docs retrieval index — powers RAG chat + MCP search_docs
 │   │   └── serverWallet.ts         # Service wallet (shadow agent execution)
 │   └── hooks/                      # useAgents, useMandates, etc. (TanStack Query)
 │
