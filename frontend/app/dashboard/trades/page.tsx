@@ -24,28 +24,6 @@ const PROTOCOL_COLORS: Record<string, string> = {
   fluxion:      '#58A6FF',
 }
 
-// ── mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_TRADES: Trade[] = [
-  { id: 'tr-001', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'ETH/USDC',   direction: 'buy',  amountUsd: 4200,  price: 2847.32, pnl: 318.45,  protocol: 'merchant_moe', txHash: '0x3f8a2b1c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a', blockNumber: 58_234_101, status: 'success', mandateRuleApplied: 'RSI < 30 trigger',    createdAt: '2026-05-06T09:14:22Z' },
-  { id: 'tr-002', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'ETH/USDC',   direction: 'sell', amountUsd: 4518,  price: 3054.10, pnl: 206.78,  protocol: 'merchant_moe', txHash: '0xa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0', blockNumber: 58_231_847, status: 'success', mandateRuleApplied: 'RSI > 70 exit',       createdAt: '2026-05-05T16:43:11Z' },
-  { id: 'tr-003', agentId: 'agent-2', mandateId: 'mandate-2', mandateName: 'Stable Yield Farmer',     assetPair: 'USDC/USDT',  direction: 'buy',  amountUsd: 10000, price: 1.0001,  pnl: 42.30,   protocol: 'agni',         txHash: '0xb2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1', blockNumber: 58_229_034, status: 'success', mandateRuleApplied: 'Daily yield reinvest', createdAt: '2026-05-05T08:00:00Z' },
-  { id: 'tr-004', agentId: 'agent-3', mandateId: 'mandate-3', mandateName: 'MNT DCA Strategy',        assetPair: 'MNT/USDC',   direction: 'buy',  amountUsd: 500,   price: 0.8234,  pnl: -12.50,  protocol: 'fluxion',      txHash: '0xc3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2', blockNumber: 58_224_211, status: 'success', mandateRuleApplied: 'Weekly DCA',          createdAt: '2026-05-04T12:00:00Z' },
-  { id: 'tr-005', agentId: 'agent-2', mandateId: 'mandate-2', mandateName: 'Stable Yield Farmer',     assetPair: 'USDC/USDT',  direction: 'buy',  amountUsd: 8500,  price: 0.9998,  pnl: 38.75,   protocol: 'agni',         txHash: '0xd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3', blockNumber: 58_220_008, status: 'success', mandateRuleApplied: 'Daily yield reinvest', createdAt: '2026-05-04T08:00:00Z' },
-  { id: 'tr-006', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'WBTC/USDC',  direction: 'buy',  amountUsd: 2100,  price: 62_430,  pnl: null,    protocol: 'merchant_moe', txHash: null,                                        blockNumber: null,        status: 'pending', mandateRuleApplied: 'Momentum breakout',   createdAt: '2026-05-06T10:02:44Z' },
-  { id: 'tr-007', agentId: 'agent-3', mandateId: 'mandate-3', mandateName: 'MNT DCA Strategy',        assetPair: 'MNT/USDC',   direction: 'buy',  amountUsd: 500,   price: 0.7918,  pnl: 8.40,    protocol: 'fluxion',      txHash: '0xe5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4', blockNumber: 58_214_344, status: 'success', mandateRuleApplied: 'Weekly DCA',          createdAt: '2026-04-28T12:00:00Z' },
-  { id: 'tr-008', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'ETH/USDC',   direction: 'buy',  amountUsd: 3850,  price: 2690.14, pnl: -74.20,  protocol: 'merchant_moe', txHash: '0xf6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5', blockNumber: 58_209_101, status: 'success', mandateRuleApplied: 'RSI < 30 trigger',    createdAt: '2026-04-27T14:33:09Z' },
-  { id: 'tr-009', agentId: 'agent-4', mandateId: 'mandate-4', mandateName: 'Arb Scanner Alpha',       assetPair: 'ETH/USDT',   direction: 'sell', amountUsd: 7200,  price: 3041.50, pnl: null,    protocol: 'agni',         txHash: '0xa7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6', blockNumber: 58_207_800, status: 'failed',  mandateRuleApplied: 'Arb spread > 0.3%',   createdAt: '2026-04-26T19:11:45Z' },
-  { id: 'tr-010', agentId: 'agent-2', mandateId: 'mandate-2', mandateName: 'Stable Yield Farmer',     assetPair: 'USDC/USDT',  direction: 'buy',  amountUsd: 9200,  price: 1.0002,  pnl: 44.10,   protocol: 'agni',         txHash: '0xb8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7', blockNumber: 58_204_550, status: 'success', mandateRuleApplied: 'Daily yield reinvest', createdAt: '2026-04-26T08:00:00Z' },
-  { id: 'tr-011', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'ETH/USDC',   direction: 'buy',  amountUsd: 5000,  price: 2722.80, pnl: 445.60,  protocol: 'merchant_moe', txHash: '0xc9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8', blockNumber: 58_199_233, status: 'success', mandateRuleApplied: 'RSI < 30 trigger',    createdAt: '2026-04-25T10:55:18Z' },
-  { id: 'tr-012', agentId: 'agent-3', mandateId: 'mandate-3', mandateName: 'MNT DCA Strategy',        assetPair: 'MNT/USDC',   direction: 'buy',  amountUsd: 500,   price: 0.8102,  pnl: 19.70,   protocol: 'fluxion',      txHash: '0xd0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9', blockNumber: 58_195_088, status: 'success', mandateRuleApplied: 'Weekly DCA',          createdAt: '2026-04-21T12:00:00Z' },
-  { id: 'tr-013', agentId: 'agent-4', mandateId: 'mandate-4', mandateName: 'Arb Scanner Alpha',       assetPair: 'WETH/USDC',  direction: 'buy',  amountUsd: 6800,  price: 2915.40, pnl: 138.90,  protocol: 'fluxion',      txHash: '0xe1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0', blockNumber: 58_190_722, status: 'success', mandateRuleApplied: 'Arb spread > 0.3%',   createdAt: '2026-04-20T07:24:33Z' },
-  { id: 'tr-014', agentId: 'agent-2', mandateId: 'mandate-2', mandateName: 'Stable Yield Farmer',     assetPair: 'USDC/USDT',  direction: 'buy',  amountUsd: 11000, price: 0.9999,  pnl: 47.80,   protocol: 'agni',         txHash: '0xf2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1', blockNumber: 58_187_409, status: 'success', mandateRuleApplied: 'Daily yield reinvest', createdAt: '2026-04-19T08:00:00Z' },
-  { id: 'tr-015', agentId: 'agent-1', mandateId: 'mandate-1', mandateName: 'ETH Conservative Buyer',  assetPair: 'ETH/USDC',   direction: 'sell', amountUsd: 5445,  price: 3089.00, pnl: 322.80,  protocol: 'merchant_moe', txHash: '0xa3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', blockNumber: 58_183_144, status: 'success', mandateRuleApplied: 'RSI > 70 exit',       createdAt: '2026-04-18T15:08:57Z' },
-]
-
-const MOCK_RESPONSE = { data: MOCK_TRADES, total: MOCK_TRADES.length, page: 1, page_size: 25, total_pages: 1 }
-
 type Filter = { status?: string; direction?: string; search?: string }
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -99,8 +77,7 @@ export default function TradesPage() {
     enabled:  !!user,
   })
 
-  const isMock = !user || (!isLoading && !apiData?.data?.length) || isError
-  const raw    = isMock ? MOCK_RESPONSE : (apiData ?? MOCK_RESPONSE)
+  const raw = apiData ?? { data: [] as Trade[], total: 0, page: 1, page_size: 25, total_pages: 1 }
 
   const visibleTrades = useMemo(() => {
     let list = raw.data
@@ -164,7 +141,7 @@ export default function TradesPage() {
       {isError && (
         <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 flex items-center gap-2">
           <span className="text-sm font-semibold text-error">API error</span>
-          <span className="text-sm text-text-secondary">— showing demo data.</span>
+          <span className="text-sm text-text-secondary">— couldn&apos;t load trade history.</span>
         </div>
       )}
 

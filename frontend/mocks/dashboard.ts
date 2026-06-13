@@ -41,27 +41,6 @@ export const DASHBOARD_PNL_30D = [
   { date: '2026-05-07', value: 2_847_120 },
 ]
 
-export interface DashboardTrade {
-  id:        string
-  pair:      string
-  side:      'BUY' | 'SELL'
-  amountUsd: number
-  pnl:       number | null
-  protocol:  string
-  status:    'success' | 'pending' | 'failed'
-  txHash:    string
-  time:      string
-}
-
-export const DASHBOARD_RECENT_TRADES: DashboardTrade[] = [
-  { id: 't1', pair: 'ETH/USDC',  side: 'BUY',  amountUsd:  4_200, pnl:  318.45, protocol: 'Merchant Moe', status: 'success', txHash: '0x3f8a2b1c...8f9a', time: '2 min ago'  },
-  { id: 't2', pair: 'ETH/USDC',  side: 'SELL', amountUsd:  4_518, pnl:  206.78, protocol: 'Merchant Moe', status: 'success', txHash: '0xa1b2c3d4...a9b0', time: '5 min ago'  },
-  { id: 't3', pair: 'USDC/USDT', side: 'BUY',  amountUsd: 10_000, pnl:   42.30, protocol: 'Agni Finance', status: 'success', txHash: '0xb2c3d4e5...b0c1', time: '12 min ago' },
-  { id: 't4', pair: 'MNT/USDC',  side: 'BUY',  amountUsd:    500, pnl:   12.50, protocol: 'Fluxion',      status: 'success', txHash: '0xc3d4e5f6...c1d2', time: '17 min ago' },
-  { id: 't5', pair: 'WBTC/USDC', side: 'BUY',  amountUsd:  2_100, pnl:    null, protocol: 'Merchant Moe', status: 'pending', txHash: '0xd4e5f6a7...d2e3', time: '21 min ago' },
-  { id: 't6', pair: 'ETH/USDT',  side: 'SELL', amountUsd:  7_200, pnl:  -74.20, protocol: 'Agni Finance', status: 'failed',  txHash: '0xe5f6a7b8...e3f4', time: '34 min ago' },
-]
-
 export const DASHBOARD_ALERTS = [
   { id: 'al1', severity: 'warning' as const, title: 'Gas spike detected on Mantle',         message: 'Fees up 32% in last 10 min — agents will defer non-urgent trades.', time: '4 min ago'  },
   { id: 'al2', severity: 'info'    as const, title: 'New protocol: Fusionswap is live',     message: 'Available for routing. Add to allow-list to enable.',              time: '32 min ago' },

@@ -41,155 +41,6 @@ interface AuditEntry {
   isLive?:     boolean
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_ENTRIES: AuditEntry[] = [
-  {
-    id: '1',
-    txHash:       '0xabc123def456789abc123def456789abc123def456789abc123def456789abc1',
-    timestamp:    '2026-04-12 09:45:21',
-    from:         '0xDe4d...3Fa1',
-    to:           'Merchant Moe',
-    mandate:      'ETH Conservative Buyer',
-    mandateId:    'mandate-1',
-    agentId:      'agent-1',
-    agent:        'Agent-001',
-    amount:       '$4,200.00',
-    status:       'SUCCESS',
-    blockNumber:  14823910,
-    gasUsed:      21000,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x9f3c2b4a8d1e5f6a9c0d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4',
-    ruleApplied:  'RSI < 30 trigger, 5% position limit checked',
-  },
-  {
-    id: '2',
-    txHash:       '0xdef456abc789def456abc789def456abc789def456abc789def456abc789def4',
-    timestamp:    '2026-04-12 08:22:04',
-    from:         '0xDe4d...3Fa1',
-    to:           'Agni Finance',
-    mandate:      'ETH Conservative Buyer',
-    mandateId:    'mandate-1',
-    agentId:      'agent-1',
-    agent:        'Agent-001',
-    amount:       '$2,800.00',
-    status:       'SUCCESS',
-    blockNumber:  14823750,
-    gasUsed:      28400,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
-    ruleApplied:  'Diversification rule: MNT allocation below 35%',
-  },
-  {
-    id: '3',
-    txHash:       '0x789abc123def789abc123def789abc123def789abc123def789abc123def7891',
-    timestamp:    '2026-04-11 16:05:33',
-    from:         '0xDe4d...3Fa1',
-    to:           'Merchant Moe',
-    mandate:      'MNT Momentum Trader',
-    mandateId:    'mandate-2',
-    agentId:      'agent-2',
-    agent:        'Agent-002',
-    amount:       '$3,500.00',
-    status:       'SUCCESS',
-    blockNumber:  14823590,
-    gasUsed:      19800,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3',
-    ruleApplied:  'Take-profit at +5.2%. Mandate cooldown: 4 hours after close.',
-  },
-  {
-    id: '4',
-    txHash:       '0x321cba987fed321cba987fed321cba987fed321cba987fed321cba987fed3214',
-    timestamp:    '2026-04-11 11:44:18',
-    from:         '0x8bC2...1D9E',
-    to:           'Fluxion',
-    mandate:      'DeFi Yield Optimizer',
-    mandateId:    'mandate-3',
-    agentId:      'agent-3',
-    agent:        'Agent-003',
-    amount:       '$5,000.00',
-    status:       'FAILED',
-    blockNumber:  0,
-    gasUsed:      12000,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4',
-    ruleApplied:  'Insufficient liquidity on Fluxion pool. Retrying next cycle.',
-  },
-  {
-    id: '5',
-    txHash:       '0x654fed321abc654fed321abc654fed321abc654fed321abc654fed321abc6545',
-    timestamp:    '2026-04-10 20:11:09',
-    from:         '0xDe4d...3Fa1',
-    to:           'Agni Finance',
-    mandate:      'ETH Conservative Buyer',
-    mandateId:    'mandate-1',
-    agentId:      'agent-1',
-    agent:        'Agent-001',
-    amount:       '$1,900.00',
-    status:       'SUCCESS',
-    blockNumber:  14822870,
-    gasUsed:      22400,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5',
-    ruleApplied:  'MNT take-profit at +4%. Position sized within 35% cap.',
-  },
-  {
-    id: '6',
-    txHash:       '0x987abc654def987abc654def987abc654def987abc654def987abc654def9876',
-    timestamp:    '2026-04-10 14:30:55',
-    from:         '0x8bC2...1D9E',
-    to:           'Merchant Moe',
-    mandate:      'MNT Momentum Trader',
-    mandateId:    'mandate-2',
-    agentId:      'agent-2',
-    agent:        'Agent-002',
-    amount:       '$8,100.00',
-    status:       'SUCCESS',
-    blockNumber:  14822340,
-    gasUsed:      31200,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6',
-    ruleApplied:  'Momentum signal: 3-day trend positive. Entry within drawdown limit.',
-  },
-  {
-    id: '7',
-    txHash:       '0xaaa111bbb222ccc333ddd444eee555fff666aaa111bbb222ccc333ddd444eee5',
-    timestamp:    '2026-04-09 08:00:12',
-    from:         '0x1aB3...9cD4',
-    to:           'Fluxion',
-    mandate:      'DeFi Yield Optimizer',
-    mandateId:    'mandate-3',
-    agentId:      'agent-3',
-    agent:        'Agent-003',
-    amount:       '$2,250.00',
-    status:       'PENDING',
-    blockNumber:  14821900,
-    gasUsed:      0,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7',
-    ruleApplied:  'Yield rebalance: USDC/USDT pool above 8% APY threshold.',
-  },
-  {
-    id: '8',
-    txHash:       '0xbbb222ccc333ddd444eee555fff666aaa111bbb222ccc333ddd444eee555fff6',
-    timestamp:    '2026-04-08 19:55:44',
-    from:         '0xDe4d...3Fa1',
-    to:           'Merchant Moe',
-    mandate:      'ETH Conservative Buyer',
-    mandateId:    'mandate-1',
-    agentId:      'agent-1',
-    agent:        'Agent-001',
-    amount:       '$6,100.00',
-    status:       'SUCCESS',
-    blockNumber:  14821100,
-    gasUsed:      24600,
-    gasPrice:     '0.001 Gwei',
-    decisionHash: '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8',
-    ruleApplied:  'Dip buy: ETH -3.1% from 7-day MA. Position within 40% cap.',
-  },
-]
-
 // ── On-chain event converter ──────────────────────────────────────────────────
 
 function onChainEventToEntry(e: OnChainEvent, idx: number): AuditEntry {
@@ -215,8 +66,6 @@ function onChainEventToEntry(e: OnChainEvent, idx: number): AuditEntry {
     isLive:       true,
   }
 }
-
-const TOTAL = 1248
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -384,9 +233,8 @@ export default function AuditPage() {
     })
   }, [])
 
-  const sourceEntries = liveEntries.length > 0 ? liveEntries : MOCK_ENTRIES
-  const displayTotal  = liveEntries.length > 0 ? liveEntries.length : TOTAL
-  const entries = sourceEntries.filter(e => {
+  const displayTotal = liveEntries.length
+  const entries = liveEntries.filter(e => {
     if (search && !e.txHash.includes(search) && !e.from.includes(search) && !e.to.toLowerCase().includes(search.toLowerCase())) return false
     if (status !== 'All Status' && e.status !== status.toUpperCase()) return false
     if (mandate !== 'All Mandates' && e.mandate !== mandate) return false
@@ -403,7 +251,7 @@ export default function AuditPage() {
 
   const handleExport = useCallback(() => {
     const header = 'TX Hash,Timestamp,From,To,Mandate,Amount,Status,Block\n'
-    const rows   = MOCK_ENTRIES.map(e =>
+    const rows   = liveEntries.map(e =>
       `${e.txHash},${e.timestamp},${e.from},${e.to},${e.mandate},${e.amount},${e.status},${e.blockNumber}`
     ).join('\n')
     const blob = new Blob([header + rows], { type: 'text/csv' })
@@ -505,29 +353,29 @@ export default function AuditPage() {
         {([
           {
             label:    'Total Transactions',
-            value:    liveEntries.length > 0 ? liveEntries.length.toLocaleString() : '1,248',
-            sub:      liveEntries.length > 0 ? 'Live on-chain' : 'All time',
+            value:    liveEntries.length.toLocaleString(),
+            sub:      liveEntries.length > 0 ? 'Live on-chain' : 'No on-chain activity yet',
             subClass: liveEntries.length > 0 ? 'text-success' : 'text-text-secondary',
           },
           {
             label:    'Total Volume',
-            value:    liveEntries.length > 0
-              ? `$${liveEntries.reduce((s, e) => s + Number(e.amount.replace(/[^0-9.]/g, '')), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : '$24,589,435.21',
+            value:    `$${liveEntries.reduce((s, e) => s + Number(e.amount.replace(/[^0-9.]/g, '')), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             sub:      'Verified on-chain',
             subClass: 'text-text-secondary',
           },
           {
             label:    'Success Rate',
-            value:    liveEntries.length > 0 ? '100%' : '98.74%',
+            value:    liveEntries.length > 0
+              ? `${Math.round((liveEntries.filter(e => e.status === 'SUCCESS').length / liveEntries.length) * 100)}%`
+              : '—',
             sub:      '',
             valClass: 'text-success',
           },
           {
             label:    'Last 7 Days',
-            value:    liveEntries.length > 0 ? `${liveEntries.length} transaction${liveEntries.length !== 1 ? 's' : ''}` : '18 transactions',
-            sub:      liveEntries.length > 0 ? 'Live data' : '3 pending',
-            subClass: liveEntries.length > 0 ? 'text-success' : 'text-warning',
+            value:    `${liveEntries.length} transaction${liveEntries.length !== 1 ? 's' : ''}`,
+            sub:      liveEntries.length > 0 ? 'Live data' : '',
+            subClass: 'text-success',
           },
         ] as { label: string; value: string; sub: string; valClass?: string; subClass?: string }[]).map(c => (
           <div key={c.label} className="bg-card border border-border rounded-lg p-4">
@@ -632,7 +480,7 @@ export default function AuditPage() {
           <span className="text-[8px] leading-none">●</span>
           {liveEntries.length > 0
             ? `${liveEntries.length} live on-chain transaction${liveEntries.length !== 1 ? 's' : ''} fetched from the AgentExecutor contract`
-            : 'Showing demo data — real transactions will appear here once agents execute trades on Mantle Network'}
+            : 'No on-chain transactions found in the recent block range — real transactions will appear here once agents execute trades on Mantle Network'}
         </div>
       )}
 

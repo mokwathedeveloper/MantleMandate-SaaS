@@ -24,7 +24,6 @@ import { useAgents } from '@/hooks/useAgents'
 import { useRecentTrades } from '@/hooks/useTrades'
 import type { Trade } from '@/types/trade'
 
-import { DASHBOARD_RECENT_TRADES, type DashboardTrade } from '@/mocks/dashboard'
 import { formatCurrency, formatPercent, truncateAddress, explorerTxUrl, cn } from '@/lib/utils'
 
 const TIME_TABS = ['7D', '30D', '90D', 'YTD', 'All'] as const
@@ -87,20 +86,6 @@ function tradeToDisplay(t: Trade): DisplayTrade {
   }
 }
 
-function mockToDisplay(t: DashboardTrade): DisplayTrade {
-  return {
-    id:            t.id,
-    pair:          t.pair,
-    side:          t.side,
-    amountUsd:     t.amountUsd,
-    pnl:           t.pnl,
-    protocol:      t.protocol,
-    status:        t.status,
-    txHashDisplay: t.txHash,
-    txHashHref:    t.txHash.includes('...') ? '/dashboard/audit' : explorerTxUrl(t.txHash),
-  }
-}
-
 export default function DashboardPage() {
   const [tab, setTab] = useState<TimeTab>('30D')
 
@@ -117,10 +102,7 @@ export default function DashboardPage() {
     [agents],
   )
 
-  const trades = useMemo(() => {
-    const real = tradesResp?.data ?? []
-    return real.length > 0 ? real.map(tradeToDisplay) : DASHBOARD_RECENT_TRADES.map(mockToDisplay)
-  }, [tradesResp])
+  const trades = useMemo(() => (tradesResp?.data ?? []).map(tradeToDisplay), [tradesResp])
 
   return (
     <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-10 space-y-6">
@@ -339,6 +321,13 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
+                {trades.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-[12px] text-text-secondary">
+                      No trades yet — once your agents execute on Mantle, they&apos;ll appear here.
+                    </td>
+                  </tr>
+                )}
                 {trades.map((t) => (
                   <tr key={t.id} className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors">
                     <td className="px-4 py-3 text-text-primary font-medium">{t.pair}</td>
