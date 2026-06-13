@@ -93,6 +93,8 @@ celerybeat.pid
 
 # Memory/scratch files
 memory/
+/BUIDL_LISTING.md
+/DEMO_VIDEO_SCRIPT.md
 
 # Development screenshots (generated during local testing)
 .playwright-mcp/
