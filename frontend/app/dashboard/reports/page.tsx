@@ -11,6 +11,10 @@ import {
   PieChart, Pie, Legend,
 } from 'recharts'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
+import { usePortfolioHistory } from '@/hooks/usePortfolio'
+import { useAgents } from '@/hooks/useAgents'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -27,46 +31,51 @@ interface Report {
   sharpeRatio?: number
 }
 
-// ─── Mock / fallback data ─────────────────────────────────────────────────────
+// ─── Chart data types ─────────────────────────────────────────────────────────
 
-const MOCK_REPORTS: Report[] = [
-  { id: '1', name: 'Agent ETH Conservative · Apr 2026',  type: 'PERFORMANCE', dateFrom: '2026-04-01', dateTo: '2026-04-30', totalPnl: 24580439.21, roi: 72.45,  createdAt: '2026-05-01', drawdown: -1240.5,  sharpeRatio: 2.1 },
-  { id: '2', name: 'LTC/USD Mandate · Apr 2026',         type: 'AGENT',       dateFrom: '2026-04-01', dateTo: '2026-04-30', totalPnl: -3245.20,    roi: -5.12,  createdAt: '2026-05-01', drawdown: -3245.2,  sharpeRatio: 0.8 },
-  { id: '3', name: 'Portfolio Q1 2026',                   type: 'PORTFOLIO',   dateFrom: '2026-01-01', dateTo: '2026-03-31', totalPnl: 8420.50,     roi: 18.34,  createdAt: '2026-04-01', drawdown: -920.0,   sharpeRatio: 1.6 },
-  { id: '4', name: 'BTC Risk Analysis · Mar 2026',        type: 'RISK',        dateFrom: '2026-03-01', dateTo: '2026-03-31', totalPnl: 1280.00,     roi: 4.22,   createdAt: '2026-04-01', drawdown: -440.0,   sharpeRatio: 1.2 },
-  { id: '5', name: 'Agent ETH Conservative · Mar 2026',   type: 'PERFORMANCE', dateFrom: '2026-03-01', dateTo: '2026-03-31', totalPnl: 6750.30,     roi: 24.10,  createdAt: '2026-04-01', drawdown: -820.0,   sharpeRatio: 1.9 },
-  { id: '6', name: 'ETH Momentum Strategy · Feb 2026',    type: 'AGENT',       dateFrom: '2026-02-01', dateTo: '2026-02-28', totalPnl: -1840.00,    roi: -8.90,  createdAt: '2026-03-01', drawdown: -2100.0,  sharpeRatio: 0.6 },
-  { id: '7', name: 'Full Portfolio Audit · Q4 2025',      type: 'PORTFOLIO',   dateFrom: '2025-10-01', dateTo: '2025-12-31', totalPnl: 12340.00,    roi: 45.80,  createdAt: '2026-01-02', drawdown: -1500.0,  sharpeRatio: 2.4 },
-]
+interface PnlPoint        { d: string; v: number }
+interface AgentPnlPoint    { name: string; pnl: number }
+interface ProtocolVolumePoint { name: string; value: number; fill: string }
+interface WinRatePoint     { mandate: string; win: number; loss: number }
 
-// ─── Chart mock data ──────────────────────────────────────────────────────────
+export interface ReportsSummary {
+  totalPnl:    number
+  winRate:     number
+  totalTrades: number
+  sharpe:      number | null
+  maxDrawdown: number
+}
 
-const PNL_TIMELINE = [
-  { d: 'Jan', v: 4200 }, { d: 'Feb', v: 5800 }, { d: 'Mar', v: 7200 },
-  { d: 'Apr', v: 6400 }, { d: 'May', v: 9100 }, { d: 'Jun', v: 11500 },
-  { d: 'Jul', v: 10200 },{ d: 'Aug', v: 13800 },
-]
+const PROTOCOL_COLORS = ['#0066FF', '#22C55E', '#F5C542', '#58A6FF', '#EF4444', '#A78BFA']
 
-const AGENT_PNL = [
-  { name: 'ETH Conservative', pnl: 24580 },
-  { name: 'BTC Momentum',     pnl: 8420  },
-  { name: 'LTC/USD',          pnl: -3245 },
-  { name: 'SOL Swing',        pnl: 6750  },
-  { name: 'ARB Arb Bot',      pnl: -1840 },
-]
+// ─── Trade aggregates hook ────────────────────────────────────────────────────
 
-const PROTOCOL_VOLUME = [
-  { name: 'Merchant Moe', value: 42, fill: '#0066FF' },
-  { name: 'Agni Finance', value: 31, fill: '#22C55E' },
-  { name: 'Fluxion',      value: 27, fill: '#F5C542' },
-]
+interface TradeAggRow {
+  protocol:   string
+  amount_usd: number
+  status:     string
+  pnl:        number | null
+  mandate:    { name: string } | null
+}
 
-const WIN_RATE = [
-  { mandate: 'ETH Conservative', win: 72, loss: 28 },
-  { mandate: 'BTC Momentum',     win: 58, loss: 42 },
-  { mandate: 'LTC/USD',          win: 41, loss: 59 },
-  { mandate: 'SOL Swing',        win: 65, loss: 35 },
-]
+function useTradeAggregates() {
+  const { user } = useAuthStore()
+
+  return useQuery<TradeAggRow[]>({
+    queryKey: ['reports', 'trade-aggregates'],
+    queryFn: async () => {
+      if (!user) return []
+      const { data, error } = await supabase
+        .from('trades')
+        .select('protocol, amount_usd, status, pnl, mandate:mandates(name)')
+        .eq('user_id', user.id)
+      if (error || !data) return []
+      return data as unknown as TradeAggRow[]
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  })
+}
 
 // ─── Badge ───────────────────────────────────────────────────────────────────
 
@@ -222,31 +231,42 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
 
 // ─── Export Modal ─────────────────────────────────────────────────────────────
 
-function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (msg: string) => void }) {
+function ExportModal({
+  onClose, onSuccess, summary, pnlTimeline, agentPnl, protocolVolume, winRate,
+}: {
+  onClose: () => void
+  onSuccess: (msg: string) => void
+  summary: ReportsSummary
+  pnlTimeline: PnlPoint[]
+  agentPnl: AgentPnlPoint[]
+  protocolVolume: ProtocolVolumePoint[]
+  winRate: WinRatePoint[]
+}) {
   const [reportType, setReportType] = useState('Performance Summary')
   const [format,     setFormat]     = useState('CSV')
   const [loading,    setLoading]    = useState(false)
-  const [dateFrom,   setDateFrom]   = useState('2026-04-01')
-  const [dateTo,     setDateTo]     = useState('2026-04-30')
+  const [dateFrom,   setDateFrom]   = useState('')
+  const [dateTo,     setDateTo]     = useState('')
 
   const handle = () => {
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
-      const slug     = reportType.replace(/\s+/g, '-')
-      const range    = `${dateFrom} to ${dateTo}`
-      const filename = `${slug}-${dateFrom.slice(0, 7)}`
+      const slug      = reportType.replace(/\s+/g, '-')
+      const range     = `${dateFrom || 'all-time'} to ${dateTo || 'now'}`
+      const filename   = `${slug}-${new Date().toISOString().slice(0, 10)}`
+      const sharpeStr  = summary.sharpe !== null ? summary.sharpe.toFixed(2) : 'N/A'
 
       if (format === 'CSV') {
         const rows = [
           ['Period', 'Metric', 'Value'],
-          [range, 'Total P&L',      '+$34,265.00'],
-          [range, 'Win Rate',       '67.3%'],
-          [range, 'Total Trades',   '847'],
-          [range, 'Sharpe Ratio',   '2.41'],
-          [range, 'Max Drawdown',   '-8.2%'],
-          ...PNL_TIMELINE.map(r => [r.d, 'Monthly P&L', `$${r.v.toLocaleString()}`]),
-          ...AGENT_PNL.map(r    => [range, `Agent P&L — ${r.name}`, `${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}`]),
+          [range, 'Total P&L',      `${summary.totalPnl >= 0 ? '+' : '-'}$${fmt(summary.totalPnl)}`],
+          [range, 'Win Rate',       `${summary.winRate.toFixed(1)}%`],
+          [range, 'Total Trades',   String(summary.totalTrades)],
+          [range, 'Sharpe Ratio',   sharpeStr],
+          [range, 'Max Drawdown',   `-$${fmt(Math.abs(summary.maxDrawdown))}`],
+          ...pnlTimeline.map(r => [r.d, 'Portfolio Value', `$${r.v.toLocaleString()}`]),
+          ...agentPnl.map(r    => [range, `Agent P&L — ${r.name}`, `${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}`]),
         ]
         const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv' })
@@ -259,12 +279,12 @@ function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         const payload = {
           report:    reportType,
           generated: new Date().toISOString(),
-          period:    { from: dateFrom, to: dateTo },
-          summary: { totalPnl: 34265, winRate: 67.3, trades: 847, sharpe: 2.41, maxDrawdown: -8.2 },
-          pnlTimeline:     PNL_TIMELINE,
-          agentBreakdown:  AGENT_PNL,
-          protocolVolume:  PROTOCOL_VOLUME,
-          winRates:        WIN_RATE,
+          period:    { from: dateFrom || null, to: dateTo || null },
+          summary,
+          pnlTimeline,
+          agentBreakdown:  agentPnl,
+          protocolVolume,
+          winRates:        winRate,
         }
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
         const url  = URL.createObjectURL(blob)
@@ -295,28 +315,27 @@ function ExportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
           <h1>MantleMandate — ${reportType}</h1>
           <p class="sub">Period: ${range} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
           <div class="kpi">
-            <div class="kpi-card"><div class="kpi-label">Total P&amp;L</div><div class="kpi-value">+$34,265</div></div>
-            <div class="kpi-card"><div class="kpi-label">Win Rate</div><div class="kpi-value">67.3%</div></div>
-            <div class="kpi-card"><div class="kpi-label">Total Trades</div><div class="kpi-value">847</div></div>
-            <div class="kpi-card"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value">2.41</div></div>
-            <div class="kpi-card"><div class="kpi-label">Max Drawdown</div><div class="kpi-value">-8.2%</div></div>
-            <div class="kpi-card"><div class="kpi-label">Avg Trade Size</div><div class="kpi-value">$4,850</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total P&amp;L</div><div class="kpi-value">${summary.totalPnl >= 0 ? '+' : '-'}$${fmt(summary.totalPnl)}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Win Rate</div><div class="kpi-value">${summary.winRate.toFixed(1)}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total Trades</div><div class="kpi-value">${summary.totalTrades}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value">${sharpeStr}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Max Drawdown</div><div class="kpi-value">-$${fmt(Math.abs(summary.maxDrawdown))}</div></div>
           </div>
-          <h2>Monthly P&amp;L Timeline</h2>
-          <table><tr><th>Month</th><th>P&amp;L</th></tr>
-            ${PNL_TIMELINE.map(r => `<tr><td>${r.d}</td><td>$${r.v.toLocaleString()}</td></tr>`).join('')}
+          <h2>Portfolio Value Timeline</h2>
+          <table><tr><th>Date</th><th>Value</th></tr>
+            ${pnlTimeline.length ? pnlTimeline.map(r => `<tr><td>${r.d}</td><td>$${r.v.toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="2">No data yet</td></tr>'}
           </table>
           <h2>Agent Breakdown</h2>
           <table><tr><th>Agent</th><th>P&amp;L</th></tr>
-            ${AGENT_PNL.map(r => `<tr><td>${r.name}</td><td>${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}</td></tr>`).join('')}
+            ${agentPnl.length ? agentPnl.map(r => `<tr><td>${r.name}</td><td>${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="2">No agents deployed yet</td></tr>'}
           </table>
           <h2>Protocol Volume</h2>
           <table><tr><th>Protocol</th><th>Share</th></tr>
-            ${PROTOCOL_VOLUME.map(r => `<tr><td>${r.name}</td><td>${r.value}%</td></tr>`).join('')}
+            ${protocolVolume.length ? protocolVolume.map(r => `<tr><td>${r.name}</td><td>${r.value}%</td></tr>`).join('') : '<tr><td colspan="2">No trade activity yet</td></tr>'}
           </table>
           <h2>Win Rates by Mandate</h2>
           <table><tr><th>Mandate</th><th>Win %</th><th>Loss %</th></tr>
-            ${WIN_RATE.map(r => `<tr><td>${r.mandate}</td><td>${r.win}%</td><td>${r.loss}%</td></tr>`).join('')}
+            ${winRate.length ? winRate.map(r => `<tr><td>${r.mandate}</td><td>${r.win}%</td><td>${r.loss}%</td></tr>`).join('') : '<tr><td colspan="3">No completed trades yet</td></tr>'}
           </table>
           <script>window.onload = function(){ window.print(); }</script>
         </body></html>`)
@@ -456,11 +475,19 @@ function ChartCard({ title, children, actions }: { title: string; children: Reac
   )
 }
 
-function PnlTimeline() {
+function ChartEmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex h-[200px] flex-col items-center justify-center gap-1 text-center">
+      <p className="text-sm font-semibold text-text-primary">{message}</p>
+    </div>
+  )
+}
+
+function PnlTimeline({ data }: { data: PnlPoint[] }) {
   const [range, setRange] = useState('1M')
   return (
     <ChartCard
-      title="Portfolio P&L Over Time"
+      title="Portfolio Value Over Time"
       actions={
         <div className="flex items-center gap-1">
           {['1W', '1M', '3M', '1Y'].map(r => (
@@ -478,8 +505,11 @@ function PnlTimeline() {
         </div>
       }
     >
+      {data.length === 0 ? (
+        <ChartEmptyState message="No portfolio history yet" />
+      ) : (
       <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={PNL_TIMELINE} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor="#0066FF" stopOpacity={0.3} />
@@ -490,42 +520,50 @@ function PnlTimeline() {
           <XAxis dataKey="d" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} width={50}
             tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => [`$${fmt(Number(v))}`, 'P&L']} />
+          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => [`$${fmt(Number(v))}`, 'Value']} />
           <Line type="monotone" dataKey="v" stroke="#0066FF" strokeWidth={2} dot={false} fill="url(#pnlGrad)" />
         </LineChart>
       </ResponsiveContainer>
+      )}
     </ChartCard>
   )
 }
 
-function AgentPnlChart() {
+function AgentPnlChart({ data }: { data: AgentPnlPoint[] }) {
   return (
     <ChartCard title="P&L by Agent">
+      {data.length === 0 ? (
+        <ChartEmptyState message="No agents deployed yet" />
+      ) : (
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={AGENT_PNL} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#21262D" strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false}
             tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
           <YAxis type="category" dataKey="name" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
           <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => { const n = Number(v); return [`${n >= 0 ? '+' : ''}$${fmt(n)}`, 'P&L'] }} />
           <Bar dataKey="pnl" radius={[0, 3, 3, 0]}>
-            {AGENT_PNL.map((entry, i) => (
+            {data.map((entry, i) => (
               <Cell key={i} fill={entry.pnl >= 0 ? '#22C55E' : '#EF4444'} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      )}
     </ChartCard>
   )
 }
 
-function ProtocolChart() {
+function ProtocolChart({ data }: { data: ProtocolVolumePoint[] }) {
   return (
     <ChartCard title="Trade Volume by Protocol">
+      {data.length === 0 ? (
+        <ChartEmptyState message="No trade activity yet" />
+      ) : (
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
-            data={PROTOCOL_VOLUME}
+            data={data}
             cx="50%"
             cy="45%"
             innerRadius={55}
@@ -533,7 +571,7 @@ function ProtocolChart() {
             paddingAngle={3}
             dataKey="value"
           >
-            {PROTOCOL_VOLUME.map((entry, i) => (
+            {data.map((entry, i) => (
               <Cell key={i} fill={entry.fill} />
             ))}
           </Pie>
@@ -548,15 +586,19 @@ function ProtocolChart() {
           />
         </PieChart>
       </ResponsiveContainer>
+      )}
     </ChartCard>
   )
 }
 
-function WinRateChart() {
+function WinRateChart({ data }: { data: WinRatePoint[] }) {
   return (
     <ChartCard title="Win Rate by Mandate">
+      {data.length === 0 ? (
+        <ChartEmptyState message="No completed trades yet" />
+      ) : (
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={WIN_RATE} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#21262D" strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" domain={[0, 100]} tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false}
             tickFormatter={v => `${v}%`} />
@@ -566,6 +608,7 @@ function WinRateChart() {
           <Bar dataKey="loss" stackId="a" fill="#EF4444" radius={[0, 3, 3, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      )}
     </ChartCard>
   )
 }
@@ -589,8 +632,11 @@ export default function ReportsPage() {
     staleTime: 60_000,
   })
 
-  const reports = (!isLoading && !isError && data && data.length > 0) ? data : MOCK_REPORTS
-  const isEmpty  = !isLoading && !isError && data && data.length === 0
+  const reports = useMemo(
+    () => (!isLoading && !isError && data) ? data : [],
+    [data, isLoading, isError],
+  )
+  const isEmpty  = !isLoading && !isError && reports.length === 0
 
   // Filter by date range
   const filteredReports = useMemo(() => {
@@ -612,6 +658,67 @@ export default function ReportsPage() {
     return { count: rs.length, totalPnl, avgRoi, maxDrawdown, avgSharpe }
   }, [filteredReports])
 
+  // ── Chart data (real, from agents/trades/portfolio_history) ─────────────────
+  const { data: portfolioHistory } = usePortfolioHistory(90)
+  const { data: agents }            = useAgents()
+  const { data: tradeRows }         = useTradeAggregates()
+
+  const pnlTimeline = useMemo<PnlPoint[]>(
+    () => (portfolioHistory ?? []).map(p => ({
+      d: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      v: p.value,
+    })),
+    [portfolioHistory],
+  )
+
+  const agentPnl = useMemo<AgentPnlPoint[]>(
+    () => (agents ?? []).map(a => ({ name: a.name, pnl: a.totalPnl })),
+    [agents],
+  )
+
+  const protocolVolume = useMemo<ProtocolVolumePoint[]>(() => {
+    const rows = tradeRows ?? []
+    const totals: Record<string, number> = {}
+    rows.forEach(t => { totals[t.protocol] = (totals[t.protocol] ?? 0) + (t.amount_usd ?? 0) })
+    const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0)
+    return Object.entries(totals).map(([name, v], i) => ({
+      name,
+      value: grandTotal > 0 ? Math.round((v / grandTotal) * 100) : 0,
+      fill: PROTOCOL_COLORS[i % PROTOCOL_COLORS.length],
+    }))
+  }, [tradeRows])
+
+  const winRate = useMemo<WinRatePoint[]>(() => {
+    const rows = tradeRows ?? []
+    const byMandate: Record<string, { win: number; total: number }> = {}
+    rows.forEach(t => {
+      if (t.status !== 'success') return
+      const name = t.mandate?.name ?? 'Unknown'
+      const entry = byMandate[name] ?? { win: 0, total: 0 }
+      entry.total += 1
+      if ((t.pnl ?? 0) > 0) entry.win += 1
+      byMandate[name] = entry
+    })
+    return Object.entries(byMandate).map(([mandate, { win, total }]) => ({
+      mandate,
+      win:  total > 0 ? Math.round((win / total) * 100) : 0,
+      loss: total > 0 ? Math.round(((total - win) / total) * 100) : 0,
+    }))
+  }, [tradeRows])
+
+  const summary = useMemo<ReportsSummary>(() => {
+    const rows = tradeRows ?? []
+    const completed = rows.filter(t => t.status === 'success')
+    const wins = completed.filter(t => (t.pnl ?? 0) > 0).length
+    return {
+      totalPnl:    kpi.totalPnl,
+      winRate:     completed.length > 0 ? (wins / completed.length) * 100 : 0,
+      totalTrades: rows.length,
+      sharpe:      kpi.avgSharpe > 0 ? kpi.avgSharpe : null,
+      maxDrawdown: kpi.maxDrawdown,
+    }
+  }, [tradeRows, kpi])
+
   //                   Name   Type  DateRange  P&L   ROI   Actions
   const COLS_BASE  = '220px 120px    160px    125px  85px  145px'
   //                   GeneratedOn  Drawdown  Sharpe
@@ -626,6 +733,11 @@ export default function ReportsPage() {
         <ExportModal
           onClose={() => setExport(false)}
           onSuccess={(msg) => setToast(msg)}
+          summary={summary}
+          pnlTimeline={pnlTimeline}
+          agentPnl={agentPnl}
+          protocolVolume={protocolVolume}
+          winRate={winRate}
         />
       )}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
@@ -799,10 +911,10 @@ export default function ReportsPage() {
       {/* ── Charts View ── */}
       {view === 'charts' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <PnlTimeline />
-          <AgentPnlChart />
-          <ProtocolChart />
-          <WinRateChart />
+          <PnlTimeline data={pnlTimeline} />
+          <AgentPnlChart data={agentPnl} />
+          <ProtocolChart data={protocolVolume} />
+          <WinRateChart data={winRate} />
         </div>
       )}
     </div>
