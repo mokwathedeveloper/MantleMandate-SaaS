@@ -29,7 +29,7 @@ export async function chat(messages: Message[], opts?: { temperature?: number })
     apiKey: process.env.OPENROUTER_API_KEY,
     model: MODEL,
     temperature: opts?.temperature ?? 0.2,
-    maxTokens: 512,
+    maxTokens: 400,
     configuration: {
       baseURL: OPENROUTER_BASE,
       defaultHeaders: {
