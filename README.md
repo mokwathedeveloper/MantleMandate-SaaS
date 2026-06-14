@@ -412,12 +412,16 @@ MANTLE_TESTNET_RPC_URL=https://rpc.sepolia.mantle.xyz
 
 ## 🏆 Hackathon Tracks
 
-This project is submitted under the **Trading & Strategy** track:
+This project is submitted under two tracks:
 
+**AI Trading & Strategy** (primary)
 - ✅ AI trading agents with real on-chain execution (mUSD/mWETH swaps via MockSwapPool)
 - ✅ Strategy verifiability via on-chain OrderExecuted + Swap events
 - ✅ Mandate policy hashes as immutable strategy commitments
 - ✅ Deployed on Mantle Sepolia Testnet (Chain ID 5003)
+
+**AI x RWA** (secondary)
+- `MandatePolicy` + `RiskGuard` + `AgentExecutor` form an asset-agnostic, on-chain "AI mandate" engine. The same policy-hash + risk-guard architecture that governs active trading today is built to extend to RWA yield strategies (USDY, mETH) as a governed automation layer for institutional-grade allocation on Mantle — one engine, two real DeFi use cases.
 
 Also eligible for:
 - **Best UI/UX Award** — premium dark dashboard, glassmorphic auth, 30+ screens
