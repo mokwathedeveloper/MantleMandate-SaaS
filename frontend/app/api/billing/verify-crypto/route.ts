@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { formatEther } from 'viem'
 import { publicClient, TREASURY_ADDRESS } from '@/lib/contracts'
@@ -13,6 +14,11 @@ export async function POST(req: NextRequest) {
   try {
     if (!TREASURY_ADDRESS) {
       return NextResponse.json({ error: 'Crypto payments are not configured (missing NEXT_PUBLIC_TREASURY_ADDRESS)' }, { status: 500 })
+    }
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceRoleKey) {
+      return NextResponse.json({ error: 'Crypto payments are not configured (missing SUPABASE_SERVICE_ROLE_KEY)' }, { status: 500 })
     }
 
     const { txHash, plan } = await req.json()
@@ -74,7 +80,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment verified but failed to record invoice' }, { status: 500 })
     }
 
-    await supabase.from('profiles').update({ plan }).eq('id', user.id)
+    // profiles.plan can only be changed by the service role (see migration 007)
+    // to prevent users from granting themselves a plan upgrade directly via RLS.
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { error: planError } = await admin.from('profiles').update({ plan }).eq('id', user.id)
+    if (planError) {
+      return NextResponse.json({ error: 'Payment recorded but failed to update plan — contact support' }, { status: 500 })
+    }
 
     return NextResponse.json({ ok: true, amount, currency: 'MNT', plan })
   } catch {
