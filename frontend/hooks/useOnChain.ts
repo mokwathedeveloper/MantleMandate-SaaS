@@ -24,8 +24,10 @@ import {
 import {
   MANDATE_POLICY_ADDRESS,
   AGENT_EXECUTOR_ADDRESS,
+  SWAP_POOL_ADDRESS,
   MANDATE_POLICY_ABI,
   AGENT_EXECUTOR_ABI,
+  SWAP_POOL_ABI,
   publicClient,
   toPolicyHash,
   assetToBytes32,
@@ -312,4 +314,28 @@ export async function fetchOnChainAuditEvents(lookbackBlocks = MANTLE_MAX_BLOCK_
   } catch {
     return []
   }
+}
+
+// ── Step 6: Read live MockSwapPool reserves ────────────────────────────────────
+
+export interface SwapPoolStats {
+  reserveUsd:  number   // mUSD reserve (6 decimals), 1:1 USD
+  reserveWeth: number   // mWETH reserve (18 decimals)
+}
+
+/** Live reserves of the on-chain mUSD/mWETH MockSwapPool used for agent execution. */
+export function useSwapPoolStats() {
+  return useReadContract({
+    address:      SWAP_POOL_ADDRESS,
+    abi:          SWAP_POOL_ABI,
+    functionName: 'getReserves',
+    chainId:      mantleTestnet.id,
+    query: {
+      refetchInterval: 30_000,
+      select: (data: readonly [bigint, bigint]): SwapPoolStats => ({
+        reserveUsd:  Number(data[0]) / 1e6,
+        reserveWeth: Number(data[1]) / 1e18,
+      }),
+    },
+  })
 }
