@@ -20,7 +20,9 @@ import {
   useAccount,
   useChainId,
   useSwitchChain,
+  useSendTransaction,
 } from 'wagmi'
+import { parseEther, type Address } from 'viem'
 import {
   MANDATE_POLICY_ADDRESS,
   AGENT_EXECUTOR_ADDRESS,
@@ -338,4 +340,32 @@ export function useSwapPoolStats() {
       }),
     },
   })
+}
+
+// ── Step 7: Pay treasury (native MNT transfer for billing) ────────────────────
+
+/** Send a native MNT transfer to `to`, e.g. the billing treasury address. */
+export function usePayTreasury() {
+  const { ensureChain } = useNetworkGuard()
+
+  const {
+    sendTransactionAsync,
+    data:     txHash,
+    isPending,
+    error:    sendError,
+    reset,
+  } = useSendTransaction()
+
+  const {
+    data:      receipt,
+    isLoading: confirming,
+    isSuccess: confirmed,
+  } = useWaitForTransactionReceipt({ hash: txHash })
+
+  const pay = useCallback(async (to: Address, amountMnt: string): Promise<`0x${string}`> => {
+    await ensureChain()
+    return sendTransactionAsync({ to, value: parseEther(amountMnt) })
+  }, [ensureChain, sendTransactionAsync])
+
+  return { pay, txHash, receipt, isPending, confirming, confirmed, sendError, reset }
 }

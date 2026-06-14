@@ -1,16 +1,19 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAccount } from 'wagmi'
+import type { Address } from 'viem'
 import {
-  Download, Copy, CheckCircle2, ExternalLink, TriangleAlert, Loader2, CreditCard, Building2, ArrowRight,
+  Download, Copy, CheckCircle2, ExternalLink, TriangleAlert, Loader2, CreditCard, ArrowRight, Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TREASURY_ADDRESS } from '@/lib/contracts'
+import { usePayTreasury } from '@/hooks/useOnChain'
 import { useInvoices, type Invoice } from '@/hooks/useInvoices'
 
 // Load QR code only client-side — qrcode.react uses browser APIs that fail during SSR
@@ -28,7 +31,7 @@ const QRCodeSVG = dynamic(
 
 const EXPLORER_TX_BASE = 'https://explorer.sepolia.mantle.xyz/tx/'
 
-type PaymentTab    = 'card' | 'bank' | 'crypto'
+type PaymentTab    = 'card' | 'crypto'
 type PurchasePlan  = 'operator' | 'strategist'
 
 const PLAN_CONFIG: Record<string, { label: string; price: string; color: string }> = {
@@ -41,6 +44,21 @@ const PURCHASE_OPTIONS: { id: PurchasePlan; label: string; price: string }[] = [
   { id: 'operator',   label: 'Operator',   price: PLAN_CONFIG.operator.price },
   { id: 'strategist', label: 'Strategist', price: PLAN_CONFIG.strategist.price },
 ]
+
+// Symbolic testnet amounts — verify-crypto accepts any positive MNT value as
+// proof of payment since there's no MNT/USD price oracle on Mantle Sepolia.
+const PLAN_MNT_PRICE: Record<PurchasePlan, string> = {
+  operator:   '0.01',
+  strategist: '0.03',
+}
+
+type CryptoStatus = 'idle' | 'paying' | 'confirming' | 'verifying' | 'success' | 'error'
+
+function payButtonLabel(status: CryptoStatus, plan: PurchasePlan): string {
+  if (status === 'paying') return 'Confirm in wallet…'
+  if (status === 'confirming') return 'Waiting for confirmation on Mantle Sepolia…'
+  return `Pay ${PLAN_MNT_PRICE[plan]} MNT with connected wallet`
+}
 
 // ── CopyButton ────────────────────────────────────────────────────────────────
 
@@ -91,17 +109,20 @@ function ComingSoonTab({ icon, title, description }: { icon: React.ReactNode; ti
 function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
   const [plan, setPlan]     = useState<PurchasePlan>('strategist')
   const [txHash, setTxHash] = useState('')
-  const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
+  const [status, setStatus] = useState<CryptoStatus>('idle')
   const [message, setMessage] = useState<string | null>(null)
 
-  const handleVerify = async () => {
+  const { isConnected } = useAccount()
+  const { pay, confirmed, reset: resetPay } = usePayTreasury()
+
+  const verify = useCallback(async (hash: string) => {
     setStatus('verifying')
     setMessage(null)
     try {
       const res = await fetch('/api/billing/verify-crypto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txHash, plan }),
+        body: JSON.stringify({ txHash: hash, plan }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -116,7 +137,30 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
       setStatus('error')
       setMessage('Network error — please try again.')
     }
+  }, [plan, onPaid])
+
+  const handleVerify = () => verify(txHash)
+
+  const handlePayWithWallet = async () => {
+    setStatus('paying')
+    setMessage(null)
+    resetPay()
+    try {
+      const hash = await pay(TREASURY_ADDRESS as Address, PLAN_MNT_PRICE[plan])
+      setTxHash(hash)
+      setStatus('confirming')
+    } catch (err) {
+      setStatus('error')
+      setMessage(err instanceof Error ? err.message : 'Transaction was rejected or failed.')
+    }
   }
+
+  // Once the wallet-initiated payment is mined, verify it automatically.
+  useEffect(() => {
+    if (confirmed && txHash && status === 'confirming') {
+      verify(txHash)
+    }
+  }, [confirmed, txHash, status, verify])
 
   if (!TREASURY_ADDRESS) {
     return (
@@ -190,6 +234,30 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
         </div>
       </div>
 
+      {/* Pay with connected wallet */}
+      <div className="space-y-2">
+        <button
+          onClick={handlePayWithWallet}
+          disabled={!isConnected || status === 'paying' || status === 'confirming'}
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-md transition-colors"
+        >
+          {(status === 'paying' || status === 'confirming') && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Wallet className="h-4 w-4" />
+          {payButtonLabel(status, plan)}
+        </button>
+        {!isConnected && (
+          <p className="text-xs text-text-disabled text-center">
+            Connect your wallet (top right) to pay in one click — or send manually below.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[10px] uppercase tracking-wider text-text-disabled">or pay manually</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
       {/* Verify */}
       <div className="space-y-2 border border-border rounded-md p-4">
         <p className="text-xs font-medium text-text-secondary">Enter your transaction hash to verify:</p>
@@ -202,7 +270,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
           />
           <button
             onClick={handleVerify}
-            disabled={!txHash || status === 'verifying'}
+            disabled={!txHash || status === 'verifying' || status === 'paying' || status === 'confirming'}
             className="px-3 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5"
           >
             {status === 'verifying' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -303,7 +371,7 @@ export default function BillingPage() {
                 <p className="text-sm font-semibold text-text-primary">On-chain payments (Mantle Sepolia)</p>
                 <p className="text-xs text-text-secondary mt-0.5">
                   Pay for your subscription with a direct MNT transfer — see the Crypto tab below.
-                  Card and bank payments are not yet connected.
+                  Card payments are not yet connected.
                 </p>
               </div>
             </div>
@@ -317,7 +385,6 @@ export default function BillingPage() {
             <div className="flex gap-0 border-b border-border">
               {([
                 ['card',   '💳 Card'],
-                ['bank',   '🏦 Bank Account'],
                 ['crypto', '💲 Crypto'],
               ] as [PaymentTab, string][]).map(([key, label]) => (
                 <button
@@ -340,13 +407,6 @@ export default function BillingPage() {
                 icon={<CreditCard className="h-5 w-5" />}
                 title="Card payments aren't connected yet"
                 description="This deployment doesn't have a Stripe account configured. Use the Crypto tab to pay with MNT on Mantle Sepolia."
-              />
-            )}
-            {tab === 'bank' && (
-              <ComingSoonTab
-                icon={<Building2 className="h-5 w-5" />}
-                title="Bank transfers aren't connected yet"
-                description="ACH / SEPA / SWIFT billing requires a banking provider integration. Use the Crypto tab to pay with MNT on Mantle Sepolia."
               />
             )}
             {tab === 'crypto' && <CryptoTab onPaid={handlePaid} />}
