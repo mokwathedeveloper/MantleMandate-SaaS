@@ -1,7 +1,7 @@
 export type WalletStatus = 'connected' | 'pending' | 'revoked'
 export type WalletKind   = 'EOA' | 'Multisig' | 'Smart Account'
 
-export interface MockWallet {
+export interface WalletInfo {
   id:          string
   label:       string
   address:     string

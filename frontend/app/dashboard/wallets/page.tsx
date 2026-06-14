@@ -19,16 +19,16 @@ import { SectionCard } from '@/components/ui/SectionCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 
-import { type MockWallet, type WalletKind } from '@/mocks/wallets'
+import { type WalletInfo, type WalletKind } from '@/types/wallet'
 import { formatCurrency, truncateAddress } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 
-function useRealWallets(): MockWallet[] {
+function useRealWallets(): WalletInfo[] {
   const { user } = useAuthStore()
   const { address: connectedAddress, isConnected } = useWallet()
 
-  const { data: agentWallets = [] } = useQuery<MockWallet[]>({
+  const { data: agentWallets = [] } = useQuery<WalletInfo[]>({
     queryKey: ['real-agent-wallets', user?.id],
     queryFn: async () => {
       if (!user) return []
@@ -37,7 +37,7 @@ function useRealWallets(): MockWallet[] {
         .select('status, capital_cap, onchain_owner, deployed_at, created_at, last_trade_at')
         .eq('user_id', user.id)
 
-      const byOwner = new Map<string, MockWallet>()
+      const byOwner = new Map<string, WalletInfo>()
       for (const a of agents ?? []) {
         const owner = a.onchain_owner as string | null
         if (!owner) continue
@@ -306,7 +306,7 @@ export default function WalletsPage() {
     })
   }, [search, kind, allWallets])
 
-  const columns: DataTableColumn<MockWallet>[] = [
+  const columns: DataTableColumn<WalletInfo>[] = [
     {
       key: 'wallet',
       header: 'Wallet',
