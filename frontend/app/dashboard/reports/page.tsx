@@ -108,6 +108,28 @@ function dateRange(from: string, to: string): string {
   return `${mo(f)} – ${t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
 }
 
+function downloadReportCsv(r: Report): string {
+  const rows = [
+    ['Field', 'Value'],
+    ['Report', r.name],
+    ['Type', r.type],
+    ['Period', dateRange(r.dateFrom, r.dateTo)],
+    ['Total P&L', `${r.totalPnl >= 0 ? '+' : '-'}$${fmt(r.totalPnl)}`],
+    ['ROI', `${r.roi >= 0 ? '+' : ''}${r.roi.toFixed(2)}%`],
+    ['Max Drawdown', r.drawdown != null ? `-$${fmt(Math.abs(r.drawdown))}` : '—'],
+    ['Sharpe Ratio', r.sharpeRatio != null ? String(r.sharpeRatio) : '—'],
+    ['Generated On', new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
+  ]
+  const csv      = rows.map(row => row.map(c => `"${c}"`).join(',')).join('\n')
+  const filename = `${r.name.replace(/\s·\s|[\s/]/g, '-')}.csv`
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
+  return filename
+}
+
 // ─── Toast ───────────────────────────────────────────────────────────────────
 
 function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
@@ -883,7 +905,7 @@ export default function ReportsPage() {
                   <Eye className="h-3 w-3" /> View
                 </button>
                 <button
-                  onClick={() => setToast(`Report downloaded: ${r.name.replace(/\s·\s|[\s/]/g, '-')}.csv`)}
+                  onClick={() => setToast(`Report downloaded: ${downloadReportCsv(r)}`)}
                   className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
                 >
                   <Download className="h-3 w-3" /> Export
