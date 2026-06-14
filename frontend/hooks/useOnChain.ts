@@ -26,9 +26,11 @@ import { parseEther, type Address } from 'viem'
 import {
   MANDATE_POLICY_ADDRESS,
   AGENT_EXECUTOR_ADDRESS,
+  AGENT_REPUTATION_REGISTRY_ADDRESS,
   SWAP_POOL_ADDRESS,
   MANDATE_POLICY_ABI,
   AGENT_EXECUTOR_ABI,
+  AGENT_REPUTATION_REGISTRY_ABI,
   SWAP_POOL_ABI,
   publicClient,
   toPolicyHash,
@@ -342,7 +344,38 @@ export function useSwapPoolStats() {
   })
 }
 
-// ── Step 7: Pay treasury (native MNT transfer for billing) ────────────────────
+// ── Step 7: Read on-chain reputation (AgentReputationRegistry) ────────────────
+
+export interface AgentReputation {
+  totalCommitted: number
+  totalExecuted:  number
+  totalResolved:  number
+}
+
+/**
+ * Read an agent's on-chain reputation counters from AgentReputationRegistry.
+ * Disabled (returns no data) until the operator deploys the registry and sets
+ * NEXT_PUBLIC_AGENT_REPUTATION_REGISTRY_CONTRACT.
+ */
+export function useAgentReputation(onchainAgentId: bigint | null | undefined) {
+  return useReadContract({
+    address:      AGENT_REPUTATION_REGISTRY_ADDRESS || undefined,
+    abi:          AGENT_REPUTATION_REGISTRY_ABI,
+    functionName: 'getReputation',
+    args:         onchainAgentId != null ? [onchainAgentId] : undefined,
+    chainId:      mantleTestnet.id,
+    query: {
+      enabled: !!AGENT_REPUTATION_REGISTRY_ADDRESS && onchainAgentId != null,
+      select: (data: readonly [bigint, bigint, bigint]): AgentReputation => ({
+        totalCommitted: Number(data[0]),
+        totalExecuted:  Number(data[1]),
+        totalResolved:  Number(data[2]),
+      }),
+    },
+  })
+}
+
+// ── Step 8: Pay treasury (native MNT transfer for billing) ────────────────────
 
 /** Send a native MNT transfer to `to`, e.g. the billing treasury address. */
 export function usePayTreasury() {

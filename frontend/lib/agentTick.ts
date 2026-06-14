@@ -4,16 +4,19 @@ import {
   publicClient,
   MANDATE_POLICY_ADDRESS,
   AGENT_EXECUTOR_ADDRESS,
+  AGENT_REPUTATION_REGISTRY_ADDRESS,
   MOCK_USD_ADDRESS,
   MOCK_WETH_ADDRESS,
   SWAP_POOL_ADDRESS,
   MANDATE_POLICY_ABI,
   AGENT_EXECUTOR_ABI,
+  AGENT_REPUTATION_REGISTRY_ABI,
   SWAP_POOL_ABI,
   assetToBytes32,
 } from '@/lib/contracts'
 import { getServiceWalletClient, getServiceAccount } from '@/lib/serverWallet'
 import { getTradeDecision, type TradeDecision } from '@/lib/agentDecision'
+import { computeReasoningDigest, pinReasoning, type ReasoningPayload } from '@/lib/ipfs'
 
 interface AgentRow {
   id:                string
@@ -39,6 +42,10 @@ export interface TickResult {
   onchainAgentId?: string
   pnl?:           number
   reason?:        string
+  reasoningCid?:     string
+  reasoningPinned?:  boolean
+  commitmentTxHash?: `0x${string}`
+  resolutionTxHash?: `0x${string}`
 }
 
 const MOCK_USD_DECIMALS  = 6
@@ -90,6 +97,71 @@ async function trySwap(
   } catch {
     // Best-effort: pool may lack liquidity for this size — fall back to a
     // record-only executeOrder call with a tick-derived txRef.
+    return null
+  }
+}
+
+/**
+ * Commit a hash of the agent's reasoning to AgentReputationRegistry *before*
+ * the trade executes. Returns null (no-op) if the registry isn't configured
+ * or the commitment tx fails — a failed/missing commitment never blocks
+ * trade execution, it just means this trade has no on-chain reputation entry.
+ */
+async function commitReasoning(
+  wallet: ReturnType<typeof getServiceWalletClient>,
+  account: ReturnType<typeof getServiceAccount>,
+  onchainAgentId: bigint,
+  digest: `0x${string}`,
+): Promise<{ txHash: `0x${string}`; commitIndex: bigint } | null> {
+  if (!AGENT_REPUTATION_REGISTRY_ADDRESS) return null
+
+  try {
+    const txHash = await wallet.writeContract({
+      address: AGENT_REPUTATION_REGISTRY_ADDRESS,
+      abi: AGENT_REPUTATION_REGISTRY_ABI,
+      functionName: 'commitDecision',
+      args: [onchainAgentId, digest],
+      account,
+      chain: wallet.chain,
+    })
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
+    const [event] = parseEventLogs({
+      abi: AGENT_REPUTATION_REGISTRY_ABI,
+      eventName: 'DecisionCommitted',
+      logs: receipt.logs,
+    })
+    if (!event) return null
+    return { txHash: receipt.transactionHash, commitIndex: event.args.commitIndex }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve a prior reasoning commitment with the trade's real outcome.
+ * Best-effort, mirrors commitReasoning's failure handling.
+ */
+async function resolveReasoningCommitment(
+  wallet: ReturnType<typeof getServiceWalletClient>,
+  account: ReturnType<typeof getServiceAccount>,
+  onchainAgentId: bigint,
+  commitIndex: bigint,
+  executed: boolean,
+): Promise<`0x${string}` | null> {
+  if (!AGENT_REPUTATION_REGISTRY_ADDRESS) return null
+
+  try {
+    const txHash = await wallet.writeContract({
+      address: AGENT_REPUTATION_REGISTRY_ADDRESS,
+      abi: AGENT_REPUTATION_REGISTRY_ABI,
+      functionName: 'resolveCommitment',
+      args: [onchainAgentId, commitIndex, executed],
+      account,
+      chain: wallet.chain,
+    })
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
+    return receipt.transactionHash
+  } catch {
     return null
   }
 }
@@ -213,6 +285,28 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
   const wallet = getServiceWalletClient()
   const account = getServiceAccount()
 
+  // Content-address the AI's reasoning for this decision (CIDv1, sha2-256,
+  // raw codec) and, if AgentReputationRegistry is configured, commit that
+  // digest on-chain *before* execution — a tamper-evident record of what the
+  // agent intended to do and why.
+  const reasoningPayload: ReasoningPayload = {
+    agentId:        agent.id,
+    onchainAgentId: onchainAgentId.toString(),
+    asset:          decision.asset,
+    action:         decision.action,
+    confidence:     decision.confidence,
+    reasoning:      decision.reasoning,
+    amountPct:      decision.amount_pct,
+    urgency:        decision.urgency,
+    livePrice:      decision.live_price,
+    priceChange:    decision.price_change,
+    rsi:            decision.rsi,
+    timestamp:      new Date().toISOString(),
+  }
+  const reasoningDigest = computeReasoningDigest(reasoningPayload)
+  const { cid: reasoningCid, pinned: reasoningPinned } = await pinReasoning(reasoningPayload)
+  const commitment = await commitReasoning(wallet, account, onchainAgentId, reasoningDigest)
+
   // For ETH/WETH, perform a real on-chain swap against the mUSD/mWETH pool
   // first, then anchor the audit record (executeOrder) to that swap's tx hash.
   const swapTxHash = await trySwap(wallet, account, decision, isBuy, amountUsd)
@@ -231,8 +325,23 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     receipt = await publicClient.waitForTransactionReceipt({ hash: txHash })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return { decision, executed: false, reason: `On-chain execution failed: ${message}` }
+    const resolutionTxHash = commitment
+      ? await resolveReasoningCommitment(wallet, account, onchainAgentId, commitment.commitIndex, false)
+      : null
+    return {
+      decision,
+      executed: false,
+      reason: `On-chain execution failed: ${message}`,
+      reasoningCid,
+      reasoningPinned,
+      commitmentTxHash: commitment?.txHash,
+      resolutionTxHash: resolutionTxHash ?? undefined,
+    }
   }
+
+  const resolutionTxHash = commitment
+    ? await resolveReasoningCommitment(wallet, account, onchainAgentId, commitment.commitIndex, true)
+    : null
 
   // Mark-to-market PnL estimate from the live 24h price change — even when a
   // real swap fills, the AMM's quoted price differs from the CEX mark price,
@@ -254,6 +363,11 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     block_number: Number(receipt.blockNumber),
     status: 'success',
     mandate_rule_applied: decision.reasoning,
+    reasoning_cid: reasoningCid,
+    reasoning_pinned: reasoningPinned,
+    commitment_tx_hash: commitment?.txHash ?? null,
+    commitment_index: commitment ? Number(commitment.commitIndex) : null,
+    resolution_tx_hash: resolutionTxHash,
   })
 
   const newTotalPnl = agent.total_pnl + pnl
@@ -275,5 +389,9 @@ export async function runAgentTick(supabase: SupabaseClient, agent: AgentRow): P
     swapTxHash: swapTxHash ?? undefined,
     onchainAgentId: onchainAgentId.toString(),
     pnl,
+    reasoningCid,
+    reasoningPinned,
+    commitmentTxHash: commitment?.txHash,
+    resolutionTxHash: resolutionTxHash ?? undefined,
   }
 }

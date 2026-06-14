@@ -30,6 +30,9 @@ function rowToTrade(row: Record<string, any>): Trade {
     blockNumber:         row.block_number ?? null,
     status:              row.status,
     mandateRuleApplied:  row.mandate_rule_applied ?? null,
+    reasoningCid:        row.reasoning_cid ?? null,
+    reasoningPinned:     Boolean(row.reasoning_pinned),
+    commitmentTxHash:    row.commitment_tx_hash ?? null,
     createdAt:           row.created_at,
   }
 }

@@ -16,6 +16,15 @@ export const RISK_GUARD_ADDRESS = (
   process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT || '0x8D99D4F922248852Bc678bd4018F9f3E4576E34B'
 ) as Address
 
+// On-chain pre-execution commitment + reputation registry. Empty until the
+// operator deploys AgentReputationRegistry and sets
+// NEXT_PUBLIC_AGENT_REPUTATION_REGISTRY_CONTRACT — commit/resolve calls and
+// reputation reads are skipped entirely while unset (agentTick.ts behaves
+// exactly as before).
+export const AGENT_REPUTATION_REGISTRY_ADDRESS = (
+  process.env.NEXT_PUBLIC_AGENT_REPUTATION_REGISTRY_CONTRACT || ''
+) as Address | ''
+
 // ── Testnet AMM (Mantle Sepolia) ───────────────────────────────────────────────
 // Merchant Moe / Agni Finance have no Sepolia deployment, so the agent swaps
 // against this project-deployed mUSD/mWETH pool to execute real on-chain trades.
@@ -60,6 +69,15 @@ export const AGENT_EXECUTOR_ABI = parseAbi([
   'event AgentRegistered(address indexed owner, uint256 indexed agentId, bytes32 policyHash)',
   'event AgentStatusChanged(uint256 indexed agentId, uint8 status)',
   'event OrderExecuted(uint256 indexed agentId, bytes32 indexed asset, uint256 amount, bool isBuy, uint256 execIndex)',
+])
+
+export const AGENT_REPUTATION_REGISTRY_ABI = parseAbi([
+  'function commitDecision(uint256 agentId, bytes32 reasoningHash) external returns (uint256 commitIndex)',
+  'function resolveCommitment(uint256 agentId, uint256 commitIndex, bool executed) external',
+  'function getReputation(uint256 agentId) external view returns (uint256 totalCommitted, uint256 totalExecuted, uint256 totalResolved)',
+  'function getCommitmentCount(uint256 agentId) external view returns (uint256)',
+  'event DecisionCommitted(uint256 indexed agentId, uint256 indexed commitIndex, bytes32 reasoningHash)',
+  'event CommitmentResolved(uint256 indexed agentId, uint256 indexed commitIndex, bool executed)',
 ])
 
 export const ERC20_ABI = parseAbi([

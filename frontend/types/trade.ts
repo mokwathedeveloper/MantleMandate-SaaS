@@ -13,6 +13,9 @@ export interface Trade {
   blockNumber: number | null
   status: 'pending' | 'success' | 'failed'
   mandateRuleApplied: string | null
+  reasoningCid: string | null
+  reasoningPinned: boolean
+  commitmentTxHash: string | null
   createdAt: string
 }
 

@@ -44,6 +44,9 @@ export async function GET(
       blockNumber:        t.block_number,
       status:             t.status,
       mandateRuleApplied: t.mandate_rule_applied,
+      reasoningCid:       t.reasoning_cid ?? null,
+      reasoningPinned:    Boolean(t.reasoning_pinned),
+      commitmentTxHash:   t.commitment_tx_hash ?? null,
       createdAt:          t.created_at,
     })))
   } catch {

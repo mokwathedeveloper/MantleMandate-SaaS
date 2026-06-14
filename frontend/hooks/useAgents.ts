@@ -21,6 +21,7 @@ function rowToAgent(row: Record<string, unknown>): Agent {
     drawdownCurrent: (row.drawdown_current as number) ?? 0,
     deployedAt:      row.deployed_at as string | null,
     lastTradeAt:     row.last_trade_at as string | null,
+    onchainAgentId:  (row.onchain_agent_id as number | null) ?? null,
   }
 }
 

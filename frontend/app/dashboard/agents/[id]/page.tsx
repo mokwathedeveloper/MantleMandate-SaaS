@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import { useAgent, usePauseAgent, useResumeAgent, useStopAgent, useRunAgentTick } from '@/hooks/useAgents'
 import { useMandate } from '@/hooks/useMandates'
+import { useAgentReputation } from '@/hooks/useOnChain'
 import { useQuery } from '@tanstack/react-query'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -81,6 +82,8 @@ function OverviewTab({
   trades: Trade[]
   pnlPoints: { time: string; pnl: number }[]
 }) {
+  const reputation = useAgentReputation(agent?.onchainAgentId != null ? BigInt(agent.onchainAgentId) : null)
+
   if (!agent) return null
 
   const wins    = trades.filter((t) => (t.pnl ?? 0) > 0).length
@@ -164,6 +167,32 @@ function OverviewTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* On-chain reputation (AgentReputationRegistry) — only once deployed/configured */}
+      {reputation.data && (
+        <Card padding="md">
+          <CardHeader>
+            <CardTitle>On-Chain Reputation</CardTitle>
+            <Badge variant="success" dot>AgentReputationRegistry</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-xs text-text-secondary">Decisions Committed</p>
+                <p className="text-xl font-bold mt-1 text-text-primary">{reputation.data.totalCommitted}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Resolved</p>
+                <p className="text-xl font-bold mt-1 text-text-primary">{reputation.data.totalResolved}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Executed</p>
+                <p className="text-xl font-bold mt-1 text-success">{reputation.data.totalExecuted}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
@@ -231,8 +260,24 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
                     <td className="px-4 py-2.5">
                       <Badge variant={TRADE_STATUS_VARIANT[t.status]}>{t.status}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-text-secondary max-w-[180px] truncate">
-                      {t.mandateRuleApplied ?? '—'}
+                    <td className="px-4 py-2.5 text-text-secondary max-w-[180px]">
+                      <span className="truncate block">{t.mandateRuleApplied ?? '—'}</span>
+                      {t.reasoningCid && (
+                        <a
+                          href={t.reasoningPinned ? `https://ipfs.io/ipfs/${t.reasoningCid}` : undefined}
+                          target={t.reasoningPinned ? '_blank' : undefined}
+                          rel={t.reasoningPinned ? 'noreferrer' : undefined}
+                          title={t.reasoningPinned ? `View reasoning on IPFS: ${t.reasoningCid}` : `Reasoning CID (not pinned to IPFS): ${t.reasoningCid}`}
+                          className={cn(
+                            'inline-flex items-center gap-1 mt-0.5 text-[10px] font-mono',
+                            t.reasoningPinned ? 'text-text-link hover:opacity-70' : 'text-text-disabled cursor-default'
+                          )}
+                        >
+                          <Hash className="h-2.5 w-2.5" />
+                          {t.reasoningCid.slice(0, 10)}…
+                          {t.commitmentTxHash && <CheckCircle2 className="h-2.5 w-2.5 text-success" />}
+                        </a>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       {t.txHash ? (

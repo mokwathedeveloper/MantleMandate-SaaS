@@ -9,12 +9,14 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { fetchOnChainAuditEvents, type OnChainEvent } from '@/hooks/useOnChain'
-import { MANTLE_TESTNET_EXPLORER as EXPLORER, CONTRACTS as _CONTRACTS } from '@/lib/constants'
+import { MANTLE_TESTNET_EXPLORER as EXPLORER, CONTRACTS as _CONTRACTS, AGENT_REPUTATION_REGISTRY_CONTRACT } from '@/lib/constants'
 
 const CONTRACTS = {
   MandatePolicy: _CONTRACTS.MANDATE_POLICY,
   AgentExecutor: _CONTRACTS.AGENT_EXECUTOR,
   RiskGuard:     _CONTRACTS.RISK_GUARD,
+  // Only shown once the operator deploys + configures the registry.
+  ...(AGENT_REPUTATION_REGISTRY_CONTRACT ? { AgentReputationRegistry: AGENT_REPUTATION_REGISTRY_CONTRACT } : {}),
 } as const
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -11,4 +11,5 @@ export interface Agent {
   drawdownCurrent: number
   deployedAt: string | null
   lastTradeAt: string | null
+  onchainAgentId: number | null
 }

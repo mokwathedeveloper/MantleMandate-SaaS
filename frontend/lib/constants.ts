@@ -8,6 +8,12 @@ export const CONTRACTS = {
   RISK_GUARD:     process.env.NEXT_PUBLIC_RISK_GUARD_CONTRACT     || '0x8D99D4F922248852Bc678bd4018F9f3E4576E34B',
 }
 
+// Pre-execution commitment + reputation registry. Empty string until the
+// operator deploys AgentReputationRegistry and sets
+// NEXT_PUBLIC_AGENT_REPUTATION_REGISTRY_CONTRACT — omitted from CONTRACTS
+// (and thus the audit page's "Live Contracts" row) until then.
+export const AGENT_REPUTATION_REGISTRY_CONTRACT = process.env.NEXT_PUBLIC_AGENT_REPUTATION_REGISTRY_CONTRACT || ''
+
 export const PLANS = {
   operator: { name: 'Operator', price: 29 },
   strategist: { name: 'Strategist', price: 99 },

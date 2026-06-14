@@ -130,8 +130,15 @@ trigger condition, not just trust that it is.
 | 🔄 `MockSwapPool` | `0x3440d742bbbAe391b95E40FAF62d7a715582a4ad` | mUSD/mWETH constant-product AMM — agents execute real on-chain swaps here (Merchant Moe / Agni Finance have no Sepolia deployment to swap against) |
 | 💵 `mUSD` (mock ERC20) | `0x61806e0D29b0aa200dC26e9C1F0380707a3210c9` | Test USD token, 6 decimals |
 | Ξ `mWETH` (mock ERC20) | `0x535DC64B3eBDf3ce0ed1C03a8dfbEaf3A84e49EF` | Test ETH token, 18 decimals |
+| 🆕 `AgentReputationRegistry` | `0xf811E72261aBd6AE5dc1083d1d8977BE0DD4a12c` | Pre-execution reasoning commitments + on-chain agent reputation (reads `AgentExecutor` above for ownership checks) |
 
-All six contracts are verified on Sourcify (full match), synced to Mantle Explorer.
+All seven contracts are verified on Sourcify (full match), synced to Mantle Explorer.
+
+**🆕 `AgentReputationRegistry`** (`blockchain/contracts/AgentReputationRegistry.sol`, 19 passing Hardhat tests) is purely additive: its constructor takes the live `AgentExecutor` address above and only makes read-only ownership checks against it — deploying it (via the standalone `scripts/deployAgentReputationRegistry.ts`, which does not touch the other contracts) cannot affect any contract above. It implements two things in one contract:
+- **Pre-execution commitment** — before an agent acts, `agentTick.ts` hashes its full reasoning (asset, action, confidence, live price, RSI, etc.) and calls `commitDecision(agentId, reasoningHash)`, then calls `resolveCommitment(agentId, commitIndex, executed)` once the trade succeeds or fails — an on-chain, timestamped record of *what the agent decided and why, before it acted*.
+- **On-chain reputation** — `getReputation(agentId)` returns `(totalCommitted, totalExecuted, totalResolved)`, surfaced on the agent detail page as an "On-Chain Reputation" card.
+
+Each commitment's reasoning is also content-addressed as an IPFS CIDv1 (`frontend/lib/ipfs.ts`, 12 passing Jest tests, zero new dependencies) and stored per-trade — shown next to each trade row, with an IPFS link when an operator-configured pinning endpoint is set (`IPFS_PIN_API_URL`). Reasoning CIDs are computed and stored for every trade regardless (no network dependency), so the audit trail is real from day one; pinning to IPFS is the only optional add-on.
 
 ### 🤖 AI Integration (Claude)
 
@@ -454,6 +461,21 @@ Also eligible for:
 - Byreal Agent Skills integration for advanced LP strategies
 - Mainnet deployment with multisig agent treasury
 - Mobile app for real-time alerts and mandate management
+
+### 🔭 Roadmap: directions inspired by the wider hackathon field
+
+These are honest **future directions**, not implemented features — listed here so judges and contributors can see where the `AgentReputationRegistry` + IPFS reasoning trail (see above) could lead next. No code for these exists yet.
+
+1. **Agent-vs-agent duels** — run two mandates head-to-head on the same asset/timeframe and compare realized PnL live, as a way to A/B test strategies before committing real capital.
+2. **Inactivity dead-switch** — if a mandate owner doesn't check in for N days, automatically pause the agent (or hand control to a designated backup wallet) rather than leaving capital exposed indefinitely.
+3. **Outcome-adaptive mandates** — feed realized trade outcomes (now recorded via `AgentReputationRegistry`) back into future position-sizing, so a mandate's risk appetite adjusts to its own track record over time.
+4. **Multi-signal confidence scoring** — combine on-chain liquidity/order-book depth with off-chain sentiment alongside the existing RSI/price inputs, producing one blended confidence score instead of relying on a single feed.
+5. **Mandate template marketplace** — let users publish a mandate's policy hash + performance history (both already on-chain) so others can clone proven configurations.
+6. **Portfolio-of-agents allocator** — a meta-mandate that rebalances capital across a user's own deployed agents based on each agent's `AgentReputationRegistry` track record.
+7. **Pre-deployment adversarial testing** — an automated checker that simulates a new mandate against `RiskGuard` bounds and historical price data before it goes live, surfacing violations up front.
+8. **Natural-language audit search** — query "why did Agent X sell ETH on June 10" and resolve the answer from the on-chain commitment + IPFS reasoning CID, with the original LLM reasoning as a citation.
+9. **Reputation-based copy trading** — let a user deploy a new agent that mirrors the decisions of a higher-reputation agent (per `getReputation()`), with its own independent risk bounds.
+10. **Agent collateral & insurance pool** — require agents to stake collateral that's slashed on a confirmed `RiskGuard` violation, funding a pool that compensates affected mandate owners.
 
 ---
 
