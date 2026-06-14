@@ -81,15 +81,53 @@ export function computeReasoningCid(payload: ReasoningPayload): string {
 }
 
 /**
- * Best-effort pin of the reasoning payload to an operator-configured IPFS
- * pinning endpoint (`IPFS_PIN_API_URL`, optional `IPFS_PIN_API_TOKEN`).
- * Returns the CID either way — `pinned: false` simply means the content
- * hasn't been uploaded to IPFS, not that the CID is invalid.
+ * Pin the canonical reasoning JSON to Pinata (`PINATA_JWT`), uploading the
+ * exact bytes that `computeReasoningDigest` hashes so the on-chain commitment
+ * stays independently verifiable from the pinned file. Pinata wraps files in
+ * UnixFS, so its returned CID differs from our raw-codec `computeReasoningCid`
+ * — when pinned, that Pinata CID is the one returned (it's the one that
+ * actually resolves on a public gateway).
+ */
+async function pinToPinata(body: string, localCid: string, jwt: string): Promise<PinResult | null> {
+  try {
+    const form = new FormData()
+    form.append('file', new Blob([body], { type: 'application/json' }), `${localCid}.json`)
+    form.append('pinataOptions', JSON.stringify({ cidVersion: 1 }))
+
+    const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}` },
+      body: form,
+    })
+    if (!res.ok) return null
+    const json = (await res.json()) as { IpfsHash?: string }
+    if (!json.IpfsHash) return null
+    return { cid: json.IpfsHash, pinned: true, gatewayUrl: `https://ipfs.io/ipfs/${json.IpfsHash}` }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Best-effort pin of the reasoning payload to IPFS. Tries Pinata first
+ * (`PINATA_JWT`), then an operator-configured generic pinning endpoint
+ * (`IPFS_PIN_API_URL`, optional `IPFS_PIN_API_TOKEN`). Returns a CID either
+ * way — `pinned: false` means the locally-computed CID (still a valid,
+ * recomputable fingerprint of the canonical payload), just not retrievable
+ * from a public gateway.
  */
 export async function pinReasoning(payload: ReasoningPayload): Promise<PinResult> {
-  const cid = computeReasoningCid(payload)
+  const localCid = computeReasoningCid(payload)
+  const body = canonicalizeReasoning(payload)
+
+  const pinataJwt = process.env.PINATA_JWT
+  if (pinataJwt) {
+    const pinned = await pinToPinata(body, localCid, pinataJwt)
+    if (pinned) return pinned
+  }
+
   const apiUrl = process.env.IPFS_PIN_API_URL
-  if (!apiUrl) return { cid, pinned: false }
+  if (!apiUrl) return { cid: localCid, pinned: false }
 
   try {
     const res = await fetch(apiUrl, {
@@ -100,11 +138,11 @@ export async function pinReasoning(payload: ReasoningPayload): Promise<PinResult
           ? { Authorization: `Bearer ${process.env.IPFS_PIN_API_TOKEN}` }
           : {}),
       },
-      body: canonicalizeReasoning(payload),
+      body,
     })
-    if (!res.ok) return { cid, pinned: false }
-    return { cid, pinned: true, gatewayUrl: `https://ipfs.io/ipfs/${cid}` }
+    if (!res.ok) return { cid: localCid, pinned: false }
+    return { cid: localCid, pinned: true, gatewayUrl: `https://ipfs.io/ipfs/${localCid}` }
   } catch {
-    return { cid, pinned: false }
+    return { cid: localCid, pinned: false }
   }
 }

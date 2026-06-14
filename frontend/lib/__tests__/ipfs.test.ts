@@ -88,7 +88,8 @@ describe('pinReasoning', () => {
     jest.restoreAllMocks()
   })
 
-  it('returns pinned: false when IPFS_PIN_API_URL is not configured', async () => {
+  it('returns pinned: false when neither PINATA_JWT nor IPFS_PIN_API_URL is configured', async () => {
+    delete process.env.PINATA_JWT
     delete process.env.IPFS_PIN_API_URL
     const result = await pinReasoning(PAYLOAD)
     expect(result.pinned).toBe(false)
@@ -96,7 +97,52 @@ describe('pinReasoning', () => {
     expect(result.gatewayUrl).toBeUndefined()
   })
 
+  it('pins to Pinata and returns its IpfsHash as the CID when PINATA_JWT is set', async () => {
+    delete process.env.IPFS_PIN_API_URL
+    process.env.PINATA_JWT = 'pinata-jwt'
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ IpfsHash: 'QmPinataHash' }),
+    }) as unknown as typeof fetch
+
+    const result = await pinReasoning(PAYLOAD)
+    expect(result.pinned).toBe(true)
+    expect(result.cid).toEqual('QmPinataHash')
+    expect(result.gatewayUrl).toEqual('https://ipfs.io/ipfs/QmPinataHash')
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.pinata.cloud/pinning/pinFileToIPFS',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { Authorization: 'Bearer pinata-jwt' },
+      })
+    )
+  })
+
+  it('falls back to the generic endpoint when the Pinata request fails', async () => {
+    process.env.PINATA_JWT = 'pinata-jwt'
+    process.env.IPFS_PIN_API_URL = 'https://pin.example.com/add'
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true }) as unknown as typeof fetch
+
+    const result = await pinReasoning(PAYLOAD)
+    expect(result.pinned).toBe(true)
+    expect(result.cid).toEqual(computeReasoningCid(PAYLOAD))
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('falls back to pinned: false when both Pinata and the fetch call throw', async () => {
+    process.env.PINATA_JWT = 'pinata-jwt'
+    delete process.env.IPFS_PIN_API_URL
+    global.fetch = jest.fn().mockRejectedValue(new Error('network error')) as unknown as typeof fetch
+
+    const result = await pinReasoning(PAYLOAD)
+    expect(result.pinned).toBe(false)
+    expect(result.cid).toEqual(computeReasoningCid(PAYLOAD))
+  })
+
   it('returns pinned: true with a gateway URL when the pin endpoint succeeds', async () => {
+    delete process.env.PINATA_JWT
     process.env.IPFS_PIN_API_URL = 'https://pin.example.com/add'
     global.fetch = jest.fn().mockResolvedValue({ ok: true }) as unknown as typeof fetch
 
@@ -111,6 +157,7 @@ describe('pinReasoning', () => {
   })
 
   it('returns pinned: false when the pin endpoint responds with an error', async () => {
+    delete process.env.PINATA_JWT
     process.env.IPFS_PIN_API_URL = 'https://pin.example.com/add'
     global.fetch = jest.fn().mockResolvedValue({ ok: false }) as unknown as typeof fetch
 
@@ -119,6 +166,7 @@ describe('pinReasoning', () => {
   })
 
   it('returns pinned: false when the fetch call throws', async () => {
+    delete process.env.PINATA_JWT
     process.env.IPFS_PIN_API_URL = 'https://pin.example.com/add'
     global.fetch = jest.fn().mockRejectedValue(new Error('network error')) as unknown as typeof fetch
 
@@ -127,6 +175,7 @@ describe('pinReasoning', () => {
   })
 
   it('includes an Authorization header when IPFS_PIN_API_TOKEN is set', async () => {
+    delete process.env.PINATA_JWT
     process.env.IPFS_PIN_API_URL = 'https://pin.example.com/add'
     process.env.IPFS_PIN_API_TOKEN = 'secret-token'
     global.fetch = jest.fn().mockResolvedValue({ ok: true }) as unknown as typeof fetch
