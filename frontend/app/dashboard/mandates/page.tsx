@@ -7,7 +7,6 @@ import { useMandates } from '@/hooks/useMandates'
 import { useAuthStore } from '@/store/authStore'
 import { formatDate, cn } from '@/lib/utils'
 import { TokenIcon } from '@/components/ui/TokenIcon'
-import { MOCK_MANDATES } from '@/lib/mockMandates'
 import type { Mandate } from '@/types/mandate'
 
 // ── status styles using design tokens ─────────────────────────────────────────
@@ -126,10 +125,7 @@ export default function MandatesPage() {
 
   const { user } = useAuthStore()
   const { data, isLoading, isError } = useMandates({ enabled: !!user })
-  const apiMandates = data?.data ?? []
-  const isMock = !user || (!isLoading && apiMandates.length === 0) || isError
-
-  const allMandates = isMock ? MOCK_MANDATES : apiMandates
+  const allMandates = data?.data ?? []
 
   const filtered = allMandates.filter(m => {
     if (statusFilter !== 'all' && m.status !== statusFilter) return false
@@ -155,8 +151,8 @@ export default function MandatesPage() {
       {/* Error banner */}
       {isError && (
         <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 text-sm text-error flex items-center gap-2">
-          <span className="font-semibold">API error</span>
-          <span className="text-text-secondary">— showing demo data while we reconnect.</span>
+          <span className="font-semibold">Couldn&apos;t load mandates</span>
+          <span className="text-text-secondary">— please try refreshing the page.</span>
         </div>
       )}
 

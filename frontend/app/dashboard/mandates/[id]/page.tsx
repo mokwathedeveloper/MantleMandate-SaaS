@@ -19,7 +19,6 @@ import { useSubmitPolicy } from '@/hooks/useOnChain'
 import { useAccount } from 'wagmi'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
-import { MOCK_MANDATES } from '@/lib/mockMandates'
 import type { BadgeVariant } from '@/components/ui/Badge'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -97,10 +96,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
   const [copied, setCopied] = useState(false)
   const [localOnChainTx, setLocalOnChainTx] = useState<string | null>(null)
 
-  const mockMandate = MOCK_MANDATES.find(m => m.id === id)
-  const { data: fetchedMandate, isLoading } = useMandate(id)
-  const mandate = fetchedMandate ?? mockMandate
-  const isMock  = !fetchedMandate && !!mockMandate
+  const { data: mandate, isLoading } = useMandate(id)
   const { mutate: update, isPending: updating } = useUpdateMandate(id)
 
   const { isConnected } = useAccount()
@@ -130,7 +126,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
     setTimeout(() => setCopied(false), 2000)
   }, [mandate?.policyHash])
 
-  if (isLoading && !mockMandate) return <ViewSkeleton />
+  if (isLoading) return <ViewSkeleton />
 
   if (!mandate) {
     return (
@@ -183,59 +179,51 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
 
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          {isMock ? (
-            <span className="text-[10px] font-bold uppercase tracking-[0.08em] px-2.5 py-1 rounded-full bg-surface text-text-secondary border border-border">
-              Demo data
-            </span>
-          ) : (
-            <>
-              {mandate.status === 'active' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => update({ status: 'paused' as 'active' })}
-                  loading={updating}
-                >
-                  <Pause className="h-3.5 w-3.5" />
-                  Pause
-                </Button>
-              )}
-              {mandate.status === 'paused' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => update({ status: 'active' })}
-                  loading={updating}
-                >
-                  <Zap className="h-3.5 w-3.5" />
-                  Activate
-                </Button>
-              )}
-              {mandate.status === 'draft' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => update({ status: 'archived' as 'active' })}
-                  loading={updating}
-                >
-                  <Archive className="h-3.5 w-3.5" />
-                  Archive
-                </Button>
-              )}
-              <Link href={`/dashboard/mandates/${id}/edit`}>
-                <Button variant="secondary" size="sm">
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit
-                </Button>
-              </Link>
-              <Link href={`/dashboard/agents/deploy?mandate=${id}`}>
-                <Button variant="primary" size="sm">
-                  <Bot className="h-3.5 w-3.5" />
-                  Deploy Agent
-                </Button>
-              </Link>
-            </>
+          {mandate.status === 'active' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'paused' as 'active' })}
+              loading={updating}
+            >
+              <Pause className="h-3.5 w-3.5" />
+              Pause
+            </Button>
           )}
+          {mandate.status === 'paused' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'active' })}
+              loading={updating}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Activate
+            </Button>
+          )}
+          {mandate.status === 'draft' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => update({ status: 'archived' as 'active' })}
+              loading={updating}
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
+            </Button>
+          )}
+          <Link href={`/dashboard/mandates/${id}/edit`}>
+            <Button variant="secondary" size="sm">
+              <Edit2 className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </Link>
+          <Link href={`/dashboard/agents/deploy?mandate=${id}`}>
+            <Button variant="primary" size="sm">
+              <Bot className="h-3.5 w-3.5" />
+              Deploy Agent
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -414,10 +402,6 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Policy anchored on Mantle Sepolia
                   </div>
-                ) : isMock ? (
-                  <p className="text-xs text-text-secondary italic">
-                    Demo mandate — anchoring is unavailable
-                  </p>
                 ) : submitting ? (
                   <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
