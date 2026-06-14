@@ -32,6 +32,12 @@ export const SWAP_POOL_ADDRESS = (
   process.env.NEXT_PUBLIC_SWAP_POOL_CONTRACT || '0x3440d742bbbAe391b95E40FAF62d7a715582a4ad'
 ) as Address
 
+// ── Billing treasury (Mantle Sepolia) ──────────────────────────────────────────
+// Wallet that receives crypto subscription payments. Empty until the operator
+// configures NEXT_PUBLIC_TREASURY_ADDRESS — billing/verify-crypto refuses to
+// verify payments until this is set.
+export const TREASURY_ADDRESS = (process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '') as Address | ''
+
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
 export const MANDATE_POLICY_ABI = parseAbi([

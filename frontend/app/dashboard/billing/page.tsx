@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Download, Copy, CheckCircle2, ChevronDown, ExternalLink, TriangleAlert, Loader2, Building2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+  Download, Copy, CheckCircle2, ExternalLink, TriangleAlert, Loader2, CreditCard, Building2, ArrowRight,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { TokenIcon } from '@/components/ui/TokenIcon'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { TREASURY_ADDRESS } from '@/lib/contracts'
+import { useInvoices, type Invoice } from '@/hooks/useInvoices'
 
 // Load QR code only client-side — qrcode.react uses browser APIs that fail during SSR
 const QRCodeSVG = dynamic(
@@ -20,25 +26,10 @@ const QRCodeSVG = dynamic(
   }
 )
 
-// ── types ─────────────────────────────────────────────────────────────────────
+const EXPLORER_TX_BASE = 'https://explorer.sepolia.mantle.xyz/tx/'
 
-type PaymentTab  = 'card' | 'bank' | 'crypto'
-type CryptoToken = 'USDC' | 'USDT' | 'MNT'
-type CryptoNetwork = 'mantle' | 'ethereum'
-
-// ── mock data ─────────────────────────────────────────────────────────────────
-
-const BILLING_HISTORY = [
-  { date: 'Apr 5, 2026',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Mar 5, 2026',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Feb 5, 2026',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Jan 5, 2026',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Dec 5, 2025',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Nov 5, 2025',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-  { date: 'Oct 5, 2025',  desc: 'Strategist Plan — Monthly', amount: '$99.00', method: 'Visa ···4242', status: 'PAID' },
-]
-
-const CRYPTO_PAYMENT_ADDRESS = '0x7f3d9a2b1c4e5f6d7e8a9b0c1d2e3f4a5b6c7d8e'
+type PaymentTab    = 'card' | 'bank' | 'crypto'
+type PurchasePlan  = 'operator' | 'strategist'
 
 const PLAN_CONFIG: Record<string, { label: string; price: string; color: string }> = {
   operator:    { label: 'Operator Plan',    price: '$29',  color: 'text-text-secondary' },
@@ -46,25 +37,10 @@ const PLAN_CONFIG: Record<string, { label: string; price: string; color: string 
   institution: { label: 'Institution Plan', price: '$299', color: 'text-warning' },
 }
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!on)}
-      aria-pressed={on}
-      className={cn(
-        'relative h-5 w-9 rounded-full transition-colors shrink-0',
-        on ? 'bg-primary' : 'bg-surface border border-border'
-      )}
-    >
-      <span className={cn(
-        'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform shadow-sm',
-        on ? 'translate-x-4' : 'translate-x-0.5'
-      )} />
-    </button>
-  )
-}
+const PURCHASE_OPTIONS: { id: PurchasePlan; label: string; price: string }[] = [
+  { id: 'operator',   label: 'Operator',   price: PLAN_CONFIG.operator.price },
+  { id: 'strategist', label: 'Strategist', price: PLAN_CONFIG.strategist.price },
+]
 
 // ── CopyButton ────────────────────────────────────────────────────────────────
 
@@ -91,339 +67,65 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
   )
 }
 
-// ── CardTab ───────────────────────────────────────────────────────────────────
+// ── ComingSoonTab ─────────────────────────────────────────────────────────────
 
-function CardTab() {
-  const [cardNumber,  setCardNumber]  = useState('')
-  const [expiry,      setExpiry]      = useState('')
-  const [cvv,         setCvv]         = useState('')
-  const [holderName,  setHolderName]  = useState('')
-  const [showAddress, setShowAddress] = useState(false)
-
-  const formatCard = (v: string) =>
-    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()
-
-  const formatExpiry = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 4)
-    return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits
-  }
-
+function ComingSoonTab({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Card Number</label>
-        <div className="relative">
-          <input
-            value={cardNumber}
-            onChange={(e) => setCardNumber(formatCard(e.target.value))}
-            placeholder="1234 5678 9012 3456"
-            className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled pr-10"
-          />
-          {/* Card brand hint */}
-          {cardNumber.startsWith('4') && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-400">VISA</span>
-          )}
-          {cardNumber.startsWith('5') && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-400">MC</span>
-          )}
-        </div>
+    <div className="flex flex-col items-center gap-3 py-10 text-center border border-dashed border-border rounded-lg">
+      <div className="h-12 w-12 rounded-full bg-surface flex items-center justify-center text-text-secondary">
+        {icon}
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-text-secondary">Expiry Date</label>
-          <input
-            value={expiry}
-            onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-            placeholder="MM/YY"
-            className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-text-secondary flex items-center gap-1">
-            CVV <span className="text-text-disabled">🔒</span>
-          </label>
-          <input
-            value={cvv}
-            onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            placeholder="•••"
-            type="password"
-            className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
-          />
-        </div>
+      <div>
+        <p className="text-sm font-semibold text-text-primary">{title}</p>
+        <p className="text-xs text-text-secondary mt-1 max-w-xs">{description}</p>
       </div>
-
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Cardholder Name</label>
-        <input
-          value={holderName}
-          onChange={(e) => setHolderName(e.target.value)}
-          placeholder="John Michael"
-          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
-        />
-      </div>
-
-      {/* Billing address — collapsible */}
-      <button
-        onClick={() => setShowAddress((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-      >
-        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showAddress && 'rotate-180')} />
-        Billing Address (optional)
-      </button>
-
-      {showAddress && (
-        <div className="space-y-2 pl-2 border-l border-border">
-          {['Address line 1', 'City', 'Postcode', 'Country'].map((ph) => (
-            <input
-              key={ph}
-              placeholder={ph}
-              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
-            />
-          ))}
-        </div>
-      )}
-
-      <button className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold py-2.5 rounded-md transition-colors">
-        Save Card
-      </button>
-      <p className="text-xs text-text-secondary flex items-center gap-1.5">
-        <span>🔒</span>
-        Secured with TLS 1.3 encryption. We never store your full card number.
-      </p>
-    </div>
-  )
-}
-
-// ── BankTab ───────────────────────────────────────────────────────────────────
-
-type BankRegion = 'us' | 'uk' | 'eu' | 'other'
-
-const BANK_REGIONS: { key: BankRegion; label: string }[] = [
-  { key: 'us',    label: '🇺🇸 United States (ACH)' },
-  { key: 'uk',    label: '🇬🇧 United Kingdom (Faster Payments)' },
-  { key: 'eu',    label: '🇪🇺 European Union (SEPA)' },
-  { key: 'other', label: '🌍 International (SWIFT/IBAN)' },
-]
-
-function BankTab() {
-  const [region,       setRegion]       = useState<BankRegion>('us')
-  const [accountName,  setAccountName]  = useState('')
-  const [bankName,     setBankName]     = useState('')
-  const [accountNum,   setAccountNum]   = useState('')
-  const [routingNum,   setRoutingNum]   = useState('')
-  const [iban,         setIban]         = useState('')
-  const [bic,          setBic]          = useState('')
-  const [accountType,  setAccountType]  = useState<'checking' | 'savings'>('checking')
-  const [loading,      setLoading]      = useState(false)
-  const [linked,       setLinked]       = useState(false)
-  const [errors,       setErrors]       = useState<Record<string, string>>({})
-
-  const validate = () => {
-    const e: Record<string, string> = {}
-    if (!accountName.trim()) e.accountName = 'Required'
-    if (!bankName.trim())    e.bankName    = 'Required'
-    if (region === 'us' || region === 'uk') {
-      if (!accountNum.trim()) e.accountNum = 'Required'
-      if (region === 'us' && !routingNum.trim()) e.routingNum = 'Required'
-      if (region === 'uk' && routingNum.length !== 6) e.routingNum = 'Must be 6 digits'
-    }
-    if (region === 'eu' || region === 'other') {
-      if (!iban.trim())                      e.iban = 'Required'
-      if (region === 'other' && !bic.trim()) e.bic  = 'Required'
-    }
-    return e
-  }
-
-  const handleLink = async () => {
-    const e = validate()
-    if (Object.keys(e).length > 0) { setErrors(e); return }
-    setErrors({})
-    setLoading(true)
-    await new Promise(r => setTimeout(r, 1800))
-    setLoading(false)
-    setLinked(true)
-  }
-
-  const fieldClass = (key: string) => cn(
-    'w-full bg-input border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled transition-colors',
-    errors[key] ? 'border-error' : 'border-border'
-  )
-
-  if (linked) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <div className="h-14 w-14 rounded-full bg-success/15 flex items-center justify-center">
-          <CheckCircle2 className="h-7 w-7 text-success" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-text-primary">Bank account linked!</p>
-          <p className="text-xs text-text-secondary mt-1 max-w-xs">
-            <span className="font-medium text-text-primary">{bankName}</span> account ending in{' '}
-            <span className="font-medium text-text-primary">
-              {(region === 'eu' || region === 'other') ? iban.slice(-4) : accountNum.slice(-4)}
-            </span>{' '}
-            has been added. Verification may take 1–2 business days.
-          </p>
-        </div>
-        <button
-          onClick={() => { setLinked(false); setAccountName(''); setBankName(''); setAccountNum(''); setRoutingNum(''); setIban(''); setBic('') }}
-          className="text-xs text-primary hover:underline mt-1"
-        >
-          + Add another account
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {/* Region / payment system */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Region / Payment System</label>
-        <div className="relative">
-          <select
-            value={region}
-            onChange={e => { setRegion(e.target.value as BankRegion); setErrors({}) }}
-            className="w-full appearance-none bg-input border border-border rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none focus:border-primary cursor-pointer"
-          >
-            {BANK_REGIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Account holder name */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Account Holder Name <span className="text-error">*</span></label>
-        <input value={accountName} onChange={e => setAccountName(e.target.value)} placeholder="Full legal name on account" className={fieldClass('accountName')} />
-        {errors.accountName && <p className="text-[11px] text-error">{errors.accountName}</p>}
-      </div>
-
-      {/* Bank name */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Bank Name <span className="text-error">*</span></label>
-        <input value={bankName} onChange={e => setBankName(e.target.value)} placeholder="e.g. Chase, Barclays, Deutsche Bank" className={fieldClass('bankName')} />
-        {errors.bankName && <p className="text-[11px] text-error">{errors.bankName}</p>}
-      </div>
-
-      {/* US / UK fields */}
-      {(region === 'us' || region === 'uk') && (
-        <>
-          {/* Account type — US only */}
-          {region === 'us' && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">Account Type</label>
-              <div className="flex gap-2">
-                {(['checking', 'savings'] as const).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setAccountType(t)}
-                    className={cn(
-                      'flex-1 py-1.5 text-xs font-semibold rounded-md border transition-colors capitalize',
-                      accountType === t
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-text-secondary hover:border-primary/60'
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">
-                Account Number <span className="text-error">*</span>
-              </label>
-              <input
-                value={accountNum}
-                onChange={e => setAccountNum(e.target.value.replace(/\D/g, ''))}
-                placeholder={region === 'us' ? 'e.g. 123456789' : 'e.g. 12345678'}
-                className={fieldClass('accountNum')}
-              />
-              {errors.accountNum && <p className="text-[11px] text-error">{errors.accountNum}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">
-                {region === 'us' ? 'Routing Number' : 'Sort Code'} <span className="text-error">*</span>
-              </label>
-              <input
-                value={routingNum}
-                onChange={e => setRoutingNum(e.target.value.replace(/\D/g, '').slice(0, region === 'us' ? 9 : 6))}
-                placeholder={region === 'us' ? 'e.g. 021000021' : 'e.g. 20-00-00'}
-                className={fieldClass('routingNum')}
-              />
-              {errors.routingNum && <p className="text-[11px] text-error">{errors.routingNum}</p>}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* EU / International IBAN + BIC */}
-      {(region === 'eu' || region === 'other') && (
-        <>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-text-secondary">IBAN <span className="text-error">*</span></label>
-            <input
-              value={iban}
-              onChange={e => setIban(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="e.g. DE89370400440532013000"
-              className={fieldClass('iban')}
-            />
-            {errors.iban && <p className="text-[11px] text-error">{errors.iban}</p>}
-          </div>
-          {region === 'other' && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">BIC / SWIFT Code <span className="text-error">*</span></label>
-              <input
-                value={bic}
-                onChange={e => setBic(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
-                placeholder="e.g. DEUTDEDB"
-                className={fieldClass('bic')}
-              />
-              {errors.bic && <p className="text-[11px] text-error">{errors.bic}</p>}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Mandate text */}
-      <p className="text-[11px] text-text-disabled flex items-start gap-1.5 pt-1">
-        <Building2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        By linking your account you authorise MantleMandate to initiate debits for your subscription. Funds are collected via secure bank transfer.
-      </p>
-
-      <button
-        onClick={handleLink}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover disabled:bg-border disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-md transition-colors"
-      >
-        {loading
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying…</>
-          : <><Building2 className="h-4 w-4" /> Link Bank Account</>
-        }
-      </button>
+      <span className="inline-flex items-center rounded-full bg-warning/10 text-warning text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1">
+        Coming soon
+      </span>
     </div>
   )
 }
 
 // ── CryptoTab ─────────────────────────────────────────────────────────────────
 
-function CryptoTab() {
-  const [token,   setToken]   = useState<CryptoToken>('MNT')
-  const [network, setNetwork] = useState<CryptoNetwork>('mantle')
-  const [showVerify, setShowVerify] = useState(false)
-  const [txHash,     setTxHash]     = useState('')
-  const [verified,   setVerified]   = useState<boolean | null>(null)
+function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
+  const [plan, setPlan]     = useState<PurchasePlan>('strategist')
+  const [txHash, setTxHash] = useState('')
+  const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle')
+  const [message, setMessage] = useState<string | null>(null)
 
-  const networkLabel = network === 'mantle' ? 'Mantle Network' : 'Ethereum Mainnet'
+  const handleVerify = async () => {
+    setStatus('verifying')
+    setMessage(null)
+    try {
+      const res = await fetch('/api/billing/verify-crypto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txHash, plan }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatus('error')
+        setMessage(data.error ?? 'Verification failed')
+        return
+      }
+      setStatus('success')
+      setMessage(`Payment of ${data.amount} ${data.currency} verified. Your plan is now ${plan === 'operator' ? 'Operator' : 'Strategist'}.`)
+      onPaid(plan)
+    } catch {
+      setStatus('error')
+      setMessage('Network error — please try again.')
+    }
+  }
 
-  const handleVerify = () => {
-    // Simulate: any non-empty hash passes
-    setVerified(txHash.length > 10)
+  if (!TREASURY_ADDRESS) {
+    return (
+      <ComingSoonTab
+        icon={<TokenIcon symbol="MNT" size="md" />}
+        title="Crypto payments aren't configured yet"
+        description="The operator needs to set NEXT_PUBLIC_TREASURY_ADDRESS to a wallet they control before crypto payments can be verified."
+      />
+    )
   }
 
   return (
@@ -431,66 +133,46 @@ function CryptoTab() {
       <div>
         <p className="text-xs font-semibold text-text-secondary mb-1">Pay with Crypto</p>
         <p className="text-xs text-text-disabled mb-3">
-          Pay your subscription using crypto on Mantle Network or Ethereum.
+          Send MNT on Mantle Sepolia Testnet to the treasury address below, then verify your transaction
+          to upgrade your plan.
         </p>
 
-        {/* Token selector */}
-        <p className="text-xs font-medium text-text-secondary mb-2">Token</p>
+        {/* Plan selector */}
+        <p className="text-xs font-medium text-text-secondary mb-2">Plan</p>
         <div className="flex gap-2">
-          {(['USDC', 'USDT', 'MNT'] as CryptoToken[]).map((t) => (
+          {PURCHASE_OPTIONS.map((p) => (
             <button
-              key={t}
-              onClick={() => setToken(t)}
+              key={p.id}
+              onClick={() => setPlan(p.id)}
               className={cn(
-                'flex-1 py-2 text-sm rounded-md border transition-colors flex flex-col items-center gap-1',
-                token === t
+                'flex-1 py-2 text-sm rounded-md border transition-colors flex flex-col items-center gap-0.5',
+                plan === p.id
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border text-text-secondary hover:border-primary/60'
               )}
             >
-              <TokenIcon symbol={t} size="md" />
-              <span className="font-semibold">{t}</span>
-              {t === 'MNT' && (
-                <span className="text-[9px] text-text-disabled leading-tight">Mantle native</span>
-              )}
+              <span className="font-semibold">{p.label}</span>
+              <span className="text-[10px] text-text-disabled">{p.price}/mo</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Network selector */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-text-secondary">Network</label>
-        <div className="relative">
-          <select
-            value={network}
-            onChange={(e) => setNetwork(e.target.value as CryptoNetwork)}
-            className="w-full appearance-none bg-input border border-border rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none focus:border-primary cursor-pointer"
-          >
-            <option value="mantle">Mantle Network (recommended)</option>
-            <option value="ethereum">Ethereum Mainnet</option>
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Payment address card */}
+      {/* Treasury address card */}
       <div className="bg-surface border border-border rounded-lg p-5 space-y-4">
-        <p className="text-xs font-medium text-text-secondary">Send payment to this address:</p>
+        <p className="text-xs font-medium text-text-secondary">Send MNT to this address:</p>
 
-        {/* Address + copy */}
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm text-text-primary flex-1 break-all">
-            {CRYPTO_PAYMENT_ADDRESS}
+            {TREASURY_ADDRESS}
           </span>
-          <CopyButton text={CRYPTO_PAYMENT_ADDRESS} label="Copy" />
+          <CopyButton text={TREASURY_ADDRESS} label="Copy" />
         </div>
 
-        {/* QR code — real */}
         <div className="flex justify-center">
           <div className="bg-white p-3 rounded-lg inline-block">
             <QRCodeSVG
-              value={`${token}:${CRYPTO_PAYMENT_ADDRESS}?amount=99&network=${network}`}
+              value={TREASURY_ADDRESS}
               size={128}
               bgColor="#ffffff"
               fgColor="#000000"
@@ -499,71 +181,54 @@ function CryptoTab() {
           </div>
         </div>
 
-        {/* Amount + network */}
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-text-primary">
-            Amount due: <span className="text-primary">99 {token} / month</span>
-          </p>
-          <p className="text-xs text-text-secondary">Network: {networkLabel}</p>
-        </div>
-
-        {/* Warning */}
         <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-md p-3">
           <TriangleAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <p className="text-xs text-warning leading-relaxed">
-            Send only <strong>{token}</strong> on {networkLabel} to this address.
-            Sending other tokens may result in permanent loss of funds.
+            Send only <strong>MNT</strong> on <strong>Mantle Sepolia Testnet</strong> to this address.
+            Any positive amount is accepted as proof of payment for this testnet deployment.
           </p>
         </div>
       </div>
 
-      {/* After sending */}
-      {!showVerify ? (
-        <button
-          onClick={() => setShowVerify(true)}
-          className="w-full border border-border rounded-md py-2.5 text-sm text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
-        >
-          {"I've Sent the Payment — Verify Transaction"}
-        </button>
-      ) : (
-        <div className="space-y-2 border border-border rounded-md p-4">
-          <p className="text-xs font-medium text-text-secondary">Enter your transaction hash to verify:</p>
-          <div className="flex gap-2">
-            <input
-              value={txHash}
-              onChange={(e) => { setTxHash(e.target.value); setVerified(null) }}
-              placeholder="0x..."
-              className="flex-1 bg-input border border-border rounded-md px-3 py-2 font-mono text-xs text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
-            />
-            <button
-              onClick={handleVerify}
-              disabled={!txHash}
-              className="px-3 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors"
-            >
-              Verify
-            </button>
-          </div>
-          {txHash && (
-            <a
-              href={`https://explorer.mantle.xyz/tx/${txHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary transition-colors w-fit"
-            >
-              <ExternalLink className="h-3 w-3" />
-              View on Mantle Explorer
-            </a>
-          )}
-          {verified === true && (
-            <p className="text-xs text-success flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Payment verified! Your plan will activate shortly.
-            </p>
-          )}
-          {verified === false && (
-            <p className="text-xs text-error">Transaction not found. Check the hash and try again.</p>
-          )}
+      {/* Verify */}
+      <div className="space-y-2 border border-border rounded-md p-4">
+        <p className="text-xs font-medium text-text-secondary">Enter your transaction hash to verify:</p>
+        <div className="flex gap-2">
+          <input
+            value={txHash}
+            onChange={(e) => { setTxHash(e.target.value); setStatus('idle'); setMessage(null) }}
+            placeholder="0x..."
+            className="flex-1 bg-input border border-border rounded-md px-3 py-2 font-mono text-xs text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
+          />
+          <button
+            onClick={handleVerify}
+            disabled={!txHash || status === 'verifying'}
+            className="px-3 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5"
+          >
+            {status === 'verifying' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Verify
+          </button>
         </div>
-      )}
+        {txHash && (
+          <a
+            href={`${EXPLORER_TX_BASE}${txHash}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary transition-colors w-fit"
+          >
+            <ExternalLink className="h-3 w-3" />
+            View on Mantle Explorer
+          </a>
+        )}
+        {status === 'success' && (
+          <p className="text-xs text-success flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" /> {message}
+          </p>
+        )}
+        {status === 'error' && (
+          <p className="text-xs text-error">{message}</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -571,14 +236,42 @@ function CryptoTab() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
-  const { user } = useAuthStore()
-  const [tab,        setTab]        = useState<PaymentTab>('card')
-  const [autoRenew,  setAutoRenew]  = useState(true)
-  const [showAll,    setShowAll]    = useState(false)
+  const { user, setUser } = useAuthStore()
+  const queryClient = useQueryClient()
+  const [tab, setTab] = useState<PaymentTab>('crypto')
+  const addMethodRef = useRef<HTMLDivElement>(null)
 
-  const plan       = user?.plan ?? 'strategist'
-  const planConfig = PLAN_CONFIG[plan] ?? PLAN_CONFIG.strategist
-  const rows       = showAll ? BILLING_HISTORY : BILLING_HISTORY.slice(0, 6)
+  const { data: invoicesData, isLoading: invoicesLoading } = useInvoices()
+  const invoices = invoicesData ?? []
+
+  const plan       = user?.plan ?? 'operator'
+  const planConfig = PLAN_CONFIG[plan] ?? PLAN_CONFIG.operator
+
+  const handlePaid = (newPlan: PurchasePlan) => {
+    if (user) setUser({ ...user, plan: newPlan })
+    queryClient.invalidateQueries({ queryKey: ['invoices'] })
+  }
+
+  const goToCrypto = () => {
+    setTab('crypto')
+    addMethodRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const downloadInvoicesCsv = () => {
+    const header = ['Date', 'Plan', 'Amount', 'Currency', 'Method', 'Status', 'Tx Hash']
+    const rows = invoices.map((inv) => [
+      new Date(inv.createdAt).toISOString(),
+      inv.plan, String(inv.amount), inv.currency, inv.paymentMethod, inv.status, inv.txHash ?? '',
+    ])
+    const csv = [header, ...rows].map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -586,7 +279,7 @@ export default function BillingPage() {
       <div>
         <h2 className="text-2xl font-bold text-text-primary">Payment Methods &amp; Billing</h2>
         <p className="text-sm text-text-secondary mt-0.5">
-          Manage subscription payments, crypto billing, and receipts for MantleMandate.
+          Manage subscription payments, crypto billing, and invoices for MantleMandate.
         </p>
       </div>
 
@@ -596,43 +289,28 @@ export default function BillingPage() {
         {/* ── Left column 60% ───────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-5">
 
-          {/* Current payment method */}
-          <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+          {/* Payment methods status */}
+          <div className="bg-card border border-border rounded-lg p-5 space-y-3">
             <div>
               <h3 className="text-base font-semibold text-text-primary">Payment Methods</h3>
               <p className="text-xs text-text-secondary mt-0.5">Manage how you pay for MantleMandate.</p>
             </div>
-
-            {/* Active card */}
-            <div className="border border-border rounded-lg p-4 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {/* Visa logo placeholder */}
-                  <div className="h-8 w-12 bg-blue-600 rounded flex items-center justify-center shrink-0">
-                    <span className="text-white font-bold text-[11px] tracking-wider">VISA</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-text-primary">Visa ending in 4242</p>
-                    <p className="text-xs text-text-secondary">Expires 08/27 · John Michael</p>
-                  </div>
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <button className="h-7 px-2.5 text-xs border border-border rounded text-text-secondary hover:border-primary hover:text-text-primary transition-colors">
-                    Edit
-                  </button>
-                  <button className="h-7 px-2.5 text-xs border border-border rounded text-text-secondary hover:border-error hover:text-error transition-colors">
-                    Remove
-                  </button>
-                </div>
+            <div className="border border-border rounded-lg p-4 flex items-start gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <TokenIcon symbol="MNT" size="md" />
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-success">
-                ✓ Default payment method
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">On-chain payments (Mantle Sepolia)</p>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Pay for your subscription with a direct MNT transfer — see the Crypto tab below.
+                  Card and bank payments are not yet connected.
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Add new payment method */}
-          <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+          <div ref={addMethodRef} className="bg-card border border-border rounded-lg p-5 space-y-4">
             <h4 className="text-sm font-semibold text-text-primary">Add New Payment Method</h4>
 
             {/* Method tabs */}
@@ -657,24 +335,21 @@ export default function BillingPage() {
               ))}
             </div>
 
-            {tab === 'card'   && <CardTab />}
-            {tab === 'bank'   && <BankTab />}
-            {tab === 'crypto' && <CryptoTab />}
-          </div>
-
-          {/* PayPal section */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-text-primary">PayPal</h4>
-                <p className="text-xs text-text-secondary mt-0.5">Pay with your PayPal account.</p>
-              </div>
-              <button className="flex items-center gap-2 h-9 px-4 rounded-md border border-border text-sm font-medium text-text-secondary hover:border-primary hover:text-text-primary transition-colors bg-input shrink-0">
-                <span className="text-[#003087] font-bold text-xs">Pay</span>
-                <span className="text-[#009cde] font-bold text-xs">Pal</span>
-                Connect PayPal
-              </button>
-            </div>
+            {tab === 'card' && (
+              <ComingSoonTab
+                icon={<CreditCard className="h-5 w-5" />}
+                title="Card payments aren't connected yet"
+                description="This deployment doesn't have a Stripe account configured. Use the Crypto tab to pay with MNT on Mantle Sepolia."
+              />
+            )}
+            {tab === 'bank' && (
+              <ComingSoonTab
+                icon={<Building2 className="h-5 w-5" />}
+                title="Bank transfers aren't connected yet"
+                description="ACH / SEPA / SWIFT billing requires a banking provider integration. Use the Crypto tab to pay with MNT on Mantle Sepolia."
+              />
+            )}
+            {tab === 'crypto' && <CryptoTab onPaid={handlePaid} />}
           </div>
         </div>
 
@@ -690,7 +365,6 @@ export default function BillingPage() {
               {planConfig.price}
               <span className="text-sm font-normal text-text-secondary ml-1">/ month</span>
             </p>
-            <p className="text-xs text-text-secondary">Renews: June 4, 2026</p>
             {user?.trialEndsAt && (
               <p className="text-xs text-success">
                 Trial: {Math.max(0, Math.ceil(
@@ -698,70 +372,73 @@ export default function BillingPage() {
                 ))} days remaining
               </p>
             )}
-            <div className="flex gap-2 pt-3">
-              <button className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">
-                Upgrade Plan
-              </button>
-              <button className="border border-border text-text-secondary text-xs px-3 py-1.5 rounded-md hover:text-text-primary hover:border-text-secondary transition-colors">
-                Cancel
-              </button>
-            </div>
+            <button
+              onClick={goToCrypto}
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors mt-2"
+            >
+              Pay with Crypto <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
 
           {/* Billing history */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold text-text-primary">Billing History</h4>
-              <button className="text-xs text-text-link hover:text-text-link-hover flex items-center gap-1 transition-colors">
-                <Download className="h-3 w-3" />
-                Download all
-              </button>
-            </div>
-
-            <div className="space-y-0">
-              {rows.map((row, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'flex items-center gap-2 py-2.5 min-h-[44px]',
-                    i < rows.length - 1 && 'border-b border-border/60'
-                  )}
+              {invoices.length > 0 && (
+                <button
+                  onClick={downloadInvoicesCsv}
+                  className="text-xs text-text-link hover:text-text-link-hover flex items-center gap-1 transition-colors"
                 >
-                  <span className="text-[11px] text-text-secondary w-[72px] shrink-0">{row.date}</span>
-                  <span className="text-[11px] text-text-primary flex-1 truncate">{row.desc}</span>
-                  <span className="text-[11px] font-semibold text-text-primary w-14 text-right shrink-0">{row.amount}</span>
-                  <span className="text-[10px] font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded shrink-0">
-                    {row.status}
-                  </span>
-                  <button className="shrink-0 text-text-link hover:text-text-link-hover transition-colors" title="Download receipt">
-                    <Download className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {BILLING_HISTORY.length > 6 && (
-              <button
-                onClick={() => setShowAll((v) => !v)}
-                className="w-full text-xs text-text-secondary hover:text-text-primary py-1.5 border-t border-border transition-colors"
-              >
-                {showAll ? 'Show less' : `Load more (${BILLING_HISTORY.length - 6} more)`}
-              </button>
-            )}
-          </div>
-
-          {/* Auto-renewal */}
-          <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-text-primary">Auto-renewal</p>
-              <p className="text-xs text-text-secondary mt-0.5">
-                Your subscription renews automatically. Turn off to cancel at period end.
-              </p>
-              {autoRenew && (
-                <p className="text-[10px] text-text-disabled mt-1">Next renewal: June 4, 2026</p>
+                  <Download className="h-3 w-3" />
+                  Export
+                </button>
               )}
             </div>
-            <Toggle on={autoRenew} onChange={setAutoRenew} />
+
+            {invoicesLoading ? (
+              <div className="flex items-center justify-center py-6 text-text-secondary text-xs gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+              </div>
+            ) : invoices.length === 0 ? (
+              <p className="text-xs text-text-secondary py-4 text-center">No invoices yet.</p>
+            ) : (
+              <div className="space-y-0">
+                {invoices.map((inv: Invoice, i: number) => (
+                  <div
+                    key={inv.id}
+                    className={cn(
+                      'flex items-center gap-2 py-2.5 min-h-[44px]',
+                      i < invoices.length - 1 && 'border-b border-border/60'
+                    )}
+                  >
+                    <span className="text-[11px] text-text-secondary w-[72px] shrink-0">
+                      {new Date(inv.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className="text-[11px] text-text-primary flex-1 truncate capitalize">
+                      {inv.plan} Plan · {inv.paymentMethod}
+                    </span>
+                    <span className="text-[11px] font-semibold text-text-primary w-20 text-right shrink-0">
+                      {inv.amount} {inv.currency}
+                    </span>
+                    <StatusBadge
+                      status={inv.status === 'paid' ? 'success' : inv.status === 'failed' ? 'failed' : 'pending'}
+                      className="shrink-0"
+                    />
+                    {inv.txHash && (
+                      <a
+                        href={`${EXPLORER_TX_BASE}${inv.txHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 text-text-link hover:text-text-link-hover transition-colors"
+                        title="View transaction"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
