@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { CheckCircle2, AlertTriangle, ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
+import { useRiskSummary } from '@/hooks/useRiskSummary'
+import { useMandates } from '@/hooks/useMandates'
+import { useAgents } from '@/hooks/useAgents'
 
 // ── Preset definitions ────────────────────────────────────────────────────────
 
@@ -16,6 +22,10 @@ const PRESETS = {
 type PresetKey = keyof typeof PRESETS
 
 const COOLDOWN_OPTIONS = ['None', '30 min', '1 hour', '4 hours', '12 hours', '24 hours', '1 week']
+
+type Cooldowns = { stopLoss: string; drawdown: string; failure: string; repeat: string }
+
+const DEFAULT_COOLDOWNS: Cooldowns = { stopLoss: '4 hours', drawdown: '24 hours', failure: '1 hour', repeat: 'None' }
 
 // ── RangeSlider ───────────────────────────────────────────────────────────────
 // Dynamic pct-based track/thumb positioning must remain inline styles.
@@ -86,17 +96,18 @@ function RangeSlider({
   )
 }
 
-// ── Protocol colors — brand-specific, data-driven ─────────────────────────────
+// ── Protocol colors — rotate through a small palette for real protocol names ──
 
-const PROTO_STYLES: Record<string, { color: string; bg: string }> = {
-  'Merchant Moe': { color: '#5B8DF6', bg: '#0D1A3A' },
-  'Agni Finance': { color: '#F97316', bg: '#2A1000' },
-  'Fluxion':      { color: '#A855F7', bg: '#1A0A3A' },
-}
+const PROTO_PALETTE = [
+  { color: '#5B8DF6', bg: '#0D1A3A' },
+  { color: '#22C55E', bg: '#0A2A14' },
+  { color: '#F5C542', bg: '#2A2200' },
+  { color: '#A78BFA', bg: '#1A0A3A' },
+]
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
-function Toast({ onDone }: { onDone: () => void }) {
+function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   useEffect(() => {
     const t = setTimeout(onDone, 3500)
     return () => clearTimeout(t)
@@ -109,14 +120,59 @@ function Toast({ onDone }: { onDone: () => void }) {
       className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium bg-success-bg border border-success text-success shadow-modal animate-in slide-in-from-bottom-4"
     >
       <CheckCircle2 className="h-4 w-4 shrink-0" />
-      Risk settings applied — on-chain hash updated
+      {message}
     </div>
   )
+}
+
+// ── Real trade-derived data ──────────────────────────────────────────────────
+
+interface TradeRow {
+  protocol:   string
+  amount_usd: number | null
+  pnl:        number | null
+  status:     string
+  created_at: string
+}
+
+function useRiskTrades() {
+  const { user } = useAuthStore()
+  return useQuery<TradeRow[]>({
+    queryKey: ['risk', 'trades'],
+    queryFn: async () => {
+      if (!user) return []
+      const { data, error } = await supabase
+        .from('trades')
+        .select('protocol, amount_usd, pnl, status, created_at')
+        .eq('user_id', user.id)
+      if (error || !data) return []
+      return data as TradeRow[]
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  })
+}
+
+interface PositionRow {
+  size:     number
+  protocol: string
+  status:   'open' | 'closed'
+}
+
+function usePositions() {
+  return useQuery<PositionRow[]>({
+    queryKey: ['portfolio', 'positions'],
+    queryFn: () => fetch('/api/portfolio/positions').then(r => r.json()),
+    staleTime: 30_000,
+  })
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RiskPage() {
+  const { user } = useAuthStore()
+  const qc = useQueryClient()
+
   const [maxDrawdown,   setMaxDrawdown]   = useState(15)
   const [maxNotional,   setMaxNotional]   = useState(10000)
   const [maxPositions,  setMaxPositions]  = useState(10)
@@ -127,19 +183,87 @@ export default function RiskPage() {
   const [activePreset,  setActivePreset]  = useState<PresetKey>('Balanced')
   const [changed,       setChanged]       = useState(false)
   const [confirm,       setConfirm]       = useState(false)
-  const [showToast,     setShowToast]     = useState(false)
-  const [applying,      setApplying]      = useState(false)
+  const [toastMsg,      setToastMsg]      = useState<string | null>(null)
   const [showTemplate,  setShowTemplate]  = useState(false)
 
-  const [allocs, setAllocs] = useState({ 'Merchant Moe': 40, 'Agni Finance': 35, 'Fluxion': 25 })
-  const [cooldowns, setCooldowns] = useState({
-    stopLoss: '4 hours',
-    drawdown: '24 hours',
-    failure:  '1 hour',
-    repeat:   'None',
-  })
+  const [allocs, setAllocs] = useState<Record<string, number>>({})
+  const [cooldowns, setCooldowns] = useState<Cooldowns>(DEFAULT_COOLDOWNS)
 
   const templateRef = useRef<HTMLDivElement>(null)
+  const initialized = useRef(false)
+  const allocsInitialized = useRef(false)
+
+  const { data: riskSummary }  = useRiskSummary()
+  const { data: agents }       = useAgents()
+  const { data: mandatesResp } = useMandates({ status: 'active' })
+  const { data: tradeRows }    = useRiskTrades()
+  const { data: positions }    = usePositions()
+
+  const activeMandates = useMemo(() => mandatesResp?.data ?? [], [mandatesResp])
+  const activeAgents   = (agents ?? []).filter(a => a.status === 'active')
+  const openPositions  = (positions ?? []).filter(p => p.status === 'open')
+
+  // ── real protocol allocation, derived from trade volume ─────────────────────
+  const protocolAllocation = useMemo(() => {
+    const rows = tradeRows ?? []
+    const totals: Record<string, number> = {}
+    rows.forEach(t => { totals[t.protocol] = (totals[t.protocol] ?? 0) + (t.amount_usd ?? 0) })
+    const grand = Object.values(totals).reduce((s, v) => s + v, 0)
+    return Object.entries(totals)
+      .map(([name, volume]) => ({ name, volume, pct: grand > 0 ? Math.round((volume / grand) * 100) : 0 }))
+      .sort((a, b) => b.volume - a.volume)
+  }, [tradeRows])
+
+  // ── real realized P&L for today (UTC) ───────────────────────────────────────
+  const dailyPnl = useMemo(() => {
+    const rows = tradeRows ?? []
+    const todayStart = new Date()
+    todayStart.setUTCHours(0, 0, 0, 0)
+    return rows
+      .filter(t => t.status === 'success' && new Date(t.created_at) >= todayStart)
+      .reduce((s, t) => s + (t.pnl ?? 0), 0)
+  }, [tradeRows])
+
+  const avgDrawdown = activeAgents.length > 0
+    ? activeAgents.reduce((s, a) => s + a.drawdownCurrent, 0) / activeAgents.length
+    : 0
+
+  const largestPosition = openPositions.length > 0
+    ? Math.max(...openPositions.map(p => p.size))
+    : 0
+
+  // ── populate sliders from the active mandate's risk_params (once) ───────────
+  useEffect(() => {
+    if (initialized.current || activeMandates.length === 0) return
+    const rp = activeMandates[0].riskParams as unknown as Record<string, unknown>
+    const num = (key: string, fallback: number) => typeof rp[key] === 'number' ? rp[key] as number : fallback
+    setMaxDrawdown(num('maxDrawdown', PRESETS.Balanced.maxDrawdown))
+    setMaxNotional(num('maxNotional', PRESETS.Balanced.maxNotional))
+    setMaxPositions(num('maxPositions', PRESETS.Balanced.maxPositions))
+    setStopLoss(num('stopLoss', PRESETS.Balanced.stopLoss))
+    setDrawdownLimit(num('drawdownLimit', PRESETS.Balanced.drawdownLimit))
+    const dailyLoss = rp.maxDailyLoss
+    setMaxDailyLoss(typeof dailyLoss === 'number' ? String(dailyLoss) : PRESETS.Balanced.maxDailyLoss)
+    if (rp.cooldowns && typeof rp.cooldowns === 'object') {
+      setCooldowns({ ...DEFAULT_COOLDOWNS, ...(rp.cooldowns as Partial<Cooldowns>) })
+    }
+    initialized.current = true
+  }, [activeMandates])
+
+  // ── populate venue allocations once real protocols are known ────────────────
+  useEffect(() => {
+    if (allocsInitialized.current || protocolAllocation.length === 0) return
+    const rp = activeMandates[0]?.riskParams as unknown as Record<string, unknown> | undefined
+    const saved = rp?.venueAllocations as Record<string, number> | undefined
+    if (saved && Object.keys(saved).length > 0) {
+      setAllocs(saved)
+    } else {
+      const init: Record<string, number> = {}
+      protocolAllocation.forEach(p => { init[p.name] = p.pct })
+      setAllocs(init)
+    }
+    allocsInitialized.current = true
+  }, [protocolAllocation, activeMandates])
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -152,7 +276,7 @@ export default function RiskPage() {
   }, [])
 
   const allocTotal = Object.values(allocs).reduce((a, b) => a + b, 0)
-  const allocOk    = allocTotal === 100
+  const allocOk    = protocolAllocation.length === 0 || allocTotal === 100
 
   const applyPreset = (key: PresetKey) => {
     const p = PRESETS[key]
@@ -167,34 +291,102 @@ export default function RiskPage() {
     setShowTemplate(false)
   }
 
-  const handleApply = () => {
-    setApplying(true)
-    setTimeout(() => {
-      setApplying(false)
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated')
+      const updates = activeMandates.map(m => {
+        const rp = (m.riskParams as unknown as Record<string, unknown>) ?? {}
+        return supabase
+          .from('mandates')
+          .update({
+            risk_params: {
+              ...rp,
+              maxDrawdown,
+              maxNotional,
+              maxPositions,
+              stopLoss,
+              drawdownLimit,
+              maxDailyLoss: Number(maxDailyLoss) || 0,
+              cooldowns,
+              venueAllocations: allocs,
+            },
+          })
+          .eq('id', m.id)
+      })
+      const results = await Promise.all(updates)
+      const failed = results.find(r => r.error)
+      if (failed?.error) throw failed.error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mandates'] })
       setConfirm(false)
       setChanged(false)
-      setShowToast(true)
-    }, 1200)
-  }
+      setToastMsg(
+        activeMandates.length > 0
+          ? `Risk settings applied to ${activeMandates.length} active mandate${activeMandates.length === 1 ? '' : 's'}`
+          : 'Risk settings saved — no active mandates to apply to yet'
+      )
+    },
+  })
+
+  const handleApply = () => applyMutation.mutate()
 
   const mark = (fn: () => void) => { fn(); setChanged(true) }
 
-  const riskScore = 4.13
-  const riskColor = riskScore < 10 ? 'text-success' : riskScore < 20 ? 'text-warning' : 'text-error'
-  const riskBarColor = riskScore < 10 ? 'bg-success' : riskScore < 20 ? 'bg-warning' : 'bg-error'
-  const riskLabel = riskScore < 10 ? 'LOW RISK' : riskScore < 20 ? 'MEDIUM RISK' : 'HIGH RISK'
+  // ── real portfolio risk score ────────────────────────────────────────────────
+  const score   = riskSummary?.score ?? 0
+  const hasRisk = riskSummary?.hasData ?? false
+  const level   = riskSummary?.level ?? 'Low Risk'
+  const riskColor    = level === 'Low Risk' ? 'text-success' : level === 'Medium Risk' ? 'text-warning' : 'text-error'
+  const riskBarColor = level === 'Low Risk' ? 'bg-success'   : level === 'Medium Risk' ? 'bg-warning'   : 'bg-error'
+  const riskMessage = !hasRisk
+    ? 'No active agents to monitor'
+    : level === 'Low Risk' ? 'Within safe parameters'
+    : level === 'Medium Risk' ? 'Approaching risk limits'
+    : 'Exceeds safe risk limits'
 
-  const METRICS = [
-    { label: 'Current Drawdown',              value: '-2.45%',        ok: true,  warn: false },
-    { label: 'Largest Open Position',         value: '$8,450',        ok: true,  warn: false },
-    { label: 'Open Positions',                value: '7 / 10',        ok: true,  warn: false },
-    { label: 'Venue Concentration (Moe)',     value: '42%',           ok: false, warn: true  },
-    { label: 'Daily Loss',                    value: '-$180 / $500',  ok: true,  warn: false },
-  ]
+  // ── real current exposure metrics ────────────────────────────────────────────
+  const METRICS = useMemo(() => {
+    const m: { label: string; value: string; warn: boolean }[] = [
+      {
+        label: 'Current Drawdown',
+        value: activeAgents.length > 0 ? `-${avgDrawdown.toFixed(2)}%` : '—',
+        warn: avgDrawdown > drawdownLimit,
+      },
+      {
+        label: 'Largest Open Position',
+        value: `$${largestPosition.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
+        warn: largestPosition > maxNotional,
+      },
+      {
+        label: 'Open Positions',
+        value: `${openPositions.length} / ${maxPositions}`,
+        warn: openPositions.length > maxPositions,
+      },
+    ]
+
+    if (protocolAllocation.length > 0) {
+      const top = protocolAllocation[0]
+      m.push({
+        label: `Venue Concentration (${top.name})`,
+        value: `${top.pct}%`,
+        warn: top.pct > 50,
+      })
+    }
+
+    const dailyLossLimit = Number(maxDailyLoss) || 0
+    m.push({
+      label: 'Daily Loss',
+      value: `${dailyPnl >= 0 ? '+' : '-'}$${Math.abs(dailyPnl).toLocaleString('en-US', { maximumFractionDigits: 2 })} / $${dailyLossLimit.toLocaleString()}`,
+      warn: dailyPnl < -dailyLossLimit,
+    })
+
+    return m
+  }, [activeAgents.length, avgDrawdown, drawdownLimit, largestPosition, maxNotional, openPositions.length, maxPositions, protocolAllocation, dailyPnl, maxDailyLoss])
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      {showToast && <Toast onDone={() => setShowToast(false)} />}
+      {toastMsg && <Toast message={toastMsg} onDone={() => setToastMsg(null)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -340,106 +532,110 @@ export default function RiskPage() {
             <div>
               <h4 className="text-sm font-semibold text-text-primary">Venue Selection &amp; Allocation</h4>
               <p className="text-xs mt-0.5 text-text-secondary">
-                Select which protocols agents may use and set allocation limits.
+                Allocation limits based on real trade volume across protocols you&apos;ve used.
               </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: 560 }}>
+            {protocolAllocation.length === 0 ? (
+              <p className="text-xs text-text-secondary">
+                No trade activity yet — allocation limits will appear once your agents start trading.
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <div style={{ minWidth: 480 }}>
 
-                {/* Table header */}
-                <div className="grid text-[10px] font-semibold uppercase tracking-wider px-3 py-2 rounded-md bg-page text-text-disabled"
-                  style={{ gridTemplateColumns: '1fr 80px 140px 72px 72px 80px' }}>
-                  <span>Protocol</span>
-                  <span>Status</span>
-                  <span>Max Allocation</span>
-                  <span className="text-right">Volume</span>
-                  <span className="text-right">TVL</span>
-                  <span className="text-right">Actions</span>
+                    {/* Table header */}
+                    <div className="grid text-[10px] font-semibold uppercase tracking-wider px-3 py-2 rounded-md bg-page text-text-disabled"
+                      style={{ gridTemplateColumns: '1fr 80px 140px 90px 80px' }}>
+                      <span>Protocol</span>
+                      <span>Status</span>
+                      <span>Max Allocation</span>
+                      <span className="text-right">Volume</span>
+                      <span className="text-right">Actions</span>
+                    </div>
+
+                    {protocolAllocation.map((p, i) => {
+                      const pct = allocs[p.name] ?? 0
+                      const c   = PROTO_PALETTE[i % PROTO_PALETTE.length]
+                      return (
+                        <div
+                          key={p.name}
+                          className="grid items-center px-3 py-2.5 border-b border-border"
+                          style={{ gridTemplateColumns: '1fr 80px 140px 90px 80px' }}
+                        >
+                          {/* Protocol name + icon */}
+                          <div className="flex items-center gap-2">
+                            {/* Palette colors — must be inline */}
+                            <div
+                              className="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
+                              style={{ background: c.bg, border: `1px solid ${c.color}40` }}
+                            >
+                              <span className="text-[9px] font-bold" style={{ color: c.color }}>
+                                {p.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-sm font-medium text-text-primary">{p.name}</span>
+                          </div>
+
+                          {/* Status */}
+                          <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded w-fit bg-success-bg text-success border border-success/20">
+                            ACTIVE ✓
+                          </span>
+
+                          {/* Allocation slider — dynamic width must be inline */}
+                          <div className="flex items-center gap-2 px-2">
+                            <div className="relative flex-1 h-1.5 rounded-full bg-border">
+                              <div
+                                className="absolute h-1.5 rounded-full bg-primary"
+                                style={{ width: `${pct}%` }}
+                              />
+                              <input
+                                name={`alloc-${p.name}`}
+                                type="range" min={0} max={100} value={pct}
+                                aria-label={`${p.name} allocation`}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={pct}
+                                onChange={e => mark(() => setAllocs(prev => ({ ...prev, [p.name]: Number(e.target.value) })))}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                            <span className="text-sm font-bold text-text-primary w-8 text-right shrink-0">{pct}%</span>
+                          </div>
+
+                          <span className="text-xs text-right text-text-secondary">
+                            ${p.volume.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                          </span>
+
+                          <div className="flex justify-end">
+                            <Link
+                              href="/dashboard/protocols"
+                              className="text-[11px] px-2 py-0.5 rounded border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors inline-block"
+                            >
+                              Configure
+                            </Link>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {([
-                  { name: 'Merchant Moe', vol: '$24.5M', tvl: '$145.2M' },
-                  { name: 'Agni Finance', vol: '$18.2M', tvl: '$89.4M' },
-                  { name: 'Fluxion',      vol: '$12.1M', tvl: '$45.8M' },
-                ] as { name: keyof typeof allocs; vol: string; tvl: string }[]).map(p => {
-                  const pct = allocs[p.name]
-                  const c   = PROTO_STYLES[p.name]
-                  return (
-                    <div
-                      key={p.name}
-                      className="grid items-center px-3 py-2.5 border-b border-border"
-                      style={{ gridTemplateColumns: '1fr 80px 140px 72px 72px 80px' }}
-                    >
-                      {/* Protocol name + icon */}
-                      <div className="flex items-center gap-2">
-                        {/* Brand-specific colors — must be inline */}
-                        <div
-                          className="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: c.bg, border: `1px solid ${c.color}40` }}
-                        >
-                          <span className="text-[9px] font-bold" style={{ color: c.color }}>
-                            {p.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-text-primary">{p.name}</span>
-                      </div>
-
-                      {/* Status */}
-                      <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded w-fit bg-success-bg text-success border border-success/20">
-                        ACTIVE ✓
-                      </span>
-
-                      {/* Allocation slider — dynamic width must be inline */}
-                      <div className="flex items-center gap-2 px-2">
-                        <div className="relative flex-1 h-1.5 rounded-full bg-border">
-                          <div
-                            className="absolute h-1.5 rounded-full bg-primary"
-                            style={{ width: `${pct}%` }}
-                          />
-                          <input
-                            name={`alloc-${p.name}`}
-                            type="range" min={0} max={100} value={pct}
-                            aria-label={`${p.name} allocation`}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={pct}
-                            onChange={e => mark(() => setAllocs(prev => ({ ...prev, [p.name]: Number(e.target.value) })))}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          />
-                        </div>
-                        <span className="text-sm font-bold text-text-primary w-8 text-right shrink-0">{pct}%</span>
-                      </div>
-
-                      <span className="text-xs text-right text-text-secondary">{p.vol}</span>
-                      <span className="text-xs text-right text-text-secondary">{p.tvl}</span>
-
-                      <div className="flex justify-end">
-                        <Link
-                          href="/dashboard/protocols"
-                          className="text-[11px] px-2 py-0.5 rounded border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors inline-block"
-                        >
-                          Configure
-                        </Link>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Allocation total */}
-            <div className={cn(
-              'flex items-center gap-1.5 text-xs font-semibold px-3',
-              allocOk ? 'text-success' : 'text-error',
-            )}>
-              {allocOk
-                ? <CheckCircle2 className="h-3.5 w-3.5" />
-                : <AlertTriangle className="h-3.5 w-3.5" />
-              }
-              Total: {allocTotal}%
-              {allocOk ? ' ✓' : ' — adjust before applying'}
-            </div>
+                {/* Allocation total */}
+                <div className={cn(
+                  'flex items-center gap-1.5 text-xs font-semibold px-3',
+                  allocOk ? 'text-success' : 'text-error',
+                )}>
+                  {allocOk
+                    ? <CheckCircle2 className="h-3.5 w-3.5" />
+                    : <AlertTriangle className="h-3.5 w-3.5" />
+                  }
+                  Total: {allocTotal}%
+                  {allocOk ? ' ✓' : ' — adjust before applying'}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Section 3: Cooldown Periods */}
@@ -477,21 +673,21 @@ export default function RiskPage() {
             </p>
 
             <div className="text-center space-y-3">
-              <p className={cn('text-5xl font-black', riskColor)}>{riskScore}%</p>
+              <p className={cn('text-5xl font-black', riskColor)}>{hasRisk ? `${score}%` : '—'}</p>
 
               {/* Health bar — dynamic width must be inline */}
               <div className="h-2 rounded-full overflow-hidden bg-border">
                 <div
                   className={cn('h-2 rounded-full transition-all', riskBarColor)}
-                  style={{ width: `${Math.min(riskScore * 2, 100)}%` }}
+                  style={{ width: `${Math.min(score, 100)}%` }}
                 />
               </div>
 
               <div className={cn('flex items-center justify-center gap-1.5', riskColor)}>
                 <CheckCircle2 className="h-4 w-4" />
-                <span className="text-sm font-bold">{riskLabel}</span>
+                <span className="text-sm font-bold">{hasRisk ? level.toUpperCase() : 'NO DATA'}</span>
               </div>
-              <p className="text-xs text-text-secondary">Within safe parameters</p>
+              <p className="text-xs text-text-secondary">{riskMessage}</p>
             </div>
           </div>
 
@@ -556,7 +752,10 @@ export default function RiskPage() {
             <div className="rounded-lg p-4 text-xs bg-primary/5 border border-primary/25 text-text-link">
               <p className="font-semibold mb-1">Unsaved changes</p>
               <p className="text-text-secondary">
-                Click &quot;Apply Changes&quot; to save. 3 agents will be affected.
+                Click &quot;Apply Changes&quot; to save.{' '}
+                {activeAgents.length > 0
+                  ? `${activeAgents.length} active agent${activeAgents.length === 1 ? '' : 's'} will be affected.`
+                  : 'No active agents are currently running.'}
               </p>
             </div>
           )}
@@ -567,7 +766,7 @@ export default function RiskPage() {
       {confirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-          onClick={() => !applying && setConfirm(false)}
+          onClick={() => !applyMutation.isPending && setConfirm(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="risk-confirm-title"
@@ -590,39 +789,39 @@ export default function RiskPage() {
             </div>
 
             <p className="text-sm text-text-secondary">
-              These changes will apply to all active agents immediately. Agents currently outside
-              new limits will pause automatically.
+              These changes update the risk parameters stored on your active mandates and apply
+              to their agents immediately.
             </p>
 
             <div className="rounded-md px-4 py-3 text-sm space-y-1 bg-page border border-border">
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Affected agents</span>
-                <span className="font-semibold text-warning">3 of 9 active agents</span>
+                <span className="text-text-secondary">Active mandates</span>
+                <span className="font-semibold text-text-primary">{activeMandates.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">On-chain effect</span>
-                <span className="font-semibold text-text-primary">New policy hash generated</span>
+                <span className="text-text-secondary">Active agents</span>
+                <span className="font-semibold text-warning">{activeAgents.length}</span>
               </div>
             </div>
 
-            <p className="text-xs text-text-disabled">
-              Settings change generates a new on-chain policy hash recorded on Mantle Network.
-            </p>
+            {applyMutation.isError && (
+              <p className="text-xs text-error">Failed to apply changes. Please try again.</p>
+            )}
 
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleApply}
-                disabled={applying}
+                disabled={applyMutation.isPending}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-semibold text-white bg-primary hover:bg-primary-hover transition-colors disabled:opacity-60"
               >
-                {applying && (
+                {applyMutation.isPending && (
                   <span className="h-4 w-4 border-2 rounded-full animate-spin border-white/30 border-t-white" />
                 )}
                 Apply Changes
               </button>
               <button
                 onClick={() => setConfirm(false)}
-                disabled={applying}
+                disabled={applyMutation.isPending}
                 className="px-5 py-2.5 rounded-md text-sm border border-border text-text-secondary hover:text-text-primary hover:border-text-disabled transition-colors disabled:opacity-60"
               >
                 Cancel
