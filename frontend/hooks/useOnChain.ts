@@ -270,23 +270,39 @@ export interface OnChainEvent {
   execIndex:   bigint
 }
 
-// Mantle Sepolia RPC caps eth_getLogs at ~2 000 blocks per request
-export const MANTLE_MAX_BLOCK_RANGE = 2_000
+// Mantle Sepolia RPC caps eth_getLogs at 10 000 blocks per request
+export const MANTLE_LOG_CHUNK_BLOCKS = 10_000
 
-export async function fetchOnChainAuditEvents(lookbackBlocks = MANTLE_MAX_BLOCK_RANGE): Promise<OnChainEvent[]> {
+// ~2s block time → ~24h of history, fetched as sequential chunks to stay
+// under the per-request cap above without tripping the RPC's rate limit.
+export const MANTLE_AUDIT_LOOKBACK_BLOCKS = 43_200
+
+export async function fetchOnChainAuditEvents(lookbackBlocks = MANTLE_AUDIT_LOOKBACK_BLOCKS): Promise<OnChainEvent[]> {
   try {
     const latestBlock = await publicClient.getBlockNumber()
     const fromBlock   = latestBlock > BigInt(lookbackBlocks)
       ? latestBlock - BigInt(lookbackBlocks)
       : BigInt(0)
 
-    const logs = await publicClient.getContractEvents({
+    const fetchChunk = (from: bigint, to: bigint) => publicClient.getContractEvents({
       address:   AGENT_EXECUTOR_ADDRESS,
       abi:       AGENT_EXECUTOR_ABI,
       eventName: 'OrderExecuted',
-      fromBlock,
-      toBlock:   'latest',
+      fromBlock: from,
+      toBlock:   to,
     })
+
+    const chunks: Awaited<ReturnType<typeof fetchChunk>>[] = []
+    let cursor = fromBlock
+    while (cursor <= latestBlock) {
+      const chunkEnd = (cursor + BigInt(MANTLE_LOG_CHUNK_BLOCKS - 1)) > latestBlock
+        ? latestBlock
+        : cursor + BigInt(MANTLE_LOG_CHUNK_BLOCKS - 1)
+
+      chunks.push(await fetchChunk(cursor, chunkEnd))
+      cursor = chunkEnd + 1n
+    }
+    const logs = chunks.flat()
 
     if (logs.length === 0) return []
 
