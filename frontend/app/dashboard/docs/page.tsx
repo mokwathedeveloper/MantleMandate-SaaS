@@ -936,100 +936,105 @@ Tx: https://explorer.sepolia.mantle.xyz/tx/0xabc...`}</Pre>
       </UL>
       <P>The adapter automatically throttles when approaching limits and logs a <Code>WARN</Code> in the Ingestion Log when utilisation exceeds 80%.</P>
       <H2>Supported pairs</H2>
-      <P>All USDT spot pairs available on Bybit are supported. MantleMandate recommends starting with high-liquidity pairs: <Code>ETHUSDT</Code>, <Code>BTCUSDT</Code>, <Code>MANTUSDT</Code>, <Code>SOLUSDT</Code>.</P>
+      <P>{t('All USDT spot pairs available on Bybit are supported. MantleMandate recommends starting with high-liquidity pairs:')} <Code>ETHUSDT</Code>, <Code>BTCUSDT</Code>, <Code>MANTUSDT</Code>, <Code>SOLUSDT</Code>.</P>
     </>
   ),
+  }
 }
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 
-const CATEGORIES: Category[] = [
+const MIN_READ = (n: number, t: (s: string) => string) => t('{n} min read').replace('{n}', String(n))
+
+function getCategories(t: (s: string) => string, articles: Record<string, React.ReactNode>): Category[] {
+  return [
   {
     id: 'getting-started',
-    label: 'Getting Started',
-    description: 'Up and running in 5 minutes',
+    label: t('Getting Started'),
+    description: t('Up and running in 5 minutes'),
     Icon: Zap,
     articles: [
-      { id: 'write-first-mandate',  title: 'Write your first mandate',       readTime: '3 min read', category: 'Getting Started', content: ARTICLES['write-first-mandate']  },
-      { id: 'deploy-first-agent',   title: 'Deploy your first AI agent',     readTime: '5 min read', category: 'Getting Started', content: ARTICLES['deploy-first-agent']   },
-      { id: 'connect-wallet',       title: 'Connect your wallet',            readTime: '2 min read', category: 'Getting Started', content: ARTICLES['connect-wallet']        },
-      { id: 'risk-parameters',      title: 'Understanding risk parameters',  readTime: '4 min read', category: 'Getting Started', content: ARTICLES['risk-parameters']       },
+      { id: 'write-first-mandate',  title: t('Write your first mandate'),       readTime: MIN_READ(3, t), category: t('Getting Started'), content: articles['write-first-mandate']  },
+      { id: 'deploy-first-agent',   title: t('Deploy your first AI agent'),     readTime: MIN_READ(5, t), category: t('Getting Started'), content: articles['deploy-first-agent']   },
+      { id: 'connect-wallet',       title: t('Connect your wallet'),            readTime: MIN_READ(2, t), category: t('Getting Started'), content: articles['connect-wallet']        },
+      { id: 'risk-parameters',      title: t('Understanding risk parameters'),  readTime: MIN_READ(4, t), category: t('Getting Started'), content: articles['risk-parameters']       },
     ],
   },
   {
     id: 'core-concepts',
-    label: 'Core Concepts',
-    description: 'How MantleMandate works under the hood',
+    label: t('Core Concepts'),
+    description: t('How MantleMandate works under the hood'),
     Icon: BookOpen,
     articles: [
-      { id: 'what-is-mandate',       title: 'What is a Mandate?',           readTime: '5 min read', category: 'Core Concepts', content: ARTICLES['what-is-mandate']        },
-      { id: 'agent-lifecycle',       title: 'AI Agent Lifecycle',           readTime: '6 min read', category: 'Core Concepts', content: ARTICLES['agent-lifecycle']        },
-      { id: 'onchain-execution',     title: 'On-Chain Execution Model',     readTime: '7 min read', category: 'Core Concepts', content: ARTICLES['onchain-execution']      },
-      { id: 'risk-engine-deep-dive', title: 'Risk Engine Deep Dive',        readTime: '8 min read', category: 'Core Concepts', content: ARTICLES['risk-engine-deep-dive']  },
+      { id: 'what-is-mandate',       title: t('What is a Mandate?'),           readTime: MIN_READ(5, t), category: t('Core Concepts'), content: articles['what-is-mandate']        },
+      { id: 'agent-lifecycle',       title: t('AI Agent Lifecycle'),           readTime: MIN_READ(6, t), category: t('Core Concepts'), content: articles['agent-lifecycle']        },
+      { id: 'onchain-execution',     title: t('On-Chain Execution Model'),     readTime: MIN_READ(7, t), category: t('Core Concepts'), content: articles['onchain-execution']      },
+      { id: 'risk-engine-deep-dive', title: t('Risk Engine Deep Dive'),        readTime: MIN_READ(8, t), category: t('Core Concepts'), content: articles['risk-engine-deep-dive']  },
     ],
   },
   {
     id: 'api-reference',
-    label: 'API Reference',
-    description: 'Full REST & WebSocket API docs',
+    label: t('API Reference'),
+    description: t('Full REST & WebSocket API docs'),
     Icon: Code2,
     articles: [
-      { id: 'auth-jwt',          title: 'Authentication & JWT tokens',    readTime: '3 min read', category: 'API Reference', content: ARTICLES['auth-jwt']          },
-      { id: 'mandates-endpoints', title: 'Mandates endpoints',            readTime: '5 min read', category: 'API Reference', content: ARTICLES['mandates-endpoints']  },
-      { id: 'agents-deploy',     title: 'Agents & deploy lifecycle',      readTime: '6 min read', category: 'API Reference', content: ARTICLES['agents-deploy']      },
-      { id: 'websocket-stream',  title: 'WebSocket event stream',         readTime: '4 min read', category: 'API Reference', content: ARTICLES['websocket-stream']   },
+      { id: 'auth-jwt',          title: t('Authentication & JWT tokens'),    readTime: MIN_READ(3, t), category: t('API Reference'), content: articles['auth-jwt']          },
+      { id: 'mandates-endpoints', title: t('Mandates endpoints'),            readTime: MIN_READ(5, t), category: t('API Reference'), content: articles['mandates-endpoints']  },
+      { id: 'agents-deploy',     title: t('Agents & deploy lifecycle'),      readTime: MIN_READ(6, t), category: t('API Reference'), content: articles['agents-deploy']      },
+      { id: 'websocket-stream',  title: t('WebSocket event stream'),         readTime: MIN_READ(4, t), category: t('API Reference'), content: articles['websocket-stream']   },
     ],
   },
   {
     id: 'smart-contracts',
-    label: 'Smart Contracts',
-    description: 'Deployed on Mantle Testnet',
+    label: t('Smart Contracts'),
+    description: t('Deployed on Mantle Testnet'),
     Icon: FileCode2,
     articles: [
-      { id: 'mandate-policy-contract', title: 'MandatePolicy — store & verify',  readTime: '6 min read', category: 'Smart Contracts', content: ARTICLES['mandate-policy-contract']  },
-      { id: 'agent-executor-contract', title: 'AgentExecutor — execute trades',  readTime: '7 min read', category: 'Smart Contracts', content: ARTICLES['agent-executor-contract']  },
-      { id: 'risk-guard-contract',     title: 'RiskGuard — enforce limits',      readTime: '5 min read', category: 'Smart Contracts', content: ARTICLES['risk-guard-contract']      },
-      { id: 'contract-addresses',      title: 'Contract addresses & ABIs',        readTime: '2 min read', category: 'Smart Contracts', content: ARTICLES['contract-addresses']       },
+      { id: 'mandate-policy-contract', title: t('MandatePolicy — store & verify'),  readTime: MIN_READ(6, t), category: t('Smart Contracts'), content: articles['mandate-policy-contract']  },
+      { id: 'agent-executor-contract', title: t('AgentExecutor — execute trades'),  readTime: MIN_READ(7, t), category: t('Smart Contracts'), content: articles['agent-executor-contract']  },
+      { id: 'risk-guard-contract',     title: t('RiskGuard — enforce limits'),      readTime: MIN_READ(5, t), category: t('Smart Contracts'), content: articles['risk-guard-contract']      },
+      { id: 'contract-addresses',      title: t('Contract addresses & ABIs'),       readTime: MIN_READ(2, t), category: t('Smart Contracts'), content: articles['contract-addresses']       },
     ],
   },
   {
     id: 'mandate-syntax',
-    label: 'Mandate Syntax',
-    description: 'Writing rules the AI understands',
+    label: t('Mandate Syntax'),
+    description: t('Writing rules the AI understands'),
     Icon: Shield,
     articles: [
-      { id: 'indicators-triggers', title: 'Supported indicators & triggers',   readTime: '5 min read', category: 'Mandate Syntax', content: ARTICLES['indicators-triggers']  },
-      { id: 'risk-rule-syntax',    title: 'Risk rule syntax reference',        readTime: '4 min read', category: 'Mandate Syntax', content: ARTICLES['risk-rule-syntax']     },
-      { id: 'example-mandates',    title: 'Example mandates library',          readTime: '3 min read', category: 'Mandate Syntax', content: ARTICLES['example-mandates']     },
-      { id: 'common-mistakes',     title: 'Common mistakes & gotchas',         readTime: '4 min read', category: 'Mandate Syntax', content: ARTICLES['common-mistakes']      },
+      { id: 'indicators-triggers', title: t('Supported indicators & triggers'),   readTime: MIN_READ(5, t), category: t('Mandate Syntax'), content: articles['indicators-triggers']  },
+      { id: 'risk-rule-syntax',    title: t('Risk rule syntax reference'),        readTime: MIN_READ(4, t), category: t('Mandate Syntax'), content: articles['risk-rule-syntax']     },
+      { id: 'example-mandates',    title: t('Example mandates library'),          readTime: MIN_READ(3, t), category: t('Mandate Syntax'), content: articles['example-mandates']     },
+      { id: 'common-mistakes',     title: t('Common mistakes & gotchas'),         readTime: MIN_READ(4, t), category: t('Mandate Syntax'), content: articles['common-mistakes']      },
     ],
   },
   {
     id: 'integrations',
-    label: 'Integrations',
-    description: 'Connect your tools and workflows',
+    label: t('Integrations'),
+    description: t('Connect your tools and workflows'),
     Icon: Puzzle,
     articles: [
-      { id: 'webhook-setup',    title: 'Webhook events setup',          readTime: '4 min read', category: 'Integrations', content: ARTICLES['webhook-setup']    },
-      { id: 'slack-telegram',   title: 'Slack & Telegram alerts',       readTime: '3 min read', category: 'Integrations', content: ARTICLES['slack-telegram']   },
-      { id: 'walletconnect',    title: 'WalletConnect integration',     readTime: '5 min read', category: 'Integrations', content: ARTICLES['walletconnect']    },
-      { id: 'bybit-adapter',    title: 'Bybit market data adapter',     readTime: '6 min read', category: 'Integrations', content: ARTICLES['bybit-adapter']    },
+      { id: 'webhook-setup',    title: t('Webhook events setup'),          readTime: MIN_READ(4, t), category: t('Integrations'), content: articles['webhook-setup']    },
+      { id: 'slack-telegram',   title: t('Slack & Telegram alerts'),       readTime: MIN_READ(3, t), category: t('Integrations'), content: articles['slack-telegram']   },
+      { id: 'walletconnect',    title: t('WalletConnect integration'),     readTime: MIN_READ(5, t), category: t('Integrations'), content: articles['walletconnect']    },
+      { id: 'bybit-adapter',    title: t('Bybit market data adapter'),     readTime: MIN_READ(6, t), category: t('Integrations'), content: articles['bybit-adapter']    },
     ],
   },
-]
+  ]
+}
 
-const ALL_ARTICLES = CATEGORIES.flatMap(c => c.articles)
-
-const QUICK_TABS = [
-  { id: 'quickstart',  label: 'Quickstart',      articleId: 'write-first-mandate'       },
-  { id: 'api',         label: 'API Reference',   articleId: 'auth-jwt'                  },
-  { id: 'contracts',   label: 'Contract ABIs',   articleId: 'contract-addresses'        },
-  { id: 'examples',    label: 'Example Mandates', articleId: 'example-mandates'         },
-]
+function getQuickTabs(t: (s: string) => string) {
+  return [
+    { id: 'quickstart',  label: t('Quickstart'),       articleId: 'write-first-mandate' },
+    { id: 'api',         label: t('API Reference'),    articleId: 'auth-jwt'            },
+    { id: 'contracts',   label: t('Contract ABIs'),     articleId: 'contract-addresses'  },
+    { id: 'examples',    label: t('Example Mandates'), articleId: 'example-mandates'    },
+  ]
+}
 
 // ─── Article view ─────────────────────────────────────────────────────────────
 
-function ArticleView({ article, onBack, onOpen }: { article: Article; onBack: () => void; onOpen: (a: Article) => void }) {
+function ArticleView({ article, allArticles, onBack, onOpen, t }: { article: Article; allArticles: Article[]; onBack: () => void; onOpen: (a: Article) => void; t: (s: string) => string }) {
   return (
     <div className="max-w-2xl mx-auto">
       <button
@@ -1038,7 +1043,7 @@ function ArticleView({ article, onBack, onOpen }: { article: Article; onBack: ()
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to docs
+        {t('Back to docs')}
       </button>
 
       <div className="flex items-center gap-2 mb-1">
@@ -1057,9 +1062,9 @@ function ArticleView({ article, onBack, onOpen }: { article: Article; onBack: ()
 
       {/* Related articles */}
       <div className="mt-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">More in {article.category}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">{t('More in {category}').replace('{category}', article.category)}</p>
         <div className="space-y-1">
-          {ALL_ARTICLES
+          {allArticles
             .filter(a => a.category === article.category && a.id !== article.id)
             .map(a => (
               <button
@@ -1088,14 +1093,20 @@ function DocsPageInner() {
   const [selected, setSelected] = useState<Article | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
+  const t = useTranslation()
+
+  const articles    = useMemo(() => getArticles(t), [t])
+  const categories  = useMemo(() => getCategories(t, articles), [t, articles])
+  const allArticles = useMemo(() => categories.flatMap(c => c.articles), [categories])
+  const quickTabs   = useMemo(() => getQuickTabs(t), [t])
 
   const searchResults = useMemo(() => {
     const q = query.toLowerCase().trim()
     if (!q) return []
-    return ALL_ARTICLES.filter(a =>
+    return allArticles.filter(a =>
       a.title.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)
     )
-  }, [query])
+  }, [query, allArticles])
 
   const showSearch  = query.trim().length > 0
   const showArticle = !!selected && !showSearch
@@ -1117,9 +1128,9 @@ function DocsPageInner() {
   useEffect(() => {
     const articleId = searchParams.get('article')
     if (!articleId) return
-    const article = ALL_ARTICLES.find(a => a.id === articleId)
+    const article = allArticles.find(a => a.id === articleId)
     if (article) openArticle(article)
-  }, [searchParams, openArticle])
+  }, [searchParams, openArticle, allArticles])
 
   return (
     <div className="p-4 sm:p-6 pb-12 space-y-8 max-w-5xl mx-auto">
@@ -1129,9 +1140,9 @@ function DocsPageInner() {
 
       {/* ── Header ── */}
       <div className="text-center space-y-2 pt-2">
-        <h1 className="text-3xl font-bold text-text-primary">Everything You Need to Build</h1>
+        <h1 className="text-3xl font-bold text-text-primary">{t('Everything You Need to Build')}</h1>
         <p className="text-sm text-text-secondary">
-          Guides, API references, smart contract docs, and integration tutorials — all in one place.
+          {t('Guides, API references, smart contract docs, and integration tutorials — all in one place.')}
         </p>
       </div>
 
@@ -1141,7 +1152,7 @@ function DocsPageInner() {
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setSelected(null) }}
-          placeholder="Search documentation…"
+          placeholder={t('Search documentation…')}
           className="w-full h-11 bg-card border border-border rounded-lg pl-11 pr-10 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary transition-colors"
         />
         {query && (
@@ -1154,11 +1165,11 @@ function DocsPageInner() {
       {/* ── Quick tabs ── */}
       {!showSearch && !showArticle && (
         <div className="flex flex-wrap gap-2 justify-center">
-          {QUICK_TABS.map(tab => (
+          {quickTabs.map(tab => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => openArticle(ALL_ARTICLES.find(a => a.id === tab.articleId)!)}
+              onClick={() => openArticle(allArticles.find(a => a.id === tab.articleId)!)}
               className="px-4 py-1.5 rounded-full border border-border text-sm text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
             >
               {tab.label}
@@ -1171,11 +1182,13 @@ function DocsPageInner() {
       {showSearch && (
         <div className="space-y-2">
           <p className="text-xs text-text-secondary">
-            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+            {t(searchResults.length === 1 ? '{n} result for “{query}”' : '{n} results for “{query}”')
+              .replace('{n}', String(searchResults.length))
+              .replace('{query}', query)}
           </p>
           {searchResults.length === 0 ? (
             <div className="text-center py-10 text-sm text-text-secondary">
-              No articles match &ldquo;{query}&rdquo;
+              {t('No articles match “{query}”').replace('{query}', query)}
             </div>
           ) : (
             <div className="space-y-1">
@@ -1205,15 +1218,17 @@ function DocsPageInner() {
       {showArticle && (
         <ArticleView
           article={selected}
+          allArticles={allArticles}
           onBack={goBack}
           onOpen={openArticle}
+          t={t}
         />
       )}
 
       {/* ── Category grid ── */}
       {!showSearch && !showArticle && (
         <>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <section key={cat.id} className="space-y-3">
               <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
@@ -1249,21 +1264,21 @@ function DocsPageInner() {
                 onClick={() => openArticle(cat.articles[0])}
                 className="flex items-center gap-1 text-xs text-text-link hover:underline underline-offset-2"
               >
-                View all {cat.label} docs <ChevronRight className="h-3.5 w-3.5" />
+                {t('View all {category} docs').replace('{category}', cat.label)} <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </section>
           ))}
 
           {/* ── Footer CTA ── */}
           <div className="mt-8 border border-border rounded-xl p-6 text-center bg-card space-y-3">
-            <p className="text-sm font-semibold text-text-primary">Can&apos;t find what you&apos;re looking for?</p>
-            <p className="text-xs text-text-secondary">Our team typically responds in under 2 hours.</p>
+            <p className="text-sm font-semibold text-text-primary">{t("Can't find what you're looking for?")}</p>
+            <p className="text-xs text-text-secondary">{t('Our team typically responds in under 2 hours.')}</p>
             <div className="flex items-center justify-center gap-3 pt-1">
               <Link
                 href="/dashboard/support"
                 className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity"
               >
-                Ask Support
+                {t('Ask Support')}
               </Link>
               <a
                 href="https://docs.mantlemandate.xyz"
@@ -1271,7 +1286,7 @@ function DocsPageInner() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-4 py-2 rounded-md border border-border text-sm text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
               >
-                View External Docs <ExternalLink className="h-3.5 w-3.5" />
+                {t('View External Docs')} <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
