@@ -15,6 +15,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TREASURY_ADDRESS } from '@/lib/contracts'
 import { usePayTreasury } from '@/hooks/useOnChain'
 import { useInvoices, type Invoice } from '@/hooks/useInvoices'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // Load QR code only client-side — qrcode.react uses browser APIs that fail during SSR
 const QRCodeSVG = dynamic(
@@ -54,15 +55,15 @@ const PLAN_MNT_PRICE: Record<PurchasePlan, string> = {
 
 type CryptoStatus = 'idle' | 'paying' | 'confirming' | 'verifying' | 'success' | 'error'
 
-function payButtonLabel(status: CryptoStatus, plan: PurchasePlan): string {
-  if (status === 'paying') return 'Confirm in wallet…'
-  if (status === 'confirming') return 'Waiting for confirmation on Mantle Sepolia…'
-  return `Pay ${PLAN_MNT_PRICE[plan]} MNT with connected wallet`
+function payButtonLabel(status: CryptoStatus, plan: PurchasePlan, t: (s: string) => string): string {
+  if (status === 'paying') return t('Confirm in wallet…')
+  if (status === 'confirming') return t('Waiting for confirmation on Mantle Sepolia…')
+  return t('Pay {amount} MNT with connected wallet').replace('{amount}', PLAN_MNT_PRICE[plan])
 }
 
 // ── CopyButton ────────────────────────────────────────────────────────────────
 
-function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+function CopyButton({ text, label, t }: { text: string; label?: string; t: (s: string) => string }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
@@ -80,25 +81,25 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
         ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
         : <Copy className="h-3.5 w-3.5" />
       }
-      {copied ? 'Copied!' : label}
+      {copied ? t('Copied!') : t(label ?? 'Copy')}
     </button>
   )
 }
 
 // ── ComingSoonTab ─────────────────────────────────────────────────────────────
 
-function ComingSoonTab({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+function ComingSoonTab({ icon, title, description, t }: { icon: React.ReactNode; title: string; description: string; t: (s: string) => string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-10 text-center border border-dashed border-border rounded-lg">
       <div className="h-12 w-12 rounded-full bg-surface flex items-center justify-center text-text-secondary">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-semibold text-text-primary">{title}</p>
-        <p className="text-xs text-text-secondary mt-1 max-w-xs">{description}</p>
+        <p className="text-sm font-semibold text-text-primary">{t(title)}</p>
+        <p className="text-xs text-text-secondary mt-1 max-w-xs">{t(description)}</p>
       </div>
       <span className="inline-flex items-center rounded-full bg-warning/10 text-warning text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1">
-        Coming soon
+        {t('Coming soon')}
       </span>
     </div>
   )
@@ -106,7 +107,7 @@ function ComingSoonTab({ icon, title, description }: { icon: React.ReactNode; ti
 
 // ── CryptoTab ─────────────────────────────────────────────────────────────────
 
-function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
+function CryptoTab({ onPaid, t }: { onPaid: (plan: PurchasePlan) => void; t: (s: string) => string }) {
   const [plan, setPlan]     = useState<PurchasePlan>('strategist')
   const [txHash, setTxHash] = useState('')
   const [status, setStatus] = useState<CryptoStatus>('idle')
@@ -127,17 +128,22 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
       const data = await res.json()
       if (!res.ok) {
         setStatus('error')
-        setMessage(data.error ?? 'Verification failed')
+        setMessage(data.error ?? t('Verification failed'))
         return
       }
       setStatus('success')
-      setMessage(`Payment of ${data.amount} ${data.currency} verified. Your plan is now ${plan === 'operator' ? 'Operator' : 'Strategist'}.`)
+      setMessage(
+        t('Payment of {amount} {currency} verified. Your plan is now {plan}.')
+          .replace('{amount}', String(data.amount))
+          .replace('{currency}', String(data.currency))
+          .replace('{plan}', plan === 'operator' ? t('Operator') : t('Strategist'))
+      )
       onPaid(plan)
     } catch {
       setStatus('error')
-      setMessage('Network error — please try again.')
+      setMessage(t('Network error — please try again.'))
     }
-  }, [plan, onPaid])
+  }, [plan, onPaid, t])
 
   const handleVerify = () => verify(txHash)
 
@@ -151,7 +157,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
       setStatus('confirming')
     } catch (err) {
       setStatus('error')
-      setMessage(err instanceof Error ? err.message : 'Transaction was rejected or failed.')
+      setMessage(err instanceof Error ? err.message : t('Transaction was rejected or failed.'))
     }
   }
 
@@ -168,6 +174,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
         icon={<TokenIcon symbol="MNT" size="md" />}
         title="Crypto payments aren't configured yet"
         description="The operator needs to set NEXT_PUBLIC_TREASURY_ADDRESS to a wallet they control before crypto payments can be verified."
+        t={t}
       />
     )
   }
@@ -175,14 +182,13 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-semibold text-text-secondary mb-1">Pay with Crypto</p>
+        <p className="text-xs font-semibold text-text-secondary mb-1">{t('Pay with Crypto')}</p>
         <p className="text-xs text-text-disabled mb-3">
-          Send MNT on Mantle Sepolia Testnet to the treasury address below, then verify your transaction
-          to upgrade your plan.
+          {t('Send MNT on Mantle Sepolia Testnet to the treasury address below, then verify your transaction to upgrade your plan.')}
         </p>
 
         {/* Plan selector */}
-        <p className="text-xs font-medium text-text-secondary mb-2">Plan</p>
+        <p className="text-xs font-medium text-text-secondary mb-2">{t('Plan')}</p>
         <div className="flex gap-2">
           {PURCHASE_OPTIONS.map((p) => (
             <button
@@ -195,8 +201,8 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
                   : 'border-border text-text-secondary hover:border-primary/60'
               )}
             >
-              <span className="font-semibold">{p.label}</span>
-              <span className="text-[10px] text-text-disabled">{p.price}/mo</span>
+              <span className="font-semibold">{t(p.label)}</span>
+              <span className="text-[10px] text-text-disabled">{p.price}{t('/mo')}</span>
             </button>
           ))}
         </div>
@@ -204,13 +210,13 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
 
       {/* Treasury address card */}
       <div className="bg-surface border border-border rounded-lg p-5 space-y-4">
-        <p className="text-xs font-medium text-text-secondary">Send MNT to this address:</p>
+        <p className="text-xs font-medium text-text-secondary">{t('Send MNT to this address:')}</p>
 
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm text-text-primary flex-1 break-all">
             {TREASURY_ADDRESS}
           </span>
-          <CopyButton text={TREASURY_ADDRESS} label="Copy" />
+          <CopyButton text={TREASURY_ADDRESS} label="Copy" t={t} />
         </div>
 
         <div className="flex justify-center">
@@ -228,8 +234,8 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
         <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-md p-3">
           <TriangleAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <p className="text-xs text-warning leading-relaxed">
-            Send only <strong>MNT</strong> on <strong>Mantle Sepolia Testnet</strong> to this address.
-            Any positive amount is accepted as proof of payment for this testnet deployment.
+            {t('Send only')} <strong>MNT</strong> {t('on')} <strong>Mantle Sepolia Testnet</strong> {t('to this address.')}
+            {' '}{t('Any positive amount is accepted as proof of payment for this testnet deployment.')}
           </p>
         </div>
       </div>
@@ -243,24 +249,24 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
         >
           {(status === 'paying' || status === 'confirming') && <Loader2 className="h-4 w-4 animate-spin" />}
           <Wallet className="h-4 w-4" />
-          {payButtonLabel(status, plan)}
+          {payButtonLabel(status, plan, t)}
         </button>
         {!isConnected && (
           <p className="text-xs text-text-disabled text-center">
-            Connect your wallet (top right) to pay in one click — or send manually below.
+            {t('Connect your wallet (top right) to pay in one click — or send manually below.')}
           </p>
         )}
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10px] uppercase tracking-wider text-text-disabled">or pay manually</span>
+        <span className="text-[10px] uppercase tracking-wider text-text-disabled">{t('or pay manually')}</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
       {/* Verify */}
       <div className="space-y-2 border border-border rounded-md p-4">
-        <p className="text-xs font-medium text-text-secondary">Enter your transaction hash to verify:</p>
+        <p className="text-xs font-medium text-text-secondary">{t('Enter your transaction hash to verify:')}</p>
         <div className="flex gap-2">
           <input
             value={txHash}
@@ -274,7 +280,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
             className="px-3 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5"
           >
             {status === 'verifying' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Verify
+            {t('Verify')}
           </button>
         </div>
         {txHash && (
@@ -285,7 +291,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
             className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary transition-colors w-fit"
           >
             <ExternalLink className="h-3 w-3" />
-            View on Mantle Explorer
+            {t('View on Mantle Explorer')}
           </a>
         )}
         {status === 'success' && (
@@ -304,6 +310,7 @@ function CryptoTab({ onPaid }: { onPaid: (plan: PurchasePlan) => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
+  const t = useTranslation()
   const { user, setUser } = useAuthStore()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<PaymentTab>('crypto')
@@ -345,9 +352,9 @@ export default function BillingPage() {
     <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">Payment Methods &amp; Billing</h2>
+        <h2 className="text-2xl font-bold text-text-primary">{t('Payment Methods & Billing')}</h2>
         <p className="text-sm text-text-secondary mt-0.5">
-          Manage subscription payments, crypto billing, and invoices for MantleMandate.
+          {t('Manage subscription payments, crypto billing, and invoices for MantleMandate.')}
         </p>
       </div>
 
@@ -360,18 +367,17 @@ export default function BillingPage() {
           {/* Payment methods status */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-3">
             <div>
-              <h3 className="text-base font-semibold text-text-primary">Payment Methods</h3>
-              <p className="text-xs text-text-secondary mt-0.5">Manage how you pay for MantleMandate.</p>
+              <h3 className="text-base font-semibold text-text-primary">{t('Payment Methods')}</h3>
+              <p className="text-xs text-text-secondary mt-0.5">{t('Manage how you pay for MantleMandate.')}</p>
             </div>
             <div className="border border-border rounded-lg p-4 flex items-start gap-3">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <TokenIcon symbol="MNT" size="md" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-text-primary">On-chain payments (Mantle Sepolia)</p>
+                <p className="text-sm font-semibold text-text-primary">{t('On-chain payments (Mantle Sepolia)')}</p>
                 <p className="text-xs text-text-secondary mt-0.5">
-                  Pay for your subscription with a direct MNT transfer — see the Crypto tab below.
-                  Card payments are not yet connected.
+                  {t('Pay for your subscription with a direct MNT transfer — see the Crypto tab below. Card payments are not yet connected.')}
                 </p>
               </div>
             </div>
@@ -379,7 +385,7 @@ export default function BillingPage() {
 
           {/* Add new payment method */}
           <div ref={addMethodRef} className="bg-card border border-border rounded-lg p-5 space-y-4">
-            <h4 className="text-sm font-semibold text-text-primary">Add New Payment Method</h4>
+            <h4 className="text-sm font-semibold text-text-primary">{t('Add New Payment Method')}</h4>
 
             {/* Method tabs */}
             <div className="flex gap-0 border-b border-border">
@@ -397,7 +403,7 @@ export default function BillingPage() {
                       : 'text-text-secondary border-transparent hover:text-text-primary'
                   )}
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -407,9 +413,10 @@ export default function BillingPage() {
                 icon={<CreditCard className="h-5 w-5" />}
                 title="Card payments aren't connected yet"
                 description="This deployment doesn't have a Stripe account configured. Use the Crypto tab to pay with MNT on Mantle Sepolia."
+                t={t}
               />
             )}
-            {tab === 'crypto' && <CryptoTab onPaid={handlePaid} />}
+            {tab === 'crypto' && <CryptoTab onPaid={handlePaid} t={t} />}
           </div>
         </div>
 
@@ -419,48 +426,48 @@ export default function BillingPage() {
           {/* Current plan card */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-2">
             <p className={cn('text-[10px] font-bold uppercase tracking-wider', planConfig.color)}>
-              {planConfig.label}
+              {t(planConfig.label)}
             </p>
             <p className="text-3xl font-black text-text-primary">
               {planConfig.price}
-              <span className="text-sm font-normal text-text-secondary ml-1">/ month</span>
+              <span className="text-sm font-normal text-text-secondary ml-1">{t('/ month')}</span>
             </p>
             {user?.trialEndsAt && (
               <p className="text-xs text-success">
-                Trial: {Math.max(0, Math.ceil(
+                {t('Trial: {n} days remaining').replace('{n}', String(Math.max(0, Math.ceil(
                   (new Date(user.trialEndsAt).getTime() - Date.now()) / 86_400_000
-                ))} days remaining
+                ))))}
               </p>
             )}
             <button
               onClick={goToCrypto}
               className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors mt-2"
             >
-              Pay with Crypto <ArrowRight className="h-3.5 w-3.5" />
+              {t('Pay with Crypto')} <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
           {/* Billing history */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-text-primary">Billing History</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Billing History')}</h4>
               {invoices.length > 0 && (
                 <button
                   onClick={downloadInvoicesCsv}
                   className="text-xs text-text-link hover:text-text-link-hover flex items-center gap-1 transition-colors"
                 >
                   <Download className="h-3 w-3" />
-                  Export
+                  {t('Export')}
                 </button>
               )}
             </div>
 
             {invoicesLoading ? (
               <div className="flex items-center justify-center py-6 text-text-secondary text-xs gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t('Loading…')}
               </div>
             ) : invoices.length === 0 ? (
-              <p className="text-xs text-text-secondary py-4 text-center">No invoices yet.</p>
+              <p className="text-xs text-text-secondary py-4 text-center">{t('No invoices yet.')}</p>
             ) : (
               <div className="space-y-0">
                 {invoices.map((inv: Invoice, i: number) => (
@@ -475,7 +482,7 @@ export default function BillingPage() {
                       {new Date(inv.createdAt).toLocaleDateString()}
                     </span>
                     <span className="text-[11px] text-text-primary flex-1 truncate capitalize">
-                      {inv.plan} Plan · {inv.paymentMethod}
+                      {inv.plan} {t('Plan')} · {inv.paymentMethod}
                     </span>
                     <span className="text-[11px] font-semibold text-text-primary w-20 text-right shrink-0">
                       {inv.amount} {inv.currency}
@@ -490,7 +497,7 @@ export default function BillingPage() {
                         target="_blank"
                         rel="noreferrer"
                         className="shrink-0 text-text-link hover:text-text-link-hover transition-colors"
-                        title="View transaction"
+                        title={t('View transaction')}
                       >
                         <ExternalLink className="h-3 w-3" />
                       </a>
