@@ -22,6 +22,7 @@ import { useMandates } from '@/hooks/useMandates'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/hooks/useTranslation'
+import { usePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/hooks/usePreferences'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Agent } from '@/types/agent'
 
@@ -73,7 +74,7 @@ function generateSparkline(agent: Agent, points = 30) {
 
 // ── AgentCard ─────────────────────────────────────────────────────────────────
 
-function AgentCard({ agent, t }: { agent: Agent; t: (s: string) => string }) {
+function AgentCard({ agent, t, prefs }: { agent: Agent; t: (s: string) => string; prefs: Partial<UserPreferences> }) {
   const { mutate: pause,  isPending: pausing  } = usePauseAgent()
   const { mutate: resume, isPending: resuming } = useResumeAgent()
   const { mutate: stop,   isPending: stopping } = useStopAgent()
@@ -115,7 +116,7 @@ function AgentCard({ agent, t }: { agent: Agent; t: (s: string) => string }) {
         {[
           {
             label: 'P&L',
-            value: formatCurrency(agent.totalPnl),
+            value: formatCurrency(agent.totalPnl, prefs),
             color: agent.totalPnl >= 0 ? 'text-success' : 'text-error',
           },
           {
@@ -125,7 +126,7 @@ function AgentCard({ agent, t }: { agent: Agent; t: (s: string) => string }) {
           },
           {
             label: 'Volume',
-            value: formatCurrency(agent.totalVolume),
+            value: formatCurrency(agent.totalVolume, prefs),
             color: 'text-text-primary',
           },
           {
@@ -169,7 +170,7 @@ function AgentCard({ agent, t }: { agent: Agent; t: (s: string) => string }) {
       {/* Bottom row */}
       <div className="flex items-center justify-between pt-1 border-t border-border">
         <span className="text-[11px] text-text-disabled">
-          {t('Deployed:')} {agent.deployedAt ? formatDate(agent.deployedAt) : '—'}
+          {t('Deployed:')} {agent.deployedAt ? formatDate(agent.deployedAt, prefs) : '—'}
         </span>
         <div className="flex items-center gap-1">
           {agent.status === 'active' && (
@@ -348,6 +349,7 @@ function DeployModal({ onClose, t }: { onClose: () => void; t: (s: string) => st
 
 export default function AgentsPage() {
   const t = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const { data: agents, isLoading } = useAgents()
 
   const [activeTab, setTab]     = useState<TabFilter>('All')
@@ -517,7 +519,7 @@ export default function AgentsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} t={t} />
+            <AgentCard key={agent.id} agent={agent} t={t} prefs={prefs} />
           ))}
         </div>
       )}
