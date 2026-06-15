@@ -17,6 +17,7 @@ import { TokenIcon } from '@/components/ui/TokenIcon'
 import { useMandate, useUpdateMandate, useParsePreview } from '@/hooks/useMandates'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 import type { BadgeVariant } from '@/components/ui/Badge'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -26,6 +27,13 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   active:   'success',
   paused:   'warning',
   archived: 'default',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  draft:    'draft',
+  active:   'active',
+  paused:   'paused',
+  archived: 'archived',
 }
 
 // ── RiskSlider ────────────────────────────────────────────────────────────────
@@ -67,17 +75,18 @@ function RiskSlider({
 // ── ParsePanel ────────────────────────────────────────────────────────────────
 
 function ParsePanel({
-  result, loading, error,
+  result, loading, error, t,
 }: {
   result: Record<string, unknown> | null
   loading: boolean
   error: string | null
+  t: (s: string) => string
 }) {
   if (loading) {
     return (
       <div className="flex items-center gap-2.5 py-6 justify-center">
         <Spinner size="sm" />
-        <span className="text-sm text-text-secondary">Parsing with Claude AI...</span>
+        <span className="text-sm text-text-secondary">{t('Parsing with Claude AI...')}</span>
       </div>
     )
   }
@@ -90,7 +99,7 @@ function ParsePanel({
     return (
       <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
         <Sparkles className="h-7 w-7 text-text-secondary opacity-40" />
-        <p className="text-sm text-text-secondary">Edit mandate text to see updated policy</p>
+        <p className="text-sm text-text-secondary">{t('Edit mandate text to see updated policy')}</p>
       </div>
     )
   }
@@ -101,7 +110,7 @@ function ParsePanel({
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-xs text-success font-medium mb-3">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Policy parsed by Claude AI
+        {t('Policy parsed by Claude AI')}
       </div>
       {rows.map(([key, value]) => (
         <div key={key} className="flex items-start justify-between gap-2 text-xs">
@@ -122,6 +131,7 @@ function ParsePanel({
 export default function MandateEditPage({ params }: { params: { id: string } }) {
   const { id }   = params
   const router   = useRouter()
+  const t        = useTranslation()
 
   const { data: mandate, isLoading } = useMandate(id)
   const { mutate: update, isPending: saving, error: updateError } = useUpdateMandate(id)
@@ -194,7 +204,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
   }
 
   const apiError = updateError
-    ? ((updateError as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Update failed')
+    ? ((updateError as { response?: { data?: { message?: string } } }).response?.data?.message ?? t('Update failed'))
     : null
 
   // ── loading ──
@@ -221,8 +231,8 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
   if (!mandate) {
     return (
       <div className="p-6">
-        <AlertBanner severity="error" title="Mandate not found">
-          This mandate does not exist or you don&apos;t have access to it.
+        <AlertBanner severity="error" title={t('Mandate not found')}>
+          {t("This mandate does not exist or you don't have access to it.")}
         </AlertBanner>
       </div>
     )
@@ -244,23 +254,23 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl font-bold text-text-primary truncate">
-              Editing: {mandate.name}
+              {t('Editing:')} {mandate.name}
               {deployedLabel && (
                 <span className="text-text-secondary font-normal ml-2 text-base">
-                  — Deployed {deployedLabel}
+                  — {t('Deployed')} {deployedLabel}
                 </span>
               )}
             </h1>
-            <Badge variant={STATUS_VARIANT[mandate.status]}>{mandate.status}</Badge>
+            <Badge variant={STATUS_VARIANT[mandate.status]}>{t(STATUS_LABEL[mandate.status] ?? mandate.status)}</Badge>
           </div>
-          <p className="text-sm text-text-secondary mt-0.5">Mandate ID: {mandate.id}</p>
+          <p className="text-sm text-text-secondary mt-0.5">{t('Mandate ID:')} {mandate.id}</p>
         </div>
       </div>
 
       {/* Caution notice */}
       <AlertBanner severity="warning">
-        <span className="font-semibold">Policy hash will regenerate.</span>{' '}
-        Changes will generate a new on-chain policy hash. Any agent running this mandate will briefly pause during the update.
+        <span className="font-semibold">{t('Policy hash will regenerate.')}</span>{' '}
+        {t('Changes will generate a new on-chain policy hash. Any agent running this mandate will briefly pause during the update.')}
       </AlertBanner>
 
       {/* Two-column layout */}
@@ -271,16 +281,16 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
 
           {/* Mandate details */}
           <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Mandate Details</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-4">{t('Mandate Details')}</h3>
             <div className="space-y-4">
               <Input
-                label="Mandate name"
+                label={t('Mandate name')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Conservative ETH Dip Buyer"
+                placeholder={t('e.g. Conservative ETH Dip Buyer')}
               />
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-text-primary">Base currency</label>
+                <label className="text-sm font-medium text-text-primary">{t('Base currency')}</label>
                 <div className="flex gap-2">
                   {(['USDC', 'USDT', 'ETH', 'MNT'] as const).map((c) => (
                     <button
@@ -301,11 +311,11 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
                 </div>
               </div>
               <Input
-                label="Capital cap (USD)"
+                label={t('Capital cap (USD)')}
                 type="number"
                 value={capitalCap}
                 onChange={(e) => setCapitalCap(e.target.value)}
-                placeholder="Leave blank for no limit"
+                placeholder={t('Leave blank for no limit')}
               />
             </div>
           </Card>
@@ -313,16 +323,16 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
           {/* Hero textarea */}
           <Card padding="md">
             <h3 className="text-sm font-semibold text-text-primary mb-1">
-              Your Trading Mandate
-              <span className="ml-2 text-xs font-normal text-primary">— The Hero Field</span>
+              {t('Your Trading Mandate')}
+              <span className="ml-2 text-xs font-normal text-primary">— {t('The Hero Field')}</span>
             </h3>
             <p className="text-xs text-text-secondary mb-4">
-              Edit your strategy in plain English. The AI will re-parse it in real time.
+              {t('Edit your strategy in plain English. The AI will re-parse it in real time.')}
             </p>
             <Textarea
               value={mandateText}
               onChange={(e) => setMandateText(e.target.value)}
-              placeholder={`e.g. "Buy ETH on Mantle when the RSI drops below 30.\nNever risk more than 5% of my portfolio on a single trade.\nTake profit when I'm up 15%. Don't trade on weekends."`}
+              placeholder={t(`e.g. "Buy ETH on Mantle when the RSI drops below 30.\nNever risk more than 5% of my portfolio on a single trade.\nTake profit when I'm up 15%. Don't trade on weekends."`)}
               rows={12}
               counter
               maxLength={2000}
@@ -332,35 +342,35 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
 
           {/* Risk params */}
           <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-5">Risk Parameters</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-5">{t('Risk Parameters')}</h3>
             <div className="space-y-6">
               <RiskSlider
-                label="Max Drawdown"
-                hint="Stop trading if portfolio drops by this much"
+                label={t('Max Drawdown')}
+                hint={t('Stop trading if portfolio drops by this much')}
                 min={0} max={50}
                 value={maxDrawdown} onChange={setMaxDrawdown}
               />
               <RiskSlider
-                label="Max Position Size"
-                hint="Maximum % of capital in a single position"
+                label={t('Max Position Size')}
+                hint={t('Maximum % of capital in a single position')}
                 min={0} max={100}
                 value={maxPosition} onChange={setMaxPosition}
               />
               <RiskSlider
-                label="Stop Loss"
-                hint="Exit position if it loses this much"
+                label={t('Stop Loss')}
+                hint={t('Exit position if it loses this much')}
                 min={0} max={50}
                 value={stopLoss} onChange={setStopLoss}
               />
               <RiskSlider
-                label="Max Concurrent Positions"
-                hint="Maximum open positions at any time"
+                label={t('Max Concurrent Positions')}
+                hint={t('Maximum open positions at any time')}
                 min={1} max={20} suffix=""
                 value={maxPositions} onChange={setMaxPositions}
               />
               <RiskSlider
-                label="Cooldown Period"
-                hint="Hours to wait after a stop-loss trigger"
+                label={t('Cooldown Period')}
+                hint={t('Hours to wait after a stop-loss trigger')}
                 min={0} max={72} suffix="h"
                 value={cooldownHours} onChange={setCooldownHours}
               />
@@ -375,13 +385,14 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
           <Card padding="md">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">Live AI Preview</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{t('Live AI Preview')}</h3>
               {parseLoading && <Spinner size="sm" className="ml-auto" />}
             </div>
             <ParsePanel
               result={parseResult}
               loading={parseLoading}
               error={parseError}
+              t={t}
             />
           </Card>
 
@@ -389,7 +400,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
           <Card padding="md">
             <div className="flex items-center gap-1.5 text-xs text-text-secondary mb-3">
               <Hash className="h-3.5 w-3.5" />
-              <span className="font-medium">On-Chain Policy Hash</span>
+              <span className="font-medium">{t('On-Chain Policy Hash')}</span>
             </div>
             {policyHash ? (
               <div className="space-y-3">
@@ -405,7 +416,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
                       ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                       : <Copy className="h-3.5 w-3.5" />
                     }
-                    {copied ? 'Copied!' : 'Copy hash'}
+                    {copied ? t('Copied!') : t('Copy hash')}
                   </button>
                   {mandate.onChainTx && (
                     <a
@@ -415,29 +426,29 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
                       className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      Explorer
+                      {t('Explorer')}
                     </a>
                   )}
                 </div>
                 {mandateText !== mandate.mandateText && (
                   <p className="text-[10px] text-warning flex items-center gap-1">
                     <TriangleAlert className="h-3 w-3" />
-                    Hash will change after saving
+                    {t('Hash will change after saving')}
                   </p>
                 )}
               </div>
             ) : (
               <p className="text-xs text-text-secondary italic">
-                Will be generated on save
+                {t('Will be generated on save')}
                 <br />
-                <span className="text-[10px] opacity-70">(computed from mandate content)</span>
+                <span className="text-[10px] opacity-70">{t('(computed from mandate content)')}</span>
               </p>
             )}
           </Card>
 
           {/* Risk summary */}
           <Card padding="sm" className="text-xs">
-            <p className="font-semibold text-text-secondary uppercase tracking-wider text-[10px] mb-2">Risk Summary</p>
+            <p className="font-semibold text-text-secondary uppercase tracking-wider text-[10px] mb-2">{t('Risk Summary')}</p>
             <div className="space-y-1.5">
               {[
                 ['Max Drawdown',  `${maxDrawdown}%`],
@@ -447,7 +458,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
                 ['Cooldown',      `${cooldownHours}h`],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between">
-                  <span className="text-text-secondary">{k}</span>
+                  <span className="text-text-secondary">{t(k)}</span>
                   <span className="text-text-primary font-medium">{v}</span>
                 </div>
               ))}
@@ -458,17 +469,17 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
 
       {/* Error */}
       {apiError && (
-        <AlertBanner severity="error" title="Update failed">{apiError}</AlertBanner>
+        <AlertBanner severity="error" title={t('Update failed')}>{apiError}</AlertBanner>
       )}
 
       {/* Action bar */}
       <div className="flex items-center justify-between pt-5 border-t border-border">
         <Button variant="ghost" onClick={() => router.back()}>
-          Cancel
+          {t('Cancel')}
         </Button>
         <div className="flex items-center gap-3">
           <p className="text-xs text-text-secondary hidden sm:block">
-            Saving will regenerate the policy hash
+            {t('Saving will regenerate the policy hash')}
           </p>
           {mandate.status === 'draft' && (
             <Button
@@ -476,7 +487,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
               onClick={() => update({ status: 'active' })}
               loading={saving}
             >
-              Activate
+              {t('Activate')}
             </Button>
           )}
           <Button
@@ -485,7 +496,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
             loading={saving}
             disabled={!mandateText.trim() || !name.trim()}
           >
-            Update Mandate
+            {t('Update Mandate')}
           </Button>
         </div>
       </div>
