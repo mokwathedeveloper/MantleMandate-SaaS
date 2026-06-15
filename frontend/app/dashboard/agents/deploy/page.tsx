@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useMandates } from '@/hooks/useMandates'
 import { useDeployAgent } from '@/hooks/useAgents'
 import { useRegisterAgent } from '@/hooks/useOnChain'
+import { useTranslation } from '@/hooks/useTranslation'
 import { useAccount } from 'wagmi'
 import { cn } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -35,6 +36,7 @@ const MANDATE_STATUS_VARIANT: Record<string, BadgeVariant> = {
 }
 
 export default function DeployAgentPage() {
+  const t = useTranslation()
   const router = useRouter()
   const { data: mandatesData, isLoading: mandatesLoading } = useMandates()
   const { mutate: deploy, isPending, error } = useDeployAgent()
@@ -104,29 +106,28 @@ export default function DeployAgentPage() {
             <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-text-primary">Agent Deployed!</h1>
-            <p className="text-sm text-text-secondary mt-0.5">{deployedAgent.name} is running</p>
+            <h1 className="text-xl font-bold text-text-primary">{t('Agent Deployed!')}</h1>
+            <p className="text-sm text-text-secondary mt-0.5">{t('{name} is running').replace('{name}', deployedAgent.name)}</p>
           </div>
         </div>
 
         <Card padding="md">
           <div className="rounded-lg bg-surface border border-border p-3 mb-4 space-y-1">
-            <p className="text-xs text-text-secondary">Agent ID</p>
+            <p className="text-xs text-text-secondary">{t('Agent ID')}</p>
             <p className="font-mono text-xs text-text-primary break-all">{deployedAgent.id}</p>
           </div>
 
           <div className="border-t border-border pt-4">
-            <h4 className="text-sm font-semibold text-text-primary mb-1">Register on Mantle Network</h4>
+            <h4 className="text-sm font-semibold text-text-primary mb-1">{t('Register on Mantle Network')}</h4>
             <p className="text-xs text-text-secondary mb-4">
-              Anchor this agent on-chain to create an immutable record and enable
-              trustless execution against your mandate policy.
+              {t('Anchor this agent on-chain to create an immutable record and enable trustless execution against your mandate policy.')}
             </p>
 
             {regDone ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-success font-medium">
                   <CheckCircle2 className="h-4 w-4" />
-                  Agent registered on Mantle Sepolia
+                  {t('Agent registered on Mantle Sepolia')}
                 </div>
                 {regTxHash && (
                   <a
@@ -136,19 +137,19 @@ export default function DeployAgentPage() {
                     className="flex items-center gap-1.5 text-xs text-primary hover:opacity-80 transition-opacity"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    View registration TX on explorer
+                    {t('View registration TX on explorer')}
                   </a>
                 )}
               </div>
             ) : registering ? (
               <div className="flex items-center gap-2 text-sm text-text-secondary">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Sign in your wallet…
+                {t('Sign in your wallet…')}
               </div>
             ) : confirmingReg ? (
               <div className="flex items-center gap-2 text-sm text-text-secondary">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Confirming on Mantle…
+                {t('Confirming on Mantle…')}
                 {regTxHash && (
                   <a
                     href={`https://explorer.sepolia.mantle.xyz/tx/${regTxHash}`}
@@ -162,11 +163,11 @@ export default function DeployAgentPage() {
               </div>
             ) : !isConnected ? (
               <p className="text-sm text-text-secondary italic">
-                Connect your wallet to register this agent on-chain.
+                {t('Connect your wallet to register this agent on-chain.')}
               </p>
             ) : !regMandate?.policyHash ? (
               <AlertBanner severity="warning">
-                The mandate has no policy hash — parse the mandate first to enable on-chain registration.
+                {t('The mandate has no policy hash — parse the mandate first to enable on-chain registration.')}
               </AlertBanner>
             ) : (
               <button
@@ -174,14 +175,14 @@ export default function DeployAgentPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors"
               >
                 <Network className="h-4 w-4" />
-                Register on Mantle
+                {t('Register on Mantle')}
               </button>
             )}
 
             {regError && (
               <p className="text-xs text-error mt-3 truncate" title={regError.message}>
                 {regError.message.slice(0, 100)}
-                <button onClick={resetReg} className="ml-2 underline">retry</button>
+                <button onClick={resetReg} className="ml-2 underline">{t('retry')}</button>
               </p>
             )}
           </div>
@@ -192,14 +193,14 @@ export default function DeployAgentPage() {
             onClick={() => router.push('/dashboard/mandates')}
             className="text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2"
           >
-            View Mandates
+            {t('View Mandates')}
           </button>
           <button
             onClick={() => router.push('/dashboard/agents')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:opacity-90 transition-opacity"
           >
             <Bot className="h-4 w-4" />
-            View My Agents
+            {t('View My Agents')}
           </button>
         </div>
       </div>
@@ -213,9 +214,9 @@ export default function DeployAgentPage() {
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Deploy Agent</h1>
+          <h1 className="text-xl font-bold text-text-primary">{t('Deploy Agent')}</h1>
           <p className="text-sm text-text-secondary mt-0.5">
-            Select a mandate and configure your agent
+            {t('Select a mandate and configure your agent')}
           </p>
         </div>
       </div>
@@ -225,30 +226,30 @@ export default function DeployAgentPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Agent Name */}
         <Card padding="md">
-          <h3 className="text-sm font-semibold text-text-primary mb-4">Agent Identity</h3>
+          <h3 className="text-sm font-semibold text-text-primary mb-4">{t('Agent Identity')}</h3>
           <Input
-            label="Agent name"
-            placeholder="e.g. ETH Hunter #1"
-            error={errors.name?.message}
+            label={t('Agent name')}
+            placeholder={t('e.g. ETH Hunter #1')}
+            error={errors.name?.message ? t(errors.name.message) : undefined}
             {...register('name')}
           />
         </Card>
 
         {/* Mandate selector */}
         <Card padding="md">
-          <h3 className="text-sm font-semibold text-text-primary mb-4">Select Mandate</h3>
+          <h3 className="text-sm font-semibold text-text-primary mb-4">{t('Select Mandate')}</h3>
 
           {mandatesLoading ? (
             <div className="flex items-center gap-2 py-4">
               <Spinner size="sm" />
-              <span className="text-sm text-text-secondary">Loading mandates…</span>
+              <span className="text-sm text-text-secondary">{t('Loading mandates…')}</span>
             </div>
           ) : mandates.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <FileText className="h-8 w-8 text-text-secondary opacity-40" />
-              <p className="text-sm text-text-secondary">No active mandates</p>
+              <p className="text-sm text-text-secondary">{t('No active mandates')}</p>
               <Link href="/dashboard/mandates/new" className="text-xs text-primary hover:underline">
-                Create a mandate first →
+                {t('Create a mandate first →')}
               </Link>
             </div>
           ) : (
@@ -270,7 +271,7 @@ export default function DeployAgentPage() {
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-sm font-medium text-text-primary">{m.name}</span>
-                    <Badge variant={MANDATE_STATUS_VARIANT[m.status]}>{m.status}</Badge>
+                    <Badge variant={MANDATE_STATUS_VARIANT[m.status]}>{t(m.status)}</Badge>
                   </div>
                   <p className="text-xs text-text-secondary line-clamp-2">{m.mandateText}</p>
                   {m.policyHash && (
@@ -283,7 +284,7 @@ export default function DeployAgentPage() {
             </div>
           )}
           {errors.mandateId && (
-            <p className="text-xs text-error mt-2">{errors.mandateId.message}</p>
+            <p className="text-xs text-error mt-2">{t(errors.mandateId.message ?? '')}</p>
           )}
         </Card>
 
@@ -291,11 +292,11 @@ export default function DeployAgentPage() {
         <Card padding="md">
           <h3 className="text-sm font-semibold text-text-primary mb-4">Capital Limit</h3>
           <Input
-            label="Maximum capital (USD)"
+            label={t('Maximum capital (USD)')}
             type="number"
-            placeholder="Leave blank for no limit"
-            hint="The agent will never deploy more than this amount"
-            error={errors.capitalCap?.message}
+            placeholder={t('Leave blank for no limit')}
+            hint={t('The agent will never deploy more than this amount')}
+            error={errors.capitalCap?.message ? t(errors.capitalCap.message) : undefined}
             {...register('capitalCap', {
               setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
             })}
@@ -303,24 +304,22 @@ export default function DeployAgentPage() {
         </Card>
 
         {selectedMandate && !selectedMandate.policyHash && (
-          <AlertBanner severity="warning" title="No policy hash">
-            This mandate hasn&apos;t been parsed by AI yet. The agent will deploy but cannot
-            enforce mandate rules until a policy hash is generated.
+          <AlertBanner severity="warning" title={t('No policy hash')}>
+            {t("This mandate hasn't been parsed by AI yet. The agent will deploy but cannot enforce mandate rules until a policy hash is generated.")}
           </AlertBanner>
         )}
 
-        <AlertBanner severity="info" title="How deployment works">
-          The agent evaluates your mandate against live Mantle DeFi market conditions every
-          5 minutes. It can only take actions that satisfy your mandate policy and risk parameters.
+        <AlertBanner severity="info" title={t('How deployment works')}>
+          {t('The agent evaluates your mandate against live Mantle DeFi market conditions every 5 minutes. It can only take actions that satisfy your mandate policy and risk parameters.')}
         </AlertBanner>
 
         <div className="flex justify-end gap-3">
           <Button variant="ghost" type="button" onClick={() => router.back()}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button type="submit" size="lg" loading={isPending}>
             <Rocket className="h-4 w-4" />
-            Deploy Agent
+            {t('Deploy Agent')}
           </Button>
         </div>
       </form>
