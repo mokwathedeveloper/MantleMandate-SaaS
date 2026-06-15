@@ -20,6 +20,7 @@ import { useAccount } from 'wagmi'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,13 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   active:   'success',
   paused:   'warning',
   archived: 'default',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  draft:    'draft',
+  active:   'active',
+  paused:   'paused',
+  archived: 'archived',
 }
 
 const STRATEGY_META: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
@@ -49,12 +57,23 @@ const FIELD_COLORS: Record<string, string> = {
   strategy_type:  'bg-indigo-400/10 text-indigo-400  border-indigo-400/30',
 }
 
-function riskLabel(maxDrawdown: number, stopLoss: number) {
+const POLICY_FIELD_LABEL: Record<string, string> = {
+  asset:          'asset',
+  trigger:        'trigger',
+  venue:          'venue',
+  schedule:       'schedule',
+  risk_per_trade: 'risk per trade',
+  take_profit:    'take profit',
+  stop_loss:      'stop loss',
+  strategy_type:  'strategy type',
+}
+
+function riskLabel(maxDrawdown: number, stopLoss: number, t: (s: string) => string) {
   const score = maxDrawdown + stopLoss * 2
-  if (score <= 20) return { label: 'Conservative', color: 'text-success', barColor: 'bg-success', width: 25 }
-  if (score <= 45) return { label: 'Moderate',     color: 'text-warning', barColor: 'bg-warning', width: 50 }
-  if (score <= 75) return { label: 'Aggressive',   color: 'text-orange-400', barColor: 'bg-orange-400', width: 75 }
-  return               { label: 'High Risk',     color: 'text-error',   barColor: 'bg-error',   width: 100 }
+  if (score <= 20) return { label: t('Conservative'), color: 'text-success', barColor: 'bg-success', width: 25 }
+  if (score <= 45) return { label: t('Moderate'),     color: 'text-warning', barColor: 'bg-warning', width: 50 }
+  if (score <= 75) return { label: t('Aggressive'),   color: 'text-orange-400', barColor: 'bg-orange-400', width: 75 }
+  return               { label: t('High Risk'),     color: 'text-error',   barColor: 'bg-error',   width: 100 }
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -91,6 +110,7 @@ function ViewSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MandateViewPage({ params }: { params: { id: string } }) {
+  const t = useTranslation()
   const { id }   = params
   const router   = useRouter()
   const [copied, setCopied] = useState(false)
@@ -131,15 +151,15 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
   if (!mandate) {
     return (
       <div className="p-6 max-w-5xl mx-auto">
-        <AlertBanner severity="error" title="Mandate not found">
-          This mandate does not exist or you don&apos;t have access to it.
+        <AlertBanner severity="error" title={t('Mandate not found')}>
+          {t("This mandate does not exist or you don't have access to it.")}
         </AlertBanner>
       </div>
     )
   }
 
   const strategy = mandate.strategyType ? STRATEGY_META[mandate.strategyType] : null
-  const risk     = riskLabel(mandate.riskParams.maxDrawdown, mandate.riskParams.stopLoss)
+  const risk     = riskLabel(mandate.riskParams.maxDrawdown, mandate.riskParams.stopLoss, t)
 
   const parsedRows = mandate.parsedPolicy
     ? Object.entries(mandate.parsedPolicy).filter(([, v]) => v !== null && v !== undefined && v !== '')
@@ -160,20 +180,20 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-xl font-bold text-text-primary truncate">{mandate.name}</h1>
-            <Badge variant={STATUS_VARIANT[mandate.status]}>{mandate.status}</Badge>
+            <Badge variant={STATUS_VARIANT[mandate.status]}>{t(STATUS_LABEL[mandate.status] ?? mandate.status)}</Badge>
             {strategy && (
               <span className={cn(
                 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full',
                 strategy.bg, strategy.color,
               )}>
                 <strategy.icon className="h-3 w-3" />
-                {strategy.label}
+                {t(strategy.label)}
               </span>
             )}
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            ID: <span className="font-mono">{mandate.id}</span>
-            {' · '}Created {formatDate(mandate.createdAt)}
+            {t('ID:')} <span className="font-mono">{mandate.id}</span>
+            {' · '}{t('Created')} {formatDate(mandate.createdAt)}
           </p>
         </div>
 
@@ -187,7 +207,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
               loading={updating}
             >
               <Pause className="h-3.5 w-3.5" />
-              Pause
+              {t('Pause')}
             </Button>
           )}
           {mandate.status === 'paused' && (
@@ -198,7 +218,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
               loading={updating}
             >
               <Zap className="h-3.5 w-3.5" />
-              Activate
+              {t('Activate')}
             </Button>
           )}
           {mandate.status === 'draft' && (
@@ -209,19 +229,19 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
               loading={updating}
             >
               <Archive className="h-3.5 w-3.5" />
-              Archive
+              {t('Archive')}
             </Button>
           )}
           <Link href={`/dashboard/mandates/${id}/edit`}>
             <Button variant="secondary" size="sm">
               <Edit2 className="h-3.5 w-3.5" />
-              Edit
+              {t('Edit')}
             </Button>
           </Link>
           <Link href={`/dashboard/agents/deploy?mandate=${id}`}>
             <Button variant="primary" size="sm">
               <Bot className="h-3.5 w-3.5" />
-              Deploy Agent
+              {t('Deploy Agent')}
             </Button>
           </Link>
         </div>
@@ -232,28 +252,28 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
         {[
           {
             icon: DollarSign,
-            label: 'Base Currency',
+            label: t('Base Currency'),
             value: mandate.baseCurrency,
             color: 'text-primary',
             bg: 'bg-primary/10',
           },
           {
             icon: Lock,
-            label: 'Capital Cap',
-            value: mandate.capitalCap ? `$${mandate.capitalCap.toLocaleString()}` : 'Unlimited',
+            label: t('Capital Cap'),
+            value: mandate.capitalCap ? `$${mandate.capitalCap.toLocaleString()}` : t('Unlimited'),
             color: 'text-amber-400',
             bg: 'bg-amber-400/10',
           },
           {
             icon: Shield,
-            label: 'Risk Profile',
+            label: t('Risk Profile'),
             value: risk.label,
             color: risk.color,
             bg: risk.barColor.replace('bg-', 'bg-').replace('bg-', '') + '/10',
           },
           {
             icon: Calendar,
-            label: 'Last Updated',
+            label: t('Last Updated'),
             value: formatDate(mandate.updatedAt),
             color: 'text-text-secondary',
             bg: 'bg-surface',
@@ -277,7 +297,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
 
           {/* Strategy text */}
           <Card padding="md">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Strategy</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-3">{t('Strategy')}</h3>
             <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
               {mandate.mandateText}
             </p>
@@ -289,7 +309,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-semibold text-success">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  AI-extracted policy
+                  {t('AI-extracted policy')}
                 </div>
                 <span className="text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
                   Claude Sonnet
@@ -301,7 +321,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                   return (
                     <div key={key} className={cn('flex flex-col rounded-lg border px-3 py-2 text-xs', colorClass)}>
                       <span className="font-medium opacity-70 capitalize text-[10px] uppercase tracking-wide">
-                        {key.replace(/_/g, ' ')}
+                        {t(POLICY_FIELD_LABEL[key] ?? key.replace(/_/g, ' '))}
                       </span>
                       <span className="font-semibold mt-0.5">
                         {typeof value === 'object' ? JSON.stringify(value) : String(value)}
@@ -323,7 +343,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
               <div className={cn('h-6 w-6 rounded-full flex items-center justify-center', risk.barColor.replace('bg-', 'bg-') + '/10')}>
                 <Shield className={cn('h-3.5 w-3.5', risk.color)} />
               </div>
-              <h3 className="text-sm font-semibold text-text-primary">Risk Parameters</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{t('Risk Parameters')}</h3>
               <span className={cn('ml-auto text-xs font-bold', risk.color)}>{risk.label}</span>
             </div>
 
@@ -344,7 +364,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                 ['Cooldown After Loss', `${mandate.riskParams.cooldownHours}h`],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
-                  <span className="text-xs text-text-secondary">{k}</span>
+                  <span className="text-xs text-text-secondary">{t(k)}</span>
                   <span className="text-xs font-bold text-text-primary">{v}</span>
                 </div>
               ))}
@@ -359,7 +379,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                   <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
                     <Hash className="h-3.5 w-3.5" />
                   </div>
-                  Policy Hash
+                  {t('Policy Hash')}
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
                   <Network className="h-3 w-3" />
@@ -380,7 +400,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                     ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     : <Copy className="h-3.5 w-3.5" />
                   }
-                  {copied ? 'Copied!' : 'Copy hash'}
+                  {copied ? t('Copied!') : t('Copy hash')}
                 </button>
                 {(localOnChainTx || mandate.onChainTx) && (
                   <a
@@ -390,7 +410,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                     className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    View on Explorer
+                    {t('View on Explorer')}
                   </a>
                 )}
               </div>
@@ -400,17 +420,17 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                 {localOnChainTx || mandate.onChainTx ? (
                   <div className="flex items-center gap-1.5 text-xs text-success">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Policy anchored on Mantle Sepolia
+                    {t('Policy anchored on Mantle Sepolia')}
                   </div>
                 ) : submitting ? (
                   <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Sign in your wallet…
+                    {t('Sign in your wallet…')}
                   </div>
                 ) : confirmingPolicy ? (
                   <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Confirming on Mantle…
+                    {t('Confirming on Mantle…')}
                     {policyTxHash && (
                       <a
                         href={`https://explorer.sepolia.mantle.xyz/tx/${policyTxHash}`}
@@ -424,7 +444,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                   </div>
                 ) : !isConnected ? (
                   <p className="text-xs text-text-secondary italic">
-                    Connect wallet to anchor policy on-chain
+                    {t('Connect wallet to anchor policy on-chain')}
                   </p>
                 ) : (
                   <button
@@ -432,13 +452,13 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
                     className="flex items-center gap-1.5 text-xs font-medium text-primary hover:opacity-80 transition-opacity"
                   >
                     <Network className="h-3.5 w-3.5" />
-                    Anchor Policy On-Chain
+                    {t('Anchor Policy On-Chain')}
                   </button>
                 )}
                 {policyError && (
                   <p className="text-xs text-error mt-1 truncate" title={policyError.message}>
                     {policyError.message.slice(0, 80)}
-                    <button onClick={resetPolicy} className="ml-2 underline">retry</button>
+                    <button onClick={resetPolicy} className="ml-2 underline">{t('retry')}</button>
                   </p>
                 )}
               </div>
@@ -449,7 +469,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
           {!mandate.policyHash && (
             <div className="rounded-xl border border-border bg-surface/50 p-4">
               <p className="text-xs text-text-secondary italic">
-                No policy hash yet — edit the mandate to generate one.
+                {t('No policy hash yet — edit the mandate to generate one.')}
               </p>
             </div>
           )}
