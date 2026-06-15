@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MetricCard } from '@/components/ui/MetricCard'
@@ -23,8 +24,9 @@ import { type WalletInfo, type WalletKind } from '@/types/wallet'
 import { formatCurrency, truncateAddress } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
+import { usePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
 
-function useRealWallets(): WalletInfo[] {
+function useRealWallets(t: (s: string) => string): WalletInfo[] {
   const { user } = useAuthStore()
   const { address: connectedAddress, isConnected } = useWallet()
 
@@ -48,7 +50,7 @@ function useRealWallets(): WalletInfo[] {
         } else {
           byOwner.set(owner, {
             id:         `agent-wallet-${owner}`,
-            label:      'Agent Service Wallet',
+            label:      t('Agent Service Wallet'),
             address:    owner,
             kind:       'EOA',
             network:    'Mantle Sepolia',
@@ -56,7 +58,7 @@ function useRealWallets(): WalletInfo[] {
             status:     a.status === 'active' ? 'connected' : 'pending',
             signers:    1,
             agents:     1,
-            lastActive: a.last_trade_at ? 'Recently' : '—',
+            lastActive: a.last_trade_at ? t('Recently') : '—',
             createdAt:  (a.deployed_at ?? a.created_at ?? '').slice(0, 10),
           })
         }
@@ -72,7 +74,7 @@ function useRealWallets(): WalletInfo[] {
     if (isConnected && connectedAddress && !wallets.some((w) => w.address.toLowerCase() === connectedAddress.toLowerCase())) {
       wallets.push({
         id:         `connected-${connectedAddress}`,
-        label:      'Connected Wallet',
+        label:      t('Connected Wallet'),
         address:    truncateAddress(connectedAddress),
         kind:       'EOA',
         network:    'Mantle Sepolia',
@@ -80,12 +82,12 @@ function useRealWallets(): WalletInfo[] {
         status:     'connected',
         signers:    1,
         agents:     0,
-        lastActive: 'Active now',
+        lastActive: t('Active now'),
         createdAt:  new Date().toISOString().slice(0, 10),
       })
     }
     return wallets
-  }, [agentWallets, isConnected, connectedAddress])
+  }, [agentWallets, isConnected, connectedAddress, t])
 }
 
 const KIND_FILTERS: Array<{ key: 'all' | WalletKind; label: string }> = [
@@ -118,7 +120,7 @@ const WALLET_OPTIONS = [
   },
 ]
 
-function ConnectWalletModal({ onClose }: { onClose: () => void }) {
+function ConnectWalletModal({ onClose, t }: { onClose: () => void; t: (s: string) => string }) {
   const { connect, isConnecting, isConnected, address, chainId, truncatedAddress, disconnect } = useWallet()
   const [copied, setCopied] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
@@ -131,7 +133,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     try {
       await connect(id)
     } catch {
-      setError('Connection rejected or wallet not available.')
+      setError(t('Connection rejected or wallet not available.'))
     }
   }
 
@@ -153,7 +155,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               <Wallet className="h-3.5 w-3.5 text-primary" />
             </div>
             <p className="text-[13px] font-semibold text-text-primary">
-              {isConnected ? 'Wallet Connected' : 'Connect Wallet'}
+              {isConnected ? t('Wallet Connected') : t('Connect Wallet')}
             </p>
           </div>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors">
@@ -171,8 +173,8 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   <CheckCircle2 className="h-7 w-7 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-text-primary">Connected</p>
-                  <p className="text-xs text-text-secondary mt-1">Mantle Network · Chain ID {chainId ?? 5000}</p>
+                  <p className="text-sm font-semibold text-text-primary">{t('Connected')}</p>
+                  <p className="text-xs text-text-secondary mt-1">Mantle Network · {t('Chain ID')} {chainId ?? 5000}</p>
                 </div>
               </div>
 
@@ -184,7 +186,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   className="flex items-center gap-1 text-[11px] text-primary hover:text-primary-hover transition-colors"
                 >
                   <Copy className="h-3.5 w-3.5" />
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? t('Copied!') : t('Copy')}
                 </button>
               </div>
 
@@ -193,13 +195,13 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   onClick={onClose}
                   className="flex-1 py-2 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors"
                 >
-                  Done
+                  {t('Done')}
                 </button>
                 <button
                   onClick={() => { disconnect(); onClose() }}
                   className="px-4 py-2 rounded-md border border-error/40 text-xs text-error hover:bg-error/10 transition-colors"
                 >
-                  Disconnect
+                  {t('Disconnect')}
                 </button>
               </div>
             </div>
@@ -210,7 +212,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 <div className="flex items-start gap-2 rounded-md p-3 bg-warning/[0.08] border border-warning/30">
                   <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                   <p className="text-[11px] text-warning leading-relaxed">
-                    No wallet extension detected. Install MetaMask or Coinbase Wallet to connect.
+                    {t('No wallet extension detected. Install MetaMask or Coinbase Wallet to connect.')}
                   </p>
                 </div>
               )}
@@ -219,7 +221,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 <p className="text-xs text-error px-1">{error}</p>
               )}
 
-              <p className="text-xs text-text-secondary px-1">Choose your wallet provider:</p>
+              <p className="text-xs text-text-secondary px-1">{t('Choose your wallet provider:')}</p>
 
               <div className="space-y-2">
                 {WALLET_OPTIONS.map((w) => (
@@ -236,19 +238,19 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                     <span className="text-2xl leading-none">{w.icon}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-text-primary">{w.name}</p>
-                      <p className="text-[11px] text-text-secondary">{w.description}</p>
+                      <p className="text-[11px] text-text-secondary">{t(w.description)}</p>
                     </div>
                     {isConnecting ? (
                       <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
                     ) : (
-                      <span className="text-[11px] text-primary font-medium shrink-0">Connect →</span>
+                      <span className="text-[11px] text-primary font-medium shrink-0">{t('Connect →')}</span>
                     )}
                   </button>
                 ))}
               </div>
 
               <p className="text-center text-[10px] text-text-disabled pt-1">
-                Connects to Mantle Network (Chain ID: 5000)
+                {t('Connects to Mantle Network (Chain ID: 5000)')}
               </p>
             </div>
           )}
@@ -263,12 +265,14 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
 const MANTLE_EXPLORER = 'https://explorer.sepolia.mantle.xyz/address'
 
 export default function WalletsPage() {
+  const t = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [kind, setKind]     = useState<'all' | WalletKind>('all')
   const [showConnect, setShowConnect] = useState(false)
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null)
-  const realWallets = useRealWallets()
+  const realWallets = useRealWallets(t)
 
   const allWallets = realWallets
 
@@ -309,7 +313,7 @@ export default function WalletsPage() {
   const columns: DataTableColumn<WalletInfo>[] = [
     {
       key: 'wallet',
-      header: 'Wallet',
+      header: t('Wallet'),
       render: (w) => (
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-primary/15 text-primary flex items-center justify-center shrink-0">
@@ -324,14 +328,14 @@ export default function WalletsPage() {
     },
     {
       key: 'address',
-      header: 'Address',
+      header: t('Address'),
       render: (w) => (
         <span className="inline-flex items-center gap-1.5 font-mono text-[12px] text-text-secondary">
           {w.address}
-          <button onClick={() => handleCopyAddress(w.address)} title="Copy address" className="shrink-0">
+          <button onClick={() => handleCopyAddress(w.address)} title={t('Copy address')} className="shrink-0">
             <Copy className={`h-3 w-3 cursor-pointer ${copiedAddr === w.address ? 'text-success' : 'hover:text-text-primary'}`} />
           </button>
-          <a href={`${MANTLE_EXPLORER}/${w.address}`} target="_blank" rel="noopener noreferrer" title="View on Mantle Explorer" className="shrink-0">
+          <a href={`${MANTLE_EXPLORER}/${w.address}`} target="_blank" rel="noopener noreferrer" title={t('View on Mantle Explorer')} className="shrink-0">
             <ExternalLink className="h-3 w-3 cursor-pointer hover:text-text-primary" />
           </a>
         </span>
@@ -339,16 +343,16 @@ export default function WalletsPage() {
     },
     {
       key: 'kind',
-      header: 'Type',
+      header: t('Type'),
       render: (w) => (
         <span className="inline-flex items-center rounded-md border border-border bg-page px-2 py-0.5 text-[11px] font-medium text-text-primary">
-          {w.kind}
+          {t(w.kind)}
         </span>
       ),
     },
     {
       key: 'signers',
-      header: 'Signers',
+      header: t('Signers'),
       render: (w) => (
         <span className="inline-flex items-center gap-1.5 text-[12px] text-text-primary">
           <KeyRound className="h-3.5 w-3.5 text-text-disabled" />
@@ -358,17 +362,17 @@ export default function WalletsPage() {
     },
     {
       key: 'balance',
-      header: 'Balance',
+      header: t('Balance'),
       align: 'right',
       render: (w) => (
         <span className="font-semibold text-[13px] text-text-primary tabular-nums">
-          {formatCurrency(w.balanceUsd)}
+          {formatCurrency(w.balanceUsd, prefs)}
         </span>
       ),
     },
     {
       key: 'agents',
-      header: 'Agents',
+      header: t('Agents'),
       align: 'right',
       render: (w) => (
         <span className="text-[13px] text-text-primary">{w.agents}</span>
@@ -376,12 +380,12 @@ export default function WalletsPage() {
     },
     {
       key: 'status',
-      header: 'Status',
-      render: (w) => <StatusBadge status={w.status === 'connected' ? 'connected' : w.status === 'pending' ? 'pending' : 'inactive'} />,
+      header: t('Status'),
+      render: (w) => <StatusBadge status={w.status === 'connected' ? 'connected' : w.status === 'pending' ? 'pending' : 'inactive'} label={w.status === 'connected' ? t('Connected') : w.status === 'pending' ? t('Pending') : t('Inactive')} />,
     },
     {
       key: 'lastActive',
-      header: 'Last Active',
+      header: t('Last Active'),
       render: (w) => <span className="text-[12px] text-text-secondary">{w.lastActive}</span>,
     },
   ]
@@ -391,15 +395,15 @@ export default function WalletsPage() {
     <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-8 sm:pb-10 space-y-6">
       <PageHeader
         breadcrumb="USER MANAGEMENT"
-        title="Wallets"
-        subtitle="Treasury wallets, multisigs, and signer keys connected to MantleMandate. Each wallet inherits its mandate's policy."
+        title={t('Wallets')}
+        subtitle={t("Treasury wallets, multisigs, and signer keys connected to MantleMandate. Each wallet inherits its mandate's policy.")}
         actions={
           <>
             <PrimaryButton variant="secondary" icon={<ShieldCheck className="h-4 w-4" />} onClick={() => router.push('/dashboard/audit')}>
-              Audit Permissions
+              {t('Audit Permissions')}
             </PrimaryButton>
             <PrimaryButton variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setShowConnect(true)}>
-              Connect Wallet
+              {t('Connect Wallet')}
             </PrimaryButton>
           </>
         }
@@ -408,22 +412,22 @@ export default function WalletsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard
-          label="Total Custody"
-          value={formatCurrency(totalCustody)}
+          label={t('Total Custody')}
+          value={formatCurrency(totalCustody, prefs)}
           icon={<Coins className="h-4 w-4" />}
         />
         <MetricCard
-          label="Connected"
+          label={t('Connected')}
           value={connectedCount.toString()}
           icon={<Wallet className="h-4 w-4" />}
         />
         <MetricCard
-          label="Linked Agents"
+          label={t('Linked Agents')}
           value={totalLinkedAgents.toString()}
           icon={<ShieldCheck className="h-4 w-4" />}
         />
         <MetricCard
-          label="Total Wallets"
+          label={t('Total Wallets')}
           value={allWallets.length.toString()}
           icon={<KeyRound className="h-4 w-4" />}
         />
@@ -434,21 +438,21 @@ export default function WalletsPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search by label, address, or network…"
+          placeholder={t('Search by label, address, or network…')}
           className="flex-1 max-w-2xl"
         />
         <div className="flex flex-wrap items-center gap-2">
           {KIND_FILTERS.map((k) => (
             <FilterButton key={k.key} active={kind === k.key} onClick={() => setKind(k.key)}>
-              {k.label}
+              {t(k.label)}
             </FilterButton>
           ))}
         </div>
       </div>
 
       <SectionCard
-        title="Connected Wallets"
-        subtitle={`${filtered.length} of ${allWallets.length} wallets`}
+        title={t('Connected Wallets')}
+        subtitle={t('{a} of {b} wallets').replace('{a}', String(filtered.length)).replace('{b}', String(allWallets.length))}
         padding="none"
       >
         <div className="border-t border-border">
@@ -458,15 +462,15 @@ export default function WalletsPage() {
             rowKey={(w) => w.id}
             empty={
               allWallets.length === 0
-                ? 'No wallets yet — connect a wallet or deploy an agent to get started.'
-                : 'No wallets match your filters.'
+                ? t('No wallets yet — connect a wallet or deploy an agent to get started.')
+                : t('No wallets match your filters.')
             }
           />
         </div>
       </SectionCard>
     </div>
 
-    {showConnect && <ConnectWalletModal onClose={() => setShowConnect(false)} />}
+    {showConnect && <ConnectWalletModal onClose={() => setShowConnect(false)} t={t} />}
     </>
   )
 }
