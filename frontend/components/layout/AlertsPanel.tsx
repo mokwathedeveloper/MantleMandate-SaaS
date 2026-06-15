@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import { Bell } from 'lucide-react'
 import type { BadgeVariant } from '@/components/ui/Badge'
+import { useTranslation } from '@/hooks/useTranslation'
 
 const SEVERITY_VARIANT: Record<string, BadgeVariant> = {
   high:   'error',
@@ -18,28 +19,29 @@ const SEVERITY_DOT: Record<string, string> = {
   low:    'bg-primary',
 }
 
-function timeAgo(dateStr: string) {
+function timeAgo(dateStr: string, t: (s: string) => string) {
   const secs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (secs < 60)   return `${secs}s ago`
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
-  return `${Math.floor(secs / 3600)}h ago`
+  if (secs < 60)   return t('{n}s ago').replace('{n}', String(secs))
+  if (secs < 3600) return t('{n}m ago').replace('{n}', String(Math.floor(secs / 60)))
+  return t('{n}h ago').replace('{n}', String(Math.floor(secs / 3600)))
 }
 
 export function AlertsPanel() {
   const { alerts, unreadCount, markRead, markAllRead, clearAll } = useAlertStore()
+  const t = useTranslation()
 
   return (
     <aside className="flex h-full w-80 flex-col border-l border-border bg-card shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0">
-        <h4 className="text-base font-semibold text-text-primary">Real-Time Alerts</h4>
+        <h4 className="text-base font-semibold text-text-primary">{t('Real-Time Alerts')}</h4>
         <div className="flex items-center gap-3">
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
               className="text-[13px] text-text-link hover:text-text-link-hover transition-colors"
             >
-              Mark all read
+              {t('Mark all read')}
             </button>
           )}
           {alerts.length > 0 && (
@@ -47,7 +49,7 @@ export function AlertsPanel() {
               onClick={clearAll}
               className="text-[13px] text-text-secondary hover:text-text-primary transition-colors"
             >
-              Clear
+              {t('Clear')}
             </button>
           )}
         </div>
@@ -58,8 +60,8 @@ export function AlertsPanel() {
         {alerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center px-6">
             <Bell className="h-8 w-8 text-text-disabled" />
-            <p className="text-[13px] text-text-disabled font-medium">No alerts right now</p>
-            <p className="text-[13px] text-text-disabled">Your agents are running smoothly.</p>
+            <p className="text-[13px] text-text-disabled font-medium">{t('No alerts right now')}</p>
+            <p className="text-[13px] text-text-disabled">{t('Your agents are running smoothly.')}</p>
           </div>
         ) : (
           <div className="py-2 space-y-0">
@@ -85,14 +87,14 @@ export function AlertsPanel() {
                       {alert.title}
                     </p>
                     <Badge variant={SEVERITY_VARIANT[alert.severity]} className="shrink-0 text-[10px] py-0 px-1.5 uppercase">
-                      {alert.severity}
+                      {t(alert.severity)}
                     </Badge>
                   </div>
                   <p className="text-xs text-text-secondary mt-0.5 leading-relaxed line-clamp-2">
                     {alert.message}
                   </p>
                   <p className="text-[11px] text-text-disabled mt-1">
-                    {timeAgo(alert.createdAt)}
+                    {timeAgo(alert.createdAt, t)}
                   </p>
                 </div>
               </div>
