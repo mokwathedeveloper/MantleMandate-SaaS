@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import { cn, truncateAddress } from '@/lib/utils'
 import { useAdminUsers, ForbiddenError, type AdminUser } from '@/hooks/useAdminUsers'
+import { useTranslation } from '@/hooks/useTranslation'
 
 const STATUS_FILTERS: Array<{ key: 'all' | 'active' | 'pending'; label: string }> = [
   { key: 'all',     label: 'All' },
@@ -27,6 +28,17 @@ const STATUS_FILTERS: Array<{ key: 'all' | 'active' | 'pending'; label: string }
 ]
 
 const AVATAR_COLORS = ['bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-cyan-600']
+
+const PLAN_LABEL: Record<string, string> = {
+  operator:   'Operator',
+  strategist: 'Strategist',
+  institution: 'Institution',
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Admin',
+  user:  'User',
+}
 
 function avatarColor(id: string): string {
   let hash = 0
@@ -38,16 +50,16 @@ function initialsOf(name: string): string {
   return name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return 'Never'
+function timeAgo(iso: string | null, t: (s: string) => string): string {
+  if (!iso) return t('Never')
   const diffMs = Date.now() - new Date(iso).getTime()
   const sec = Math.floor(diffMs / 1000)
-  if (sec < 60) return `${sec}s ago`
+  if (sec < 60) return t('{n}s ago').replace('{n}', String(sec))
   const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
+  if (min < 60) return t('{n}m ago').replace('{n}', String(min))
   const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  return `${Math.floor(hr / 24)}d ago`
+  if (hr < 24) return t('{n}h ago').replace('{n}', String(hr))
+  return t('{n}d ago').replace('{n}', String(Math.floor(hr / 24)))
 }
 
 function riskTone(score: number) {
@@ -76,6 +88,7 @@ function downloadUsersCsv(users: AdminUser[]) {
 }
 
 export default function UsersPage() {
+  const t = useTranslation()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<'all' | 'active' | 'pending'>('all')
   const { data, isLoading, error } = useAdminUsers()
@@ -105,7 +118,7 @@ export default function UsersPage() {
   const columns: DataTableColumn<AdminUser>[] = [
     {
       key: 'user',
-      header: 'User',
+      header: t('User'),
       render: (u) => (
         <div className="flex items-center gap-3 min-w-0">
           <div className={cn(
@@ -123,43 +136,43 @@ export default function UsersPage() {
     },
     {
       key: 'wallet',
-      header: 'Wallet',
+      header: t('Wallet'),
       render: (u) => (
         <span className="font-mono text-[12px] text-text-secondary">
-          {u.walletAddr ? truncateAddress(u.walletAddr) : 'Not connected'}
+          {u.walletAddr ? truncateAddress(u.walletAddr) : t('Not connected')}
         </span>
       ),
     },
     {
       key: 'plan',
-      header: 'Plan',
+      header: t('Plan'),
       render: (u) => (
         <span className="inline-flex items-center rounded-md border border-border bg-page px-2 py-0.5 text-[11px] font-medium text-text-primary capitalize">
-          {u.plan}
+          {t(PLAN_LABEL[u.plan] ?? u.plan)}
         </span>
       ),
     },
     {
       key: 'role',
-      header: 'Role',
+      header: t('Role'),
       render: (u) => (
         <span className={cn(
           'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium capitalize',
           u.role === 'admin' ? 'text-primary bg-primary/10' : 'text-text-secondary bg-page border border-border',
         )}>
           {u.role === 'admin' && <ShieldCheck className="h-3 w-3" />}
-          {u.role}
+          {t(ROLE_LABEL[u.role] ?? u.role)}
         </span>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
-      render: (u) => <StatusBadge status={u.status} />,
+      header: t('Status'),
+      render: (u) => <StatusBadge status={u.status} label={t(u.status === 'active' ? 'Active' : 'Pending')} />,
     },
     {
       key: 'agents',
-      header: 'Agents',
+      header: t('Agents'),
       align: 'right',
       render: (u) => (
         <span className="text-[13px] font-semibold text-text-primary">{u.agents}</span>
@@ -167,7 +180,7 @@ export default function UsersPage() {
     },
     {
       key: 'risk',
-      header: 'Risk',
+      header: t('Risk'),
       render: (u) => {
         const tone = riskTone(u.riskScore)
         return (
@@ -184,9 +197,9 @@ export default function UsersPage() {
     },
     {
       key: 'lastLogin',
-      header: 'Last Login',
+      header: t('Last Login'),
       render: (u) => (
-        <span className="text-[12px] text-text-secondary">{timeAgo(u.lastLogin)}</span>
+        <span className="text-[12px] text-text-secondary">{timeAgo(u.lastLogin, t)}</span>
       ),
     },
   ]
@@ -194,10 +207,9 @@ export default function UsersPage() {
   if (error instanceof ForbiddenError) {
     return (
       <div className="px-6 pt-8 pb-10 space-y-6">
-        <PageHeader breadcrumb="USER MANAGEMENT" title="Users" />
-        <AlertBanner severity="warning" title="Admin access required">
-          This page is only available to administrators. If you believe this is a mistake, ask an
-          existing admin to grant your account the &quot;admin&quot; role.
+        <PageHeader breadcrumb="USER MANAGEMENT" title={t('Users')} />
+        <AlertBanner severity="warning" title={t('Admin access required')}>
+          {t('This page is only available to administrators. If you believe this is a mistake, ask an existing admin to grant your account the "admin" role.')}
         </AlertBanner>
       </div>
     )
@@ -206,9 +218,9 @@ export default function UsersPage() {
   if (error) {
     return (
       <div className="px-6 pt-8 pb-10 space-y-6">
-        <PageHeader breadcrumb="USER MANAGEMENT" title="Users" />
-        <AlertBanner severity="error" title="Failed to load users">
-          Something went wrong while loading the admin user list. Please try again later.
+        <PageHeader breadcrumb="USER MANAGEMENT" title={t('Users')} />
+        <AlertBanner severity="error" title={t('Failed to load users')}>
+          {t('Something went wrong while loading the admin user list. Please try again later.')}
         </AlertBanner>
       </div>
     )
@@ -219,8 +231,8 @@ export default function UsersPage() {
       {/* Header */}
       <PageHeader
         breadcrumb="USER MANAGEMENT"
-        title="Users"
-        subtitle="Manage access, wallet permissions, AI agent ownership, and risk visibility across your organization."
+        title={t('Users')}
+        subtitle={t('Manage access, wallet permissions, AI agent ownership, and risk visibility across your organization.')}
         actions={
           <PrimaryButton
             variant="secondary"
@@ -228,7 +240,7 @@ export default function UsersPage() {
             onClick={() => downloadUsersCsv(filtered)}
             disabled={filtered.length === 0}
           >
-            Export
+            {t('Export')}
           </PrimaryButton>
         }
       />
@@ -236,7 +248,7 @@ export default function UsersPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-24 text-text-secondary gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Loading users…
+          {t('Loading users…')}
         </div>
       ) : (
         <>
@@ -245,7 +257,7 @@ export default function UsersPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search by name, email, or wallet address…"
+              placeholder={t('Search by name, email, or wallet address…')}
               className="flex-1 max-w-2xl"
             />
             <div className="flex flex-wrap gap-2">
@@ -255,7 +267,7 @@ export default function UsersPage() {
                   active={status === s.key}
                   onClick={() => setStatus(s.key)}
                 >
-                  {s.label}
+                  {t(s.label)}
                 </FilterButton>
               ))}
             </div>
@@ -264,22 +276,22 @@ export default function UsersPage() {
           {/* KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MetricCard
-              label="Total Users"
+              label={t('Total Users')}
               value={(data?.kpis.totalUsers ?? 0).toLocaleString()}
               icon={<UsersIcon className="h-4 w-4" />}
             />
             <MetricCard
-              label="Active Agents"
+              label={t('Active Agents')}
               value={(data?.kpis.activeAgents ?? 0).toLocaleString()}
               icon={<Bot className="h-4 w-4" />}
             />
             <MetricCard
-              label="Total Agents"
+              label={t('Total Agents')}
               value={(data?.kpis.totalAgents ?? 0).toLocaleString()}
               icon={<Bot className="h-4 w-4" />}
             />
             <MetricCard
-              label="Admins"
+              label={t('Admins')}
               value={(data?.kpis.adminCount ?? 0).toLocaleString()}
               icon={<ShieldCheck className="h-4 w-4" />}
             />
@@ -287,8 +299,8 @@ export default function UsersPage() {
 
           {/* Signup trend */}
           <SectionCard
-            title="User Signups"
-            subtitle="New accounts created over the last 12 weeks"
+            title={t('User Signups')}
+            subtitle={t('New accounts created over the last 12 weeks')}
             action={
               trendDelta !== 0 ? (
                 <span className={cn(
@@ -296,10 +308,10 @@ export default function UsersPage() {
                   trendDelta > 0 ? 'text-success' : 'text-error',
                 )}>
                   {trendDelta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {trendDelta > 0 ? '+' : ''}{trendDelta} vs previous week
+                  {trendDelta > 0 ? '+' : ''}{trendDelta} {t('vs previous week')}
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-text-secondary">No change vs previous week</span>
+                <span className="text-[11px] font-semibold text-text-secondary">{t('No change vs previous week')}</span>
               )
             }
             bodyClassName="px-2 py-2"
@@ -346,8 +358,8 @@ export default function UsersPage() {
 
           {/* Users table */}
           <SectionCard
-            title="Users"
-            subtitle={`${filtered.length} of ${users.length} users matching filters`}
+            title={t('Users')}
+            subtitle={t('{a} of {b} users matching filters').replace('{a}', String(filtered.length)).replace('{b}', String(users.length))}
             bodyClassName="px-0 py-0"
             padding="none"
           >
@@ -358,7 +370,7 @@ export default function UsersPage() {
                 rowKey={(u) => u.id}
                 empty={
                   <span className="inline-flex items-center gap-2 text-text-secondary">
-                    <Search className="h-4 w-4" /> No users match your filters
+                    <Search className="h-4 w-4" /> {t('No users match your filters')}
                   </span>
                 }
               />
