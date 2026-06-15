@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useAlertStore } from '@/store/alertStore'
 import { useLogout } from '@/hooks/useAuth'
 import { useWallet } from '@/hooks/useWallet'
+import { useTranslation } from '@/hooks/useTranslation'
 
 const PLAN_COLOR: Record<string, string> = {
   operator:    'bg-blue-500/15 text-blue-400',
@@ -31,11 +32,11 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-function breadcrumb(pathname: string): string {
+function breadcrumb(pathname: string, t: (s: string) => string): string {
   const parts = pathname.replace('/dashboard', '').split('/').filter(Boolean)
-  if (!parts.length) return 'Dashboard'
+  if (!parts.length) return t('Dashboard')
   return parts
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .map((p) => t(p.charAt(0).toUpperCase() + p.slice(1)))
     .join(' / ')
 }
 
@@ -51,6 +52,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { unreadCount, markAllRead, alerts } = useAlertStore()
   const logout    = useLogout()
   const { isConnected, isConnecting, address, chainId, truncatedAddress, connect, disconnect } = useWallet()
+  const t = useTranslation()
 
   const [dropOpen,    setDropOpen]    = useState(false)
   const [bellOpen,    setBellOpen]    = useState(false)
@@ -78,14 +80,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         {/* Hamburger — mobile only */}
         <button
           onClick={onMenuClick}
-          aria-label="Open menu"
+          aria-label={t('Open menu')}
           className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-white/5 transition-colors shrink-0"
         >
           <Menu className="h-5 w-5 text-muted-foreground" />
         </button>
         {/* Breadcrumb */}
         <span className="text-sm text-muted-foreground font-medium tracking-wide truncate">
-          {breadcrumb(pathname)}
+          {breadcrumb(pathname, t)}
         </span>
       </div>
 
@@ -103,7 +105,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           >
             <Wallet className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline max-w-[100px] truncate">
-              {isConnected ? truncatedAddress : 'Connect'}
+              {isConnected ? truncatedAddress : t('Connect')}
             </span>
             {isConnected && (
               <span className="relative flex h-1.5 w-1.5 shrink-0">
@@ -122,9 +124,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div>
-                      <p className="text-[12px] font-semibold text-text-primary">Connected</p>
+                      <p className="text-[12px] font-semibold text-text-primary">{t('Connected')}</p>
                       <p className="text-[10px] text-text-secondary">
-                        Mantle · Chain {chainId}
+                        Mantle · {t('Chain')} {chainId}
                       </p>
                     </div>
                   </div>
@@ -153,12 +155,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                     onClick={() => { disconnect(); setWalletOpen(false) }}
                     className="w-full py-1.5 rounded-md border border-error/40 text-[11px] text-error hover:bg-error/10 transition-colors"
                   >
-                    Disconnect
+                    {t('Disconnect')}
                   </button>
                 </div>
               ) : (
                 <div className="p-3 space-y-1.5">
-                  <p className="text-[11px] text-text-secondary px-0.5 pb-1">Choose a wallet:</p>
+                  <p className="text-[11px] text-text-secondary px-0.5 pb-1">{t('Choose a wallet:')}</p>
                   {WALLET_OPTIONS_TB.map(({ id, name, icon }) => (
                     <button
                       key={id}
@@ -194,18 +196,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           {bellOpen && (
             <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-sm font-semibold">Notifications</span>
+                <span className="text-sm font-semibold">{t('Notifications')}</span>
                 <Link
                   href="/dashboard/alerts"
                   className="text-xs text-primary hover:underline"
                   onClick={() => setBellOpen(false)}
                 >
-                  View all
+                  {t('View all')}
                 </Link>
               </div>
               <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
                 {alerts.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-sm text-muted-foreground">No notifications</p>
+                  <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('No notifications')}</p>
                 ) : (
                   alerts.slice(0, 6).map((a) => (
                     <div
@@ -238,10 +240,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
             <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
               <span className="text-sm font-medium text-foreground/90 max-w-[120px] truncate">
-                {user?.name || user?.email?.split('@')[0] || 'User'}
+                {user?.name || user?.email?.split('@')[0] || t('User')}
               </span>
               <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', PLAN_COLOR[plan])}>
-                {PLAN_LABEL[plan]}
+                {t(PLAN_LABEL[plan])}
               </span>
             </div>
 
@@ -255,7 +257,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               {/* Header */}
               <div className="px-4 py-3 border-b border-white/5">
                 <p className="text-sm font-semibold text-foreground/90 truncate">
-                  {user?.name || 'User'}
+                  {user?.name || t('User')}
                 </p>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">
                   {user?.email}
@@ -273,7 +275,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground/80 hover:bg-white/5 hover:text-foreground transition-colors"
                 >
                   <User className="h-4 w-4" />
-                  Profile
+                  {t('Profile')}
                 </Link>
                 <Link
                   href="/dashboard/settings"
@@ -281,7 +283,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground/80 hover:bg-white/5 hover:text-foreground transition-colors"
                 >
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t('Settings')}
                 </Link>
               </div>
 
@@ -291,7 +293,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign out
+                  {t('Sign out')}
                 </button>
               </div>
             </div>
