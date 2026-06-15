@@ -418,7 +418,7 @@ export default function DashboardPage() {
                   <span className="text-text-secondary text-xs">{t('/ 100')}</span>
                   <StatusBadge
                     status={riskSummary.score < 30 ? 'active' : riskSummary.score < 60 ? 'pending' : 'failed'}
-                    label={riskSummary.level}
+                    label={t(riskSummary.level)}
                     className="ml-auto"
                   />
                 </div>
