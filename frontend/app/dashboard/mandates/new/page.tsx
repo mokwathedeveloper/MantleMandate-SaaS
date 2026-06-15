@@ -21,6 +21,7 @@ import { AlertBanner } from '@/components/ui/AlertBanner'
 import { Spinner } from '@/components/ui/Spinner'
 import { useCreateMandate, useParsePreview } from '@/hooks/useMandates'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ const STEPS = [
   { label: 'Deploy',     desc: 'Review & go live' },
 ]
 
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, t }: { current: number; t: (s: string) => string }) {
   return (
     <div className="flex items-center w-full max-w-md mx-auto">
       {STEPS.map((s, i) => {
@@ -105,9 +106,9 @@ function StepIndicator({ current }: { current: number }) {
               </div>
               <div className="text-center">
                 <p className={cn('text-xs font-semibold', active ? 'text-text-primary' : 'text-text-secondary')}>
-                  {s.label}
+                  {t(s.label)}
                 </p>
-                <p className="text-[10px] text-text-secondary hidden sm:block">{s.desc}</p>
+                <p className="text-[10px] text-text-secondary hidden sm:block">{t(s.desc)}</p>
               </div>
             </div>
             {i < STEPS.length - 1 && (
@@ -137,11 +138,12 @@ const FIELD_COLORS: Record<string, string> = {
 }
 
 function ParsePanel({
-  result, loading, error,
+  result, loading, error, t,
 }: {
   result: Record<string, unknown> | null
   loading: boolean
   error: string | null
+  t: (s: string) => string
 }) {
   if (loading) {
     return (
@@ -150,7 +152,7 @@ function ParsePanel({
           <Spinner size="sm" />
           <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
         </div>
-        <span className="text-sm text-text-secondary">Claude Sonnet is parsing…</span>
+        <span className="text-sm text-text-secondary">{t('Claude Sonnet is parsing…')}</span>
       </div>
     )
   }
@@ -171,9 +173,9 @@ function ParsePanel({
           <Sparkles className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <p className="text-sm font-medium text-text-primary">AI Preview</p>
+          <p className="text-sm font-medium text-text-primary">{t('AI Preview')}</p>
           <p className="text-xs text-text-secondary mt-0.5 max-w-[200px]">
-            Type your mandate and Claude will extract a structured policy in real time
+            {t('Type your mandate and Claude will extract a structured policy in real time')}
           </p>
         </div>
       </div>
@@ -187,7 +189,7 @@ function ParsePanel({
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-success">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          Policy extracted
+          {t('Policy extracted')}
         </div>
         <div className="ml-auto text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
           Claude Sonnet
@@ -218,12 +220,12 @@ function ParsePanel({
 
 // ── Risk level helper ─────────────────────────────────────────────────────────
 
-function riskLevel(maxDrawdown: number, stopLoss: number) {
+function riskLevel(maxDrawdown: number, stopLoss: number, t: (s: string) => string) {
   const score = maxDrawdown + stopLoss * 2
-  if (score <= 20) return { label: 'Conservative', color: 'text-success', bar: 'bg-success', width: 'w-1/4' }
-  if (score <= 45) return { label: 'Moderate',     color: 'text-warning', bar: 'bg-warning', width: 'w-1/2' }
-  if (score <= 75) return { label: 'Aggressive',   color: 'text-orange-400', bar: 'bg-orange-400', width: 'w-3/4' }
-  return               { label: 'High Risk',     color: 'text-error',   bar: 'bg-error',   width: 'w-full' }
+  if (score <= 20) return { label: 'Conservative', text: t('Conservative'), color: 'text-success', bar: 'bg-success', width: 'w-1/4' }
+  if (score <= 45) return { label: 'Moderate',     text: t('Moderate'),     color: 'text-warning', bar: 'bg-warning', width: 'w-1/2' }
+  if (score <= 75) return { label: 'Aggressive',   text: t('Aggressive'),   color: 'text-orange-400', bar: 'bg-orange-400', width: 'w-3/4' }
+  return               { label: 'High Risk',     text: t('High Risk'),   color: 'text-error',   bar: 'bg-error',   width: 'w-full' }
 }
 
 // ── Risk Slider ───────────────────────────────────────────────────────────────
@@ -274,7 +276,7 @@ function RiskSlider({
 
 // ── Policy Hash Card ──────────────────────────────────────────────────────────
 
-function PolicyHashCard({ hash }: { hash: string | null }) {
+function PolicyHashCard({ hash, t }: { hash: string | null; t: (s: string) => string }) {
   if (!hash) return null
   return (
     <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent p-4 space-y-2.5">
@@ -283,7 +285,7 @@ function PolicyHashCard({ hash }: { hash: string | null }) {
           <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
             <Hash className="h-3.5 w-3.5" />
           </div>
-          On-Chain Policy Hash
+          {t('On-Chain Policy Hash')}
         </div>
         <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-secondary bg-surface border border-border px-2 py-0.5 rounded-full">
           <Network className="h-3 w-3" />
@@ -295,7 +297,7 @@ function PolicyHashCard({ hash }: { hash: string | null }) {
       </p>
       <p className="text-xs text-text-secondary flex items-center gap-1.5">
         <Lock className="h-3 w-3" />
-        SHA-256 fingerprint — immutably posted to Mantle Network at deployment
+        {t('SHA-256 fingerprint — immutably posted to Mantle Network at deployment')}
       </p>
     </div>
   )
@@ -304,6 +306,7 @@ function PolicyHashCard({ hash }: { hash: string | null }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NewMandatePage() {
+  const t = useTranslation()
   const router = useRouter()
   const [step, setStep]               = useState(1)
   const [step1Data, setStep1Data]     = useState<Step1Data | null>(null)
@@ -369,22 +372,22 @@ export default function NewMandatePage() {
 
   const watchedDrawdown  = form2.watch('maxDrawdown')
   const watchedStopLoss  = form2.watch('stopLoss')
-  const risk             = riskLevel(watchedDrawdown, watchedStopLoss)
+  const risk             = riskLevel(watchedDrawdown, watchedStopLoss, t)
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8">
 
       {/* ── Header ── */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-text-primary">New Mandate</h1>
+        <h1 className="text-2xl font-bold text-text-primary">{t('New Mandate')}</h1>
         <p className="text-sm text-text-secondary">
-          Describe your strategy in plain English — Claude AI turns it into an enforceable on-chain policy
+          {t('Describe your strategy in plain English — Claude AI turns it into an enforceable on-chain policy')}
         </p>
       </div>
 
       {/* ── Step progress ── */}
       <div className="rounded-xl border border-border bg-surface/50 p-5">
-        <StepIndicator current={step} />
+        <StepIndicator current={step} t={t} />
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -402,8 +405,8 @@ export default function NewMandatePage() {
                 <div className="space-y-4">
                   <div>
                     <Input
-                      label="Mandate name"
-                      placeholder="e.g. ETH Conservative RSI Strategy"
+                      label={t('Mandate name')}
+                      placeholder={t('e.g. ETH Conservative RSI Strategy')}
                       error={form1.formState.errors.name?.message}
                       {...form1.register('name')}
                     />
@@ -415,8 +418,8 @@ export default function NewMandatePage() {
                     control={form1.control}
                     render={({ field }) => (
                       <Textarea
-                        label="Strategy description"
-                        placeholder="Write your trading strategy in plain English. Include assets, entry / exit triggers, risk limits, and DeFi protocols you want to use on Mantle Network…"
+                        label={t('Strategy description')}
+                        placeholder={t('Write your trading strategy in plain English. Include assets, entry / exit triggers, risk limits, and DeFi protocols you want to use on Mantle Network…')}
                         rows={10}
                         counter
                         maxLength={2000}
@@ -429,7 +432,7 @@ export default function NewMandatePage() {
                   {/* Example strategy chips */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                      Quick-start examples
+                      {t('Quick-start examples')}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {EXAMPLES.map((ex) => {
@@ -445,7 +448,7 @@ export default function NewMandatePage() {
                             )}
                           >
                             <Icon className={cn('h-4 w-4 shrink-0', ex.color)} />
-                            <span className={cn('text-xs font-semibold', ex.color)}>{ex.label}</span>
+                            <span className={cn('text-xs font-semibold', ex.color)}>{t(ex.label)}</span>
                           </button>
                         )
                       })}
@@ -454,7 +457,7 @@ export default function NewMandatePage() {
 
                   {/* Base currency */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-primary">Base currency</label>
+                    <label className="text-sm font-medium text-text-primary">{t('Base currency')}</label>
                     <div className="flex gap-2">
                       {(['USDC', 'USDT', 'ETH', 'MNT'] as const).map((c) => {
                         const active = form1.watch('base_currency') === c
@@ -489,11 +492,11 @@ export default function NewMandatePage() {
                   <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <h3 className="text-sm font-semibold text-text-primary">Live AI Preview</h3>
+                  <h3 className="text-sm font-semibold text-text-primary">{t('Live AI Preview')}</h3>
                   {parseLoading && <Spinner size="sm" className="ml-auto" />}
                 </div>
                 <div className="p-4">
-                  <ParsePanel result={parseResult} loading={parseLoading} error={parseError} />
+                  <ParsePanel result={parseResult} loading={parseLoading} error={parseError} t={t} />
                 </div>
               </div>
             </div>
@@ -501,7 +504,7 @@ export default function NewMandatePage() {
 
           <div className="flex justify-end">
             <Button type="submit" size="lg">
-              Continue to Risk Settings
+              {t('Continue to Risk Settings')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -525,8 +528,8 @@ export default function NewMandatePage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-semibold text-text-primary">Risk Profile</span>
-                <span className={cn('text-sm font-bold', risk.color)}>{risk.label}</span>
+                <span className="text-sm font-semibold text-text-primary">{t('Risk Profile')}</span>
+                <span className={cn('text-sm font-bold', risk.color)}>{risk.text}</span>
               </div>
               <div className="h-1.5 rounded-full bg-border overflow-hidden">
                 <div className={cn('h-full rounded-full transition-all duration-300', risk.bar, risk.width)} />
@@ -540,23 +543,23 @@ export default function NewMandatePage() {
             <Card padding="lg" className="lg:col-span-2">
               <div className="flex items-center gap-2 mb-6">
                 <Zap className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold text-text-primary">Risk Parameters</h3>
+                <h3 className="text-sm font-semibold text-text-primary">{t('Risk Parameters')}</h3>
               </div>
               <div className="space-y-7">
                 <Controller name="maxDrawdown" control={form2.control} render={({ field }) => (
-                  <RiskSlider label="Max Drawdown" hint="Halt trading if portfolio drops by this percentage" min={0} max={50} value={field.value} onChange={field.onChange} />
+                  <RiskSlider label={t('Max Drawdown')} hint={t('Halt trading if portfolio drops by this percentage')} min={0} max={50} value={field.value} onChange={field.onChange} />
                 )} />
                 <Controller name="maxPosition" control={form2.control} render={({ field }) => (
-                  <RiskSlider label="Max Position Size" hint="Maximum portfolio allocation per single position" min={0} max={100} value={field.value} onChange={field.onChange} />
+                  <RiskSlider label={t('Max Position Size')} hint={t('Maximum portfolio allocation per single position')} min={0} max={100} value={field.value} onChange={field.onChange} />
                 )} />
                 <Controller name="stopLoss" control={form2.control} render={({ field }) => (
-                  <RiskSlider label="Stop Loss" hint="Automatically exit if a position loses this much" min={0} max={50} value={field.value} onChange={field.onChange} />
+                  <RiskSlider label={t('Stop Loss')} hint={t('Automatically exit if a position loses this much')} min={0} max={50} value={field.value} onChange={field.onChange} />
                 )} />
                 <Controller name="maxPositions" control={form2.control} render={({ field }) => (
-                  <RiskSlider label="Max Concurrent Positions" hint="How many trades can be open simultaneously" min={1} max={20} value={field.value} onChange={field.onChange} suffix="" />
+                  <RiskSlider label={t('Max Concurrent Positions')} hint={t('How many trades can be open simultaneously')} min={1} max={20} value={field.value} onChange={field.onChange} suffix="" />
                 )} />
                 <Controller name="cooldownHours" control={form2.control} render={({ field }) => (
-                  <RiskSlider label="Cooldown Period" hint="Pause duration after a stop-loss is triggered" min={0} max={72} value={field.value} onChange={field.onChange} suffix="h" />
+                  <RiskSlider label={t('Cooldown Period')} hint={t('Pause duration after a stop-loss is triggered')} min={0} max={72} value={field.value} onChange={field.onChange} suffix="h" />
                 )} />
               </div>
             </Card>
@@ -566,16 +569,16 @@ export default function NewMandatePage() {
               <Card padding="md">
                 <div className="flex items-center gap-2 mb-4">
                   <Lock className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-text-primary">Capital Limit</h3>
+                  <h3 className="text-sm font-semibold text-text-primary">{t('Capital Limit')}</h3>
                 </div>
                 <Controller
                   name="capital_cap"
                   control={form2.control}
                   render={({ field }) => (
                     <Input
-                      label="Max capital (USD)"
+                      label={t('Max capital (USD)')}
                       type="number"
-                      placeholder="No limit"
+                      placeholder={t('No limit')}
                       error={form2.formState.errors.capital_cap?.message}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
@@ -583,19 +586,19 @@ export default function NewMandatePage() {
                   )}
                 />
                 <p className="text-xs text-text-secondary mt-2">
-                  Leave blank to allow unlimited capital allocation.
+                  {t('Leave blank to allow unlimited capital allocation.')}
                 </p>
               </Card>
 
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-primary">
                   <Info className="h-3.5 w-3.5 shrink-0" />
-                  On-Chain Enforcement
+                  {t('On-Chain Enforcement')}
                 </div>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  These parameters are cryptographically encoded into your policy hash and enforced by the
-                  <span className="text-text-primary font-medium"> RiskGuard</span> smart contract on Mantle Network.
-                  The AI agent <strong className="text-error">cannot</strong> exceed these limits.
+                  {t('These parameters are cryptographically encoded into your policy hash and enforced by the')}
+                  <span className="text-text-primary font-medium"> RiskGuard</span> {t('smart contract on Mantle Network.')}
+                  {' '}{t('The AI agent')} <strong className="text-error">{t('cannot')}</strong> {t('exceed these limits.')}
                 </p>
               </div>
             </div>
@@ -604,10 +607,10 @@ export default function NewMandatePage() {
           <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => setStep(1)} type="button">
               <ChevronLeft className="h-4 w-4" />
-              Back
+              {t('Back')}
             </Button>
             <Button type="submit" size="lg">
-              Review &amp; Deploy
+              {t('Review & Deploy')}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -627,28 +630,28 @@ export default function NewMandatePage() {
                 <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
-                <h3 className="text-sm font-semibold text-text-primary">Mandate Summary</h3>
+                <h3 className="text-sm font-semibold text-text-primary">{t('Mandate Summary')}</h3>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
-                  <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">Name</span>
+                  <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">{t('Name')}</span>
                   <span className="text-sm text-text-primary font-semibold">{step1Data.name}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
-                  <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">Currency</span>
+                  <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">{t('Currency')}</span>
                   <Badge variant="primary">{step1Data.base_currency}</Badge>
                 </div>
                 {step2Data.capital_cap && (
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">Capital cap</span>
+                    <span className="text-xs text-text-secondary uppercase tracking-wide font-medium">{t('Capital cap')}</span>
                     <span className="text-sm text-text-primary font-semibold">
                       ${step2Data.capital_cap.toLocaleString()}
                     </span>
                   </div>
                 )}
                 <div className="pt-1">
-                  <p className="text-xs text-text-secondary uppercase tracking-wide font-medium mb-2">Strategy</p>
+                  <p className="text-xs text-text-secondary uppercase tracking-wide font-medium mb-2">{t('Strategy')}</p>
                   <p className="text-xs text-text-primary leading-relaxed bg-surface rounded-lg p-3 border border-border/50">
                     {step1Data.mandate_text}
                   </p>
@@ -661,7 +664,7 @@ export default function NewMandatePage() {
               <Card padding="md">
                 <div className="flex items-center gap-2 mb-4">
                   <Shield className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-text-primary">Risk Parameters</h3>
+                  <h3 className="text-sm font-semibold text-text-primary">{t('Risk Parameters')}</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
@@ -672,22 +675,22 @@ export default function NewMandatePage() {
                     ['Cooldown After Loss',  `${step2Data.cooldownHours}h`],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between items-center py-1.5 border-b border-border/40 last:border-0">
-                      <span className="text-xs text-text-secondary">{k}</span>
+                      <span className="text-xs text-text-secondary">{t(k)}</span>
                       <span className="text-xs font-bold text-text-primary">{v}</span>
                     </div>
                   ))}
                 </div>
               </Card>
 
-              <PolicyHashCard hash={policyHash} />
+              <PolicyHashCard hash={policyHash} t={t} />
 
               {!policyHash && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning/5 p-4">
                   <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-semibold text-warning">Policy hash missing</p>
+                    <p className="text-xs font-semibold text-warning">{t('Policy hash missing')}</p>
                     <p className="text-xs text-text-secondary mt-0.5">
-                      Go back to Step 1 and enter your mandate text so Claude can generate the policy hash.
+                      {t('Go back to Step 1 and enter your mandate text so Claude can generate the policy hash.')}
                     </p>
                   </div>
                 </div>
@@ -696,7 +699,7 @@ export default function NewMandatePage() {
           </div>
 
           {createApiError && (
-            <AlertBanner severity="error" title="Creation failed">
+            <AlertBanner severity="error" title={t('Creation failed')}>
               {createApiError}
             </AlertBanner>
           )}
@@ -704,19 +707,19 @@ export default function NewMandatePage() {
           <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => setStep(2)} type="button">
               <ChevronLeft className="h-4 w-4" />
-              Back
+              {t('Back')}
             </Button>
             <Button size="lg" onClick={onDeploy} loading={creating}>
               <CheckCircle2 className="h-4 w-4" />
-              Save Mandate
+              {t('Save Mandate')}
             </Button>
           </div>
 
           <div className="flex items-start gap-2 text-xs text-text-secondary bg-surface/50 rounded-lg p-3 border border-border/50">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <p>
-              This saves your mandate. To deploy a live trading agent, open the mandate and click{' '}
-              <strong className="text-text-primary">Deploy Agent</strong> after connecting your Mantle wallet.
+              {t('This saves your mandate. To deploy a live trading agent, open the mandate and click')}{' '}
+              <strong className="text-text-primary">{t('Deploy Agent')}</strong> {t('after connecting your Mantle wallet.')}
             </p>
           </div>
         </div>
