@@ -18,6 +18,7 @@ import { useMandate, useUpdateMandate, useParsePreview } from '@/hooks/useMandat
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import { useTranslation } from '@/hooks/useTranslation'
+import { usePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
 import type { BadgeVariant } from '@/components/ui/Badge'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -132,6 +133,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
   const { id }   = params
   const router   = useRouter()
   const t        = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
 
   const { data: mandate, isLoading } = useMandate(id)
   const { mutate: update, isPending: saving, error: updateError } = useUpdateMandate(id)
@@ -238,7 +240,7 @@ export default function MandateEditPage({ params }: { params: { id: string } }) 
     )
   }
 
-  const deployedLabel = mandate.createdAt ? formatDate(mandate.createdAt) : null
+  const deployedLabel = mandate.createdAt ? formatDate(mandate.createdAt, prefs) : null
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">
