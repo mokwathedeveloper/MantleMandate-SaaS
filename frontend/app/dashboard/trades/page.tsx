@@ -7,7 +7,9 @@ import {
 } from 'lucide-react'
 import { useTrades } from '@/hooks/useTrades'
 import { useAuthStore } from '@/store/authStore'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
+import { usePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
+import { useTranslation } from '@/hooks/useTranslation'
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import type { Trade } from '@/types/trade'
 
@@ -66,10 +68,12 @@ const STATUS_CLASS: Record<string, string> = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function TradesPage() {
+  const t = useTranslation()
   const [page,   setPage]   = useState(1)
   const [filter, setFilter] = useState<Filter>({})
 
   const { user } = useAuthStore()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const { data: apiData, isLoading, isError } = useTrades({
     page,
     per_page: 25,
@@ -140,17 +144,17 @@ export default function TradesPage() {
       {/* Error banner */}
       {isError && (
         <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 flex items-center gap-2">
-          <span className="text-sm font-semibold text-error">API error</span>
-          <span className="text-sm text-text-secondary">— couldn&apos;t load trade history.</span>
+          <span className="text-sm font-semibold text-error">{t('API error')}</span>
+          <span className="text-sm text-text-secondary">— {t("couldn't load trade history.")}</span>
         </div>
       )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Trade History</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('Trade History')}</h2>
           <p className="text-sm text-text-secondary mt-1">
-            All trade executions across agents and protocols
+            {t('All trade executions across agents and protocols')}
           </p>
         </div>
         <button
@@ -158,46 +162,46 @@ export default function TradesPage() {
           className="self-start sm:self-auto inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md text-sm border border-border bg-card text-text-secondary hover:text-text-primary hover:border-text-disabled transition-colors shrink-0"
         >
           <Download className="h-3.5 w-3.5" />
-          Export CSV
+          {t('Export CSV')}
         </button>
       </div>
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total Trades" value={String(stats.total)} />
+        <KpiCard label={t('Total Trades')} value={String(stats.total)} />
         <KpiCard
-          label="Successful"
+          label={t('Successful')}
           value={String(stats.success)}
           valueClass="text-success"
         />
         <KpiCard
-          label="Failed"
+          label={t('Failed')}
           value={String(stats.failed)}
           valueClass={stats.failed > 0 ? 'text-error' : undefined}
         />
         <KpiCard
-          label="Total P&L"
-          value={`${stats.totalPnl >= 0 ? '+' : ''}$${Math.abs(stats.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          label={t('Total P&L')}
+          value={`${stats.totalPnl >= 0 ? '+' : '-'}${formatCurrency(Math.abs(stats.totalPnl), prefs)}`}
           valueClass={stats.totalPnl >= 0 ? 'text-success' : 'text-error'}
         />
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterPill label="All"     active={!filter.status && !filter.direction} onClick={() => setFilter({})} />
-        <FilterPill label="Success" active={filter.status === 'success'} onClick={() => toggleStatus('success')} />
-        <FilterPill label="Failed"  active={filter.status === 'failed'}  onClick={() => toggleStatus('failed')} />
-        <FilterPill label="Pending" active={filter.status === 'pending'} onClick={() => toggleStatus('pending')} />
+        <FilterPill label={t('All')}     active={!filter.status && !filter.direction} onClick={() => setFilter({})} />
+        <FilterPill label={t('Success')} active={filter.status === 'success'} onClick={() => toggleStatus('success')} />
+        <FilterPill label={t('Failed')}  active={filter.status === 'failed'}  onClick={() => toggleStatus('failed')} />
+        <FilterPill label={t('Pending')} active={filter.status === 'pending'} onClick={() => toggleStatus('pending')} />
         <div className="w-px h-6 bg-border mx-1" />
-        <FilterPill label="Buys"  active={filter.direction === 'buy'}  onClick={() => toggleDir('buy')} />
-        <FilterPill label="Sells" active={filter.direction === 'sell'} onClick={() => toggleDir('sell')} />
+        <FilterPill label={t('Buys')}  active={filter.direction === 'buy'}  onClick={() => toggleDir('buy')} />
+        <FilterPill label={t('Sells')} active={filter.direction === 'sell'} onClick={() => toggleDir('sell')} />
 
         {/* Search */}
         <div className="relative sm:ml-auto w-full sm:w-auto">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           <input
             name="trade-search"
-            placeholder="Search pair, mandate, tx…"
+            placeholder={t('Search pair, mandate, tx…')}
             value={filter.search ?? ''}
             onChange={e => setFilter(f => ({ ...f, search: e.target.value || undefined }))}
             className="w-full sm:w-56 h-8 pl-8 pr-8 rounded-md border border-border bg-page text-text-primary text-xs placeholder:text-text-disabled focus:outline-none focus:border-primary"
@@ -226,7 +230,7 @@ export default function TradesPage() {
                     scope="col"
                     className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary whitespace-nowrap"
                   >
-                    {h}
+                    {t(h)}
                   </th>
                 ))}
               </tr>
@@ -245,72 +249,72 @@ export default function TradesPage() {
                   <td colSpan={9} className="py-16">
                     <div className="flex flex-col items-center justify-center gap-3 text-center">
                       <Activity className="h-10 w-10 text-text-secondary opacity-40" />
-                      <p className="text-sm font-semibold text-text-primary">No trades found</p>
+                      <p className="text-sm font-semibold text-text-primary">{t('No trades found')}</p>
                       <p className="text-xs text-text-secondary">
-                        {Object.keys(filter).length > 0 ? 'Try clearing the filters' : 'Deploy an agent to start trading'}
+                        {Object.keys(filter).length > 0 ? t('Try clearing the filters') : t('Deploy an agent to start trading')}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                visibleTrades.map(t => {
-                  const pnlPositive = t.pnl != null && t.pnl >= 0
-                  const pnlClass    = t.pnl == null ? 'text-text-disabled' : pnlPositive ? 'text-success' : 'text-error'
+                visibleTrades.map(trd => {
+                  const pnlPositive = trd.pnl != null && trd.pnl >= 0
+                  const pnlClass    = trd.pnl == null ? 'text-text-disabled' : pnlPositive ? 'text-success' : 'text-error'
                   return (
                     <tr
-                      key={t.id}
+                      key={trd.id}
                       className="border-b border-border/60 last:border-b-0 hover:bg-surface transition-colors"
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <TokenIcon symbol={t.assetPair.split('/')[0]} size="sm" />
-                          <span className="text-[13px] font-semibold text-text-primary">{t.assetPair}</span>
+                          <TokenIcon symbol={trd.assetPair.split('/')[0]} size="sm" />
+                          <span className="text-[13px] font-semibold text-text-primary">{trd.assetPair}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          {t.direction === 'buy'
+                          {trd.direction === 'buy'
                             ? <TrendingUp className="h-3 w-3 text-success" />
                             : <TrendingDown className="h-3 w-3 text-error" />
                           }
                           <span className={cn(
                             'text-[11px] font-bold uppercase',
-                            t.direction === 'buy' ? 'text-success' : 'text-error',
+                            trd.direction === 'buy' ? 'text-success' : 'text-error',
                           )}>
-                            {t.direction}
+                            {t(trd.direction)}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-text-primary tabular-nums whitespace-nowrap">
-                        ${t.amountUsd.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                        {formatCurrency(trd.amountUsd, prefs, { minimumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-xs text-text-secondary tabular-nums whitespace-nowrap">
-                        ${t.price.toFixed(t.price > 100 ? 2 : 4)}
+                        {formatCurrency(trd.price, prefs, { minimumFractionDigits: trd.price > 100 ? 2 : 4 })}
                       </td>
                       <td className={cn('px-4 py-3 text-xs font-semibold tabular-nums whitespace-nowrap', pnlClass)}>
-                        {t.pnl != null ? `${pnlPositive ? '+' : ''}$${Math.abs(t.pnl).toFixed(2)}` : '—'}
+                        {trd.pnl != null ? `${pnlPositive ? '+' : '-'}${formatCurrency(Math.abs(trd.pnl), prefs)}` : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           {/* Brand-specific dot color stays inline */}
                           <div
                             className="h-2 w-2 rounded-full shrink-0"
-                            style={{ background: PROTOCOL_COLORS[t.protocol] ?? '#8B949E' }}
+                            style={{ background: PROTOCOL_COLORS[trd.protocol] ?? '#8B949E' }}
                           />
                           <span className="text-[11px] text-text-secondary whitespace-nowrap">
-                            {PROTOCOL_LABELS[t.protocol] ?? t.protocol}
+                            {t(PROTOCOL_LABELS[trd.protocol] ?? trd.protocol)}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {t.txHash ? (
+                        {trd.txHash ? (
                           <a
-                            href={`https://explorer.sepolia.mantle.xyz/tx/${t.txHash}`}
+                            href={`https://explorer.sepolia.mantle.xyz/tx/${trd.txHash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-[11px] text-text-link hover:text-text-link-hover transition-colors font-mono"
                           >
-                            {t.txHash.slice(0, 8)}…{t.txHash.slice(-4)}
+                            {trd.txHash.slice(0, 8)}…{trd.txHash.slice(-4)}
                             <ExternalLink className="h-2.5 w-2.5 shrink-0" />
                           </a>
                         ) : (
@@ -320,16 +324,13 @@ export default function TradesPage() {
                       <td className="px-4 py-3">
                         <span className={cn(
                           'text-[10px] font-bold uppercase px-1.5 py-0.5 rounded whitespace-nowrap',
-                          STATUS_CLASS[t.status] ?? 'bg-card text-text-secondary border border-border',
+                          STATUS_CLASS[trd.status] ?? 'bg-card text-text-secondary border border-border',
                         )}>
-                          {t.status}
+                          {t(trd.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-[11px] text-text-disabled whitespace-nowrap">
-                        {new Date(t.createdAt).toLocaleString('en-US', {
-                          month: 'short', day: 'numeric',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
+                        {formatDateTime(trd.createdAt, prefs)}
                       </td>
                     </tr>
                   )
@@ -344,7 +345,10 @@ export default function TradesPage() {
       {totalPages > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-xs text-text-secondary">
-            {visibleTrades.length} trades · Page {page} of {totalPages}
+            {t(visibleTrades.length === 1 ? '{n} trade · Page {page} of {total}' : '{n} trades · Page {page} of {total}')
+              .replace('{n}', String(visibleTrades.length))
+              .replace('{page}', String(page))
+              .replace('{total}', String(totalPages))}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -353,14 +357,14 @@ export default function TradesPage() {
               className="inline-flex items-center gap-1 h-8 px-3 rounded-md text-xs border border-border text-text-secondary hover:border-text-disabled hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              Prev
+              {t('Prev')}
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage(p => p + 1)}
               className="inline-flex items-center gap-1 h-8 px-3 rounded-md text-xs border border-border text-text-secondary hover:border-text-disabled hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Next
+              {t('Next')}
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
