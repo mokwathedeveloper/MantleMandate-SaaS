@@ -8,6 +8,7 @@ import {
   BookOpen, Zap, Code2, FileCode2, Shield, Puzzle,
   ExternalLink, Copy, CheckCircle2,
 } from 'lucide-react'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,23 +81,24 @@ function Warning({ children }: { children: React.ReactNode }) {
 
 // ─── Article content ──────────────────────────────────────────────────────────
 
-const ARTICLES: Record<string, React.ReactNode> = {
+function getArticles(t: (s: string) => string): Record<string, React.ReactNode> {
+  return {
 
   /* ── Getting Started ─────────────────────────────────────────── */
 
   'write-first-mandate': (
     <>
-      <P>A mandate is a plain-English description of your trading strategy. You write it in natural language; Claude compiles it into a verifiable, on-chain policy. No coding required.</P>
-      <H2>Step 1 — Navigate to New Mandate</H2>
-      <P>Go to <strong>Dashboard → Mandates → New Mandate</strong>. You&apos;ll see a large text area and a live parsing panel on the right.</P>
-      <H2>Step 2 — Write your strategy</H2>
-      <P>Describe your rules in plain English. Be specific about entry conditions, exit conditions, and risk limits. Example:</P>
+      <P>{t('A mandate is a plain-English description of your trading strategy. You write it in natural language; Claude compiles it into a verifiable, on-chain policy. No coding required.')}</P>
+      <H2>{t('Step 1 — Navigate to New Mandate')}</H2>
+      <P>{t('Go to')} <strong>{t('Dashboard → Mandates → New Mandate')}</strong>. {t("You'll see a large text area and a live parsing panel on the right.")}</P>
+      <H2>{t('Step 2 — Write your strategy')}</H2>
+      <P>{t('Describe your rules in plain English. Be specific about entry conditions, exit conditions, and risk limits. Example:')}</P>
       <Pre>{`Buy ETH when the 1-hour RSI drops below 30 AND price is above the 200-day
 moving average. Sell when RSI exceeds 70 or the position loses 4% from entry.
 Never risk more than 2% of the portfolio on a single trade.
 Do not trade between midnight and 6am UTC.`}</Pre>
-      <H2>Step 3 — Review the parsed policy</H2>
-      <P>Click <strong>Parse Mandate</strong>. Claude extracts your rules into a structured JSON policy. Review it carefully — every field represents an enforceable rule:</P>
+      <H2>{t('Step 3 — Review the parsed policy')}</H2>
+      <P>{t('Click')} <strong>{t('Parse Mandate')}</strong>. {t('Claude extracts your rules into a structured JSON policy. Review it carefully — every field represents an enforceable rule:')}</P>
       <Pre>{`{
   "pairs": ["ETHUSDT"],
   "entry": { "rsi_1h": { "lt": 30 }, "ma_200d": "above" },
@@ -104,55 +106,55 @@ Do not trade between midnight and 6am UTC.`}</Pre>
   "sizing": { "max_risk_pct": 2 },
   "schedule": { "blackout_utc": ["00:00", "06:00"] }
 }`}</Pre>
-      <H2>Step 4 — Deploy to Mantle</H2>
-      <P>Click <strong>Deploy Mandate</strong>. This hashes the JSON policy using keccak256 and stores the hash on <Code>MandatePolicy.sol</Code> on Mantle. You&apos;ll receive a policy hash and a Mantle Explorer link.</P>
-      <Note>Your private key never leaves your wallet. The deploy transaction only stores the hash — not your personal strategy details.</Note>
-      <H2>What happens next</H2>
-      <P>Your mandate is now live. Assign it to an agent in <strong>Dashboard → Agents → Deploy New Agent</strong> and the agent will execute trades that conform to your policy, with every decision logged on-chain.</P>
+      <H2>{t('Step 4 — Deploy to Mantle')}</H2>
+      <P>{t('Click')} <strong>{t('Deploy Mandate')}</strong>. {t("This hashes the JSON policy using keccak256 and stores the hash on")} <Code>MandatePolicy.sol</Code> {t('on Mantle. You\'ll receive a policy hash and a Mantle Explorer link.')}</P>
+      <Note>{t('Your private key never leaves your wallet. The deploy transaction only stores the hash — not your personal strategy details.')}</Note>
+      <H2>{t('What happens next')}</H2>
+      <P>{t('Your mandate is now live. Assign it to an agent in')} <strong>{t('Dashboard → Agents → Deploy New Agent')}</strong> {t('and the agent will execute trades that conform to your policy, with every decision logged on-chain.')}</P>
     </>
   ),
 
   'deploy-first-agent': (
     <>
-      <P>An agent is an automated process that monitors markets in real-time and executes trades when your mandate&apos;s conditions are met. Each agent is bound to exactly one mandate on-chain.</P>
-      <H2>Prerequisites</H2>
+      <P>{t("An agent is an automated process that monitors markets in real-time and executes trades when your mandate's conditions are met. Each agent is bound to exactly one mandate on-chain.")}</P>
+      <H2>{t('Prerequisites')}</H2>
       <UL>
-        <LI>A deployed mandate (see <em>Write your first mandate</em>)</LI>
-        <LI>A connected wallet (MetaMask or WalletConnect)</LI>
-        <LI>Bybit API keys added in <strong>Settings → API Keys</strong> (Read + Trade permissions)</LI>
+        <LI>{t('A deployed mandate (see')} <em>{t('Write your first mandate')}</em>)</LI>
+        <LI>{t('A connected wallet (MetaMask or WalletConnect)')}</LI>
+        <LI>{t('Bybit API keys added in')} <strong>{t('Settings → API Keys')}</strong> ({t('Read + Trade permissions')})</LI>
       </UL>
-      <H2>Step 1 — Open the deploy wizard</H2>
-      <P>Go to <strong>Dashboard → Agents → Deploy New Agent</strong>. The 4-step wizard opens.</P>
-      <H2>Step 2 — Select your mandate</H2>
-      <P>Choose the mandate this agent will follow. The policy hash is displayed — verify it matches what you see on the Mandates page.</P>
-      <H2>Step 3 — Set execution parameters</H2>
+      <H2>{t('Step 1 — Open the deploy wizard')}</H2>
+      <P>{t('Go to')} <strong>{t('Dashboard → Agents → Deploy New Agent')}</strong>. {t('The 4-step wizard opens.')}</P>
+      <H2>{t('Step 2 — Select your mandate')}</H2>
+      <P>{t('Choose the mandate this agent will follow. The policy hash is displayed — verify it matches what you see on the Mandates page.')}</P>
+      <H2>{t('Step 3 — Set execution parameters')}</H2>
       <UL>
-        <LI><strong>Capital allocation</strong> — the USD amount the agent is allowed to deploy (e.g. $5,000)</LI>
-        <LI><strong>Max position size</strong> — largest single trade as % of allocation (e.g. 2% = max $100 per trade on a $5,000 allocation)</LI>
-        <LI><strong>Allowed pairs</strong> — which assets the agent may trade (ETHUSDT, BTCUSDT, MANTUSDT)</LI>
-        <LI><strong>Execution mode</strong> — Live (real orders) or Paper (simulated, no real trades)</LI>
+        <LI><strong>{t('Capital allocation')}</strong> {t('— the USD amount the agent is allowed to deploy (e.g. $5,000)')}</LI>
+        <LI><strong>{t('Max position size')}</strong> {t('— largest single trade as % of allocation (e.g. 2% = max $100 per trade on a $5,000 allocation)')}</LI>
+        <LI><strong>{t('Allowed pairs')}</strong> {t('— which assets the agent may trade (ETHUSDT, BTCUSDT, MANTUSDT)')}</LI>
+        <LI><strong>{t('Execution mode')}</strong> {t('— Live (real orders) or Paper (simulated, no real trades)')}</LI>
       </UL>
-      <Warning>Start in Paper mode until you&apos;ve verified the agent behaves as expected. You can switch to Live at any time from the agent detail page.</Warning>
-      <H2>Step 4 — Deploy on-chain</H2>
-      <P>Click <strong>Deploy Agent</strong>. Your wallet signs a transaction calling <Code>AgentExecutor.sol</Code>, registering the agent with its policy hash. Gas on Mantle is typically less than $0.01.</P>
-      <H2>Monitoring your agent</H2>
-      <P>Once deployed, the agent appears in <strong>Dashboard → Agents</strong> with status <Code>RUNNING</Code>. Click into the agent to see real-time logs, position history, and the on-chain audit trail.</P>
+      <Warning>{t("Start in Paper mode until you've verified the agent behaves as expected. You can switch to Live at any time from the agent detail page.")}</Warning>
+      <H2>{t('Step 4 — Deploy on-chain')}</H2>
+      <P>{t('Click')} <strong>{t('Deploy Agent')}</strong>. {t('Your wallet signs a transaction calling')} <Code>AgentExecutor.sol</Code>, {t('registering the agent with its policy hash. Gas on Mantle is typically less than $0.01.')}</P>
+      <H2>{t('Monitoring your agent')}</H2>
+      <P>{t('Once deployed, the agent appears in')} <strong>{t('Dashboard → Agents')}</strong> {t('with status')} <Code>RUNNING</Code>. {t('Click into the agent to see real-time logs, position history, and the on-chain audit trail.')}</P>
     </>
   ),
 
   'connect-wallet': (
     <>
-      <P>Your wallet is your identity on Mantle. MantleMandate uses it to sign mandate deployments and authenticate on-chain agent registrations. Your private key never leaves your device.</P>
-      <H2>Supported wallets</H2>
+      <P>{t('Your wallet is your identity on Mantle. MantleMandate uses it to sign mandate deployments and authenticate on-chain agent registrations. Your private key never leaves your device.')}</P>
+      <H2>{t('Supported wallets')}</H2>
       <UL>
-        <LI><strong>MetaMask</strong> — recommended for desktop</LI>
-        <LI><strong>WalletConnect</strong> — Rainbow, Trust Wallet, Coinbase Wallet, Ledger Live, and 300+ others</LI>
-        <LI><strong>Injected provider</strong> — any EIP-1193 compatible browser extension</LI>
+        <LI><strong>MetaMask</strong> — {t('recommended for desktop')}</LI>
+        <LI><strong>WalletConnect</strong> — {t('Rainbow, Trust Wallet, Coinbase Wallet, Ledger Live, and 300+ others')}</LI>
+        <LI><strong>{t('Injected provider')}</strong> — {t('any EIP-1193 compatible browser extension')}</LI>
       </UL>
-      <H2>How to connect</H2>
-      <P>Click <strong>Connect Wallet</strong> in the top navigation bar. Select your provider. Approve the connection in your wallet app. You&apos;ll be asked to sign a message (no gas fee) to prove ownership.</P>
-      <H2>Switch to Mantle Network</H2>
-      <P>If your wallet is on Ethereum or another chain, MantleMandate will prompt you to switch. Click <strong>Switch Network</strong> and approve in your wallet.</P>
+      <H2>{t('How to connect')}</H2>
+      <P>{t('Click')} <strong>{t('Connect Wallet')}</strong> {t("in the top navigation bar. Select your provider. Approve the connection in your wallet app. You'll be asked to sign a message (no gas fee) to prove ownership.")}</P>
+      <H2>{t('Switch to Mantle Network')}</H2>
+      <P>{t('If your wallet is on Ethereum or another chain, MantleMandate will prompt you to switch. Click')} <strong>{t('Switch Network')}</strong> {t('and approve in your wallet.')}</P>
       <Pre>{`Network name: Mantle Mainnet
 Chain ID:     5000
 Currency:     MNT
@@ -164,40 +166,40 @@ Chain ID:     5003
 Currency:     MNT
 RPC URL:      https://rpc.sepolia.mantle.xyz
 Explorer:     https://explorer.sepolia.mantle.xyz`}</Pre>
-      <H2>Disconnect or switch wallet</H2>
-      <P>Go to <strong>Dashboard → Wallets</strong>. Click <strong>Disconnect</strong> next to the active wallet. You can then connect a different address. Note: disconnecting from the app does not revoke on-chain permissions — your deployed mandates remain active.</P>
-      <Note>MantleMandate is fully non-custodial. We never store, request, or have access to your private keys.</Note>
+      <H2>{t('Disconnect or switch wallet')}</H2>
+      <P>{t('Go to')} <strong>{t('Dashboard → Wallets')}</strong>. {t('Click')} <strong>{t('Disconnect')}</strong> {t('next to the active wallet. You can then connect a different address. Note: disconnecting from the app does not revoke on-chain permissions — your deployed mandates remain active.')}</P>
+      <Note>{t('MantleMandate is fully non-custodial. We never store, request, or have access to your private keys.')}</Note>
     </>
   ),
 
   'risk-parameters': (
     <>
-      <P>Risk parameters are the safety guardrails that limit your agent&apos;s maximum exposure. They are enforced by <Code>RiskGuard.sol</Code> on Mantle — the agent cannot bypass them regardless of market conditions or mandate instructions.</P>
-      <H2>Max Drawdown %</H2>
-      <P>A circuit breaker that automatically pauses your agent when the portfolio drops this percentage from its peak value (high-water mark). The agent sends you an alert and halts all new orders.</P>
+      <P>{t('Risk parameters are the safety guardrails that limit your agent\'s maximum exposure. They are enforced by')} <Code>RiskGuard.sol</Code> {t('on Mantle — the agent cannot bypass them regardless of market conditions or mandate instructions.')}</P>
+      <H2>{t('Max Drawdown %')}</H2>
+      <P>{t('A circuit breaker that automatically pauses your agent when the portfolio drops this percentage from its peak value (high-water mark). The agent sends you an alert and halts all new orders.')}</P>
       <Pre>{`Example: Max Drawdown = 15%
 Portfolio peak:   $10,000
 Pause threshold:  $8,500
 If portfolio drops to $8,499 → agent pauses immediately`}</Pre>
-      <H2>Max Notional per Trade</H2>
-      <P>The maximum USD value of a single order. Prevents the agent from concentrating too much capital in one trade.</P>
+      <H2>{t('Max Notional per Trade')}</H2>
+      <P>{t('The maximum USD value of a single order. Prevents the agent from concentrating too much capital in one trade.')}</P>
       <Pre>{`Example: Max Notional = 5% of allocation
 Allocation:      $10,000
 Max order size:  $500
 Any order > $500 is rejected by RiskGuard`}</Pre>
-      <H2>Stop-Loss %</H2>
-      <P>When an open position moves against you by this percentage, the agent automatically closes it. Calculated from your average entry price.</P>
+      <H2>{t('Stop-Loss %')}</H2>
+      <P>{t('When an open position moves against you by this percentage, the agent automatically closes it. Calculated from your average entry price.')}</P>
       <Pre>{`Example: Stop-Loss = 3%
 ETH entry price:  $3,000.00
 Stop-loss price:  $2,910.00
 Position closes if ETH trades at or below $2,910`}</Pre>
-      <H2>Recommended starting values</H2>
+      <H2>{t('Recommended starting values')}</H2>
       <UL>
-        <LI>Max Drawdown: <strong>10–15%</strong> for conservative, 20% for aggressive</LI>
-        <LI>Max Notional: <strong>2–3%</strong> of allocation per trade</LI>
-        <LI>Stop-Loss: <strong>2–4%</strong> for spot, 1–2% for high-frequency</LI>
+        <LI>{t('Max Drawdown:')} <strong>10–15%</strong> {t('for conservative, 20% for aggressive')}</LI>
+        <LI>{t('Max Notional:')} <strong>2–3%</strong> {t('of allocation per trade')}</LI>
+        <LI>{t('Stop-Loss:')} <strong>2–4%</strong> {t('for spot, 1–2% for high-frequency')}</LI>
       </UL>
-      <Warning>Never set Max Drawdown above 25% for fully automated strategies. Start conservative and loosen limits only after observing the agent in paper mode.</Warning>
+      <Warning>{t('Never set Max Drawdown above 25% for fully automated strategies. Start conservative and loosen limits only after observing the agent in paper mode.')}</Warning>
     </>
   ),
 
@@ -205,123 +207,123 @@ Position closes if ETH trades at or below $2,910`}</Pre>
 
   'what-is-mandate': (
     <>
-      <P>A mandate is the core governance primitive of MantleMandate. It is a plain-English description of your trading strategy that Claude compiles into a structured, cryptographically verifiable policy stored on the Mantle blockchain.</P>
-      <H2>Why mandates?</H2>
-      <P>Traditional algorithmic trading requires you to write code. Mandates let you describe your strategy in plain English — Claude handles the translation. You define the rules; the AI and the blockchain enforce them.</P>
-      <H2>The mandate lifecycle</H2>
+      <P>{t('A mandate is the core governance primitive of MantleMandate. It is a plain-English description of your trading strategy that Claude compiles into a structured, cryptographically verifiable policy stored on the Mantle blockchain.')}</P>
+      <H2>{t('Why mandates?')}</H2>
+      <P>{t('Traditional algorithmic trading requires you to write code. Mandates let you describe your strategy in plain English — Claude handles the translation. You define the rules; the AI and the blockchain enforce them.')}</P>
+      <H2>{t('The mandate lifecycle')}</H2>
       <UL>
-        <LI><strong>Write</strong> — You describe your strategy in plain English</LI>
-        <LI><strong>Parse</strong> — Claude extracts structured rules into JSON</LI>
-        <LI><strong>Hash</strong> — The JSON policy is hashed with keccak256</LI>
-        <LI><strong>Register</strong> — The hash is stored on <Code>MandatePolicy.sol</Code> on Mantle</LI>
-        <LI><strong>Execute</strong> — Every agent decision is validated against the hash</LI>
-        <LI><strong>Audit</strong> — All executions are logged on-chain, immutably</LI>
+        <LI><strong>{t('Write')}</strong> — {t('You describe your strategy in plain English')}</LI>
+        <LI><strong>{t('Parse')}</strong> — {t('Claude extracts structured rules into JSON')}</LI>
+        <LI><strong>{t('Hash')}</strong> — {t('The JSON policy is hashed with keccak256')}</LI>
+        <LI><strong>{t('Register')}</strong> — {t('The hash is stored on')} <Code>MandatePolicy.sol</Code> {t('on Mantle')}</LI>
+        <LI><strong>{t('Execute')}</strong> — {t('Every agent decision is validated against the hash')}</LI>
+        <LI><strong>{t('Audit')}</strong> — {t('All executions are logged on-chain, immutably')}</LI>
       </UL>
-      <H2>What a mandate can specify</H2>
+      <H2>{t('What a mandate can specify')}</H2>
       <UL>
-        <LI>Asset pairs (ETHUSDT, BTCUSDT, MANTUSDT, and more)</LI>
-        <LI>Entry triggers: RSI thresholds, moving average crossovers, price levels, volume conditions</LI>
-        <LI>Exit triggers: take-profit %, trailing stop, time-based expiry</LI>
-        <LI>Position sizing: fixed USD, % of portfolio, Kelly criterion (beta)</LI>
-        <LI>Time constraints: allowed trading hours, blackout periods, max hold duration</LI>
-        <LI>Risk limits: stop-loss %, max drawdown, max notional per trade</LI>
+        <LI>{t('Asset pairs (ETHUSDT, BTCUSDT, MANTUSDT, and more)')}</LI>
+        <LI>{t('Entry triggers: RSI thresholds, moving average crossovers, price levels, volume conditions')}</LI>
+        <LI>{t('Exit triggers: take-profit %, trailing stop, time-based expiry')}</LI>
+        <LI>{t('Position sizing: fixed USD, % of portfolio, Kelly criterion (beta)')}</LI>
+        <LI>{t('Time constraints: allowed trading hours, blackout periods, max hold duration')}</LI>
+        <LI>{t('Risk limits: stop-loss %, max drawdown, max notional per trade')}</LI>
       </UL>
-      <H2>What a mandate cannot do</H2>
+      <H2>{t('What a mandate cannot do')}</H2>
       <UL>
-        <LI>Override <Code>RiskGuard.sol</Code>&apos;s hard limits — they are enforced on-chain</LI>
-        <LI>Access funds outside the agent&apos;s allocated capital</LI>
-        <LI>Trade pairs or protocols not whitelisted in your policy</LI>
+        <LI>{t('Override')} <Code>RiskGuard.sol</Code> {t("'s hard limits — they are enforced on-chain")}</LI>
+        <LI>{t("Access funds outside the agent's allocated capital")}</LI>
+        <LI>{t('Trade pairs or protocols not whitelisted in your policy')}</LI>
       </UL>
-      <Note>Each mandate has a unique policy hash. If you edit your strategy, a new hash is generated and a new registration is required — preserving the full audit history of your original mandate.</Note>
+      <Note>{t('Each mandate has a unique policy hash. If you edit your strategy, a new hash is generated and a new registration is required — preserving the full audit history of your original mandate.')}</Note>
     </>
   ),
 
   'agent-lifecycle': (
     <>
-      <P>An agent moves through a defined set of states from deployment to termination. Understanding the lifecycle helps you manage agents effectively and interpret the status indicators in the dashboard.</P>
-      <H2>States</H2>
+      <P>{t('An agent moves through a defined set of states from deployment to termination. Understanding the lifecycle helps you manage agents effectively and interpret the status indicators in the dashboard.')}</P>
+      <H2>{t('States')}</H2>
       <UL>
-        <LI><strong>DEPLOYING</strong> — On-chain registration transaction is pending</LI>
-        <LI><strong>RUNNING</strong> — Agent is active, monitoring markets, and executing trades</LI>
-        <LI><strong>PAUSED</strong> — Temporarily halted (manual pause or circuit breaker triggered). Resumes when you click Resume or the condition clears.</LI>
-        <LI><strong>STOPPED</strong> — Permanently halted. Requires manual review before reactivation. Triggered by critical errors or mandate revocation.</LI>
-        <LI><strong>COMPLETED</strong> — Agent ran its full intended duration and exited cleanly</LI>
+        <LI><strong>DEPLOYING</strong> — {t('On-chain registration transaction is pending')}</LI>
+        <LI><strong>RUNNING</strong> — {t('Agent is active, monitoring markets, and executing trades')}</LI>
+        <LI><strong>PAUSED</strong> — {t('Temporarily halted (manual pause or circuit breaker triggered). Resumes when you click Resume or the condition clears.')}</LI>
+        <LI><strong>STOPPED</strong> — {t('Permanently halted. Requires manual review before reactivation. Triggered by critical errors or mandate revocation.')}</LI>
+        <LI><strong>COMPLETED</strong> — {t('Agent ran its full intended duration and exited cleanly')}</LI>
       </UL>
-      <H2>The execution loop</H2>
-      <P>Every <strong>30 seconds</strong>, a RUNNING agent:</P>
+      <H2>{t('The execution loop')}</H2>
+      <P>{t('Every')} <strong>{t('30 seconds')}</strong>, {t('a RUNNING agent:')}</P>
       <UL>
-        <LI>Fetches the latest market data from Bybit (price, volume, indicators)</LI>
-        <LI>Reads current on-chain state (block number, gas price) from the Mantle RPC</LI>
-        <LI>Calls the AI decision engine with the market snapshot and mandate policy</LI>
-        <LI>If the AI recommends a trade, calls <Code>RiskGuard.sol</Code> to validate the order</LI>
-        <LI>If validation passes, submits the order to Bybit and emits an <Code>OrderExecuted</Code> event on Mantle</LI>
+        <LI>{t('Fetches the latest market data from Bybit (price, volume, indicators)')}</LI>
+        <LI>{t('Reads current on-chain state (block number, gas price) from the Mantle RPC')}</LI>
+        <LI>{t('Calls the AI decision engine with the market snapshot and mandate policy')}</LI>
+        <LI>{t('If the AI recommends a trade, calls')} <Code>RiskGuard.sol</Code> {t('to validate the order')}</LI>
+        <LI>{t('If validation passes, submits the order to Bybit and emits an')} <Code>OrderExecuted</Code> {t('event on Mantle')}</LI>
       </UL>
-      <H2>Circuit breakers</H2>
-      <P>The agent pauses automatically when:</P>
+      <H2>{t('Circuit breakers')}</H2>
+      <P>{t('The agent pauses automatically when:')}</P>
       <UL>
-        <LI>Portfolio drawdown exceeds the Max Drawdown % parameter</LI>
-        <LI>A single order would exceed the Max Notional per Trade limit</LI>
-        <LI>Three consecutive API errors occur (Bybit rate limit or network issue)</LI>
-        <LI>The mandate policy hash cannot be verified on-chain</LI>
+        <LI>{t('Portfolio drawdown exceeds the Max Drawdown % parameter')}</LI>
+        <LI>{t('A single order would exceed the Max Notional per Trade limit')}</LI>
+        <LI>{t('Three consecutive API errors occur (Bybit rate limit or network issue)')}</LI>
+        <LI>{t('The mandate policy hash cannot be verified on-chain')}</LI>
       </UL>
-      <H2>Resuming a paused agent</H2>
-      <P>Go to <strong>Dashboard → Agents</strong>, click the agent, then click <strong>Resume</strong>. Resolve the underlying issue first — resuming without fixing the root cause will trigger the same pause again.</P>
+      <H2>{t('Resuming a paused agent')}</H2>
+      <P>{t('Go to')} <strong>{t('Dashboard → Agents')}</strong>, {t('click the agent, then click')} <strong>{t('Resume')}</strong>. {t('Resolve the underlying issue first — resuming without fixing the root cause will trigger the same pause again.')}</P>
     </>
   ),
 
   'onchain-execution': (
     <>
-      <P>MantleMandate uses Mantle Network as its settlement and audit layer. Every mandate deployment, agent registration, and trade execution is recorded on-chain — creating a tamper-proof compliance trail.</P>
-      <H2>Why Mantle?</H2>
-      <P>Mantle is an EVM-compatible Layer 2 built on Ethereum with near-instant finality and gas costs under $0.01. This makes it practical to record individual trades on-chain — something that would be prohibitively expensive on Ethereum mainnet.</P>
-      <H2>The three contracts</H2>
+      <P>{t('MantleMandate uses Mantle Network as its settlement and audit layer. Every mandate deployment, agent registration, and trade execution is recorded on-chain — creating a tamper-proof compliance trail.')}</P>
+      <H2>{t('Why Mantle?')}</H2>
+      <P>{t('Mantle is an EVM-compatible Layer 2 built on Ethereum with near-instant finality and gas costs under $0.01. This makes it practical to record individual trades on-chain — something that would be prohibitively expensive on Ethereum mainnet.')}</P>
+      <H2>{t('The three contracts')}</H2>
       <UL>
-        <LI><Code>MandatePolicy.sol</Code> — stores and verifies policy hashes. Called when you deploy a mandate.</LI>
-        <LI><Code>AgentExecutor.sol</Code> — registers agents and emits <Code>OrderExecuted</Code> events. Called by the execution engine after every successful trade.</LI>
-        <LI><Code>RiskGuard.sol</Code> — validates each proposed order against configured risk limits. Called before every trade.</LI>
+        <LI><Code>MandatePolicy.sol</Code> — {t('stores and verifies policy hashes. Called when you deploy a mandate.')}</LI>
+        <LI><Code>AgentExecutor.sol</Code> — {t('registers agents and emits')} <Code>OrderExecuted</Code> {t('events. Called by the execution engine after every successful trade.')}</LI>
+        <LI><Code>RiskGuard.sol</Code> — {t('validates each proposed order against configured risk limits. Called before every trade.')}</LI>
       </UL>
-      <H2>Transaction flow for a single trade</H2>
+      <H2>{t('Transaction flow for a single trade')}</H2>
       <Pre>{`1. Agent execution loop fires (every 30s)
 2. AI engine evaluates mandate conditions → BUY ETHUSDT $500
 3. POST /order to Bybit API → orderId: 12345678
 4. AgentExecutor.executeOrder(policyHash, "ETHUSDT", 500, "BUY")
    → emits OrderExecuted(policyHash, pair, amount, side, orderId, ts)
 5. Event visible on Mantle Explorer immediately`}</Pre>
-      <H2>Verifying a trade on Mantle Explorer</H2>
-      <P>Every <Code>OrderExecuted</Code> event in the Audit tab has a TX hash. Clicking it opens the transaction on Mantle Explorer where you can inspect the full event log, including the policy hash that authorised the trade.</P>
-      <Note>The on-chain record cannot be modified or deleted. Even if you revoke a mandate, past executions remain permanently visible — providing a complete, trustless audit trail.</Note>
+      <H2>{t('Verifying a trade on Mantle Explorer')}</H2>
+      <P>{t('Every')} <Code>OrderExecuted</Code> {t('event in the Audit tab has a TX hash. Clicking it opens the transaction on Mantle Explorer where you can inspect the full event log, including the policy hash that authorised the trade.')}</P>
+      <Note>{t('The on-chain record cannot be modified or deleted. Even if you revoke a mandate, past executions remain permanently visible — providing a complete, trustless audit trail.')}</Note>
     </>
   ),
 
   'risk-engine-deep-dive': (
     <>
-      <P>The risk engine is a two-layer system: an off-chain pre-check powered by the AI decision engine, and an on-chain hard stop enforced by <Code>RiskGuard.sol</Code>. Both must pass before a trade executes.</P>
-      <H2>Layer 1 — AI pre-check (off-chain)</H2>
-      <P>Before proposing any order, the AI engine checks the mandate&apos;s own risk rules:</P>
+      <P>{t('The risk engine is a two-layer system: an off-chain pre-check powered by the AI decision engine, and an on-chain hard stop enforced by')} <Code>RiskGuard.sol</Code>. {t('Both must pass before a trade executes.')}</P>
+      <H2>{t('Layer 1 — AI pre-check (off-chain)')}</H2>
+      <P>{t("Before proposing any order, the AI engine checks the mandate's own risk rules:")}</P>
       <UL>
-        <LI>Is the proposed order within the mandate&apos;s position sizing rules?</LI>
-        <LI>Is the current portfolio below the drawdown limit?</LI>
-        <LI>Is this trade within the mandate&apos;s allowed trading hours?</LI>
-        <LI>Does the order respect the mandate&apos;s stop-loss configuration?</LI>
+        <LI>{t("Is the proposed order within the mandate's position sizing rules?")}</LI>
+        <LI>{t('Is the current portfolio below the drawdown limit?')}</LI>
+        <LI>{t("Is this trade within the mandate's allowed trading hours?")}</LI>
+        <LI>{t("Does the order respect the mandate's stop-loss configuration?")}</LI>
       </UL>
-      <P>If any check fails, the AI logs the rejection and skips the cycle. No blockchain transaction is created.</P>
-      <H2>Layer 2 — RiskGuard.sol (on-chain)</H2>
-      <P>Even if the AI approves the trade, <Code>RiskGuard.sol</Code> performs its own independent validation using the risk parameters you set in <strong>Dashboard → Risk</strong>:</P>
+      <P>{t('If any check fails, the AI logs the rejection and skips the cycle. No blockchain transaction is created.')}</P>
+      <H2>{t('Layer 2 — RiskGuard.sol (on-chain)')}</H2>
+      <P>{t('Even if the AI approves the trade,')} <Code>RiskGuard.sol</Code> {t('performs its own independent validation using the risk parameters you set in')} <strong>{t('Dashboard → Risk')}</strong>:</P>
       <Pre>{`function validateOrder(
   address agent,
   bytes32 policyHash,
   uint256 notionalUSD,
   uint256 currentDrawdownBps
 ) external view returns (bool valid, string memory reason)`}</Pre>
-      <P>This function reverts if:</P>
+      <P>{t('This function reverts if:')}</P>
       <UL>
-        <LI><Code>notionalUSD</Code> exceeds the Max Notional per Trade limit</LI>
-        <LI><Code>currentDrawdownBps</Code> exceeds the Max Drawdown basis points</LI>
-        <LI>The agent is not registered under the given <Code>policyHash</Code></LI>
+        <LI><Code>notionalUSD</Code> {t('exceeds the Max Notional per Trade limit')}</LI>
+        <LI><Code>currentDrawdownBps</Code> {t('exceeds the Max Drawdown basis points')}</LI>
+        <LI>{t('The agent is not registered under the given')} <Code>policyHash</Code></LI>
       </UL>
-      <H2>Why two layers?</H2>
-      <P>The off-chain AI check is fast and catches most rejections without spending gas. The on-chain check is the unforgeable backstop — it cannot be bypassed even if the AI engine is compromised or produces incorrect output.</P>
-      <Warning>The on-chain limits are independent of your mandate&apos;s rules. Even if your mandate says &quot;risk 10% per trade,&quot; RiskGuard will reject the order if you&apos;ve configured a 2% Max Notional limit in the Risk dashboard.</Warning>
+      <H2>{t('Why two layers?')}</H2>
+      <P>{t('The off-chain AI check is fast and catches most rejections without spending gas. The on-chain check is the unforgeable backstop — it cannot be bypassed even if the AI engine is compromised or produces incorrect output.')}</P>
+      <Warning>{t('The on-chain limits are independent of your mandate\'s rules. Even if your mandate says "risk 10% per trade," RiskGuard will reject the order if you\'ve configured a 2% Max Notional limit in the Risk dashboard.')}</Warning>
     </>
   ),
 
@@ -329,8 +331,8 @@ Position closes if ETH trades at or below $2,910`}</Pre>
 
   'auth-jwt': (
     <>
-      <P>All MantleMandate API endpoints require a valid JWT issued by Supabase Auth. The JWT is automatically attached to requests when you&apos;re signed in via the dashboard. For direct API access, obtain a token using the auth endpoint below.</P>
-      <H2>Obtain a token</H2>
+      <P>{t("All MantleMandate API endpoints require a valid JWT issued by Supabase Auth. The JWT is automatically attached to requests when you're signed in via the dashboard. For direct API access, obtain a token using the auth endpoint below.")}</P>
+      <H2>{t('Obtain a token')}</H2>
       <Pre>{`POST https://your-project.supabase.co/auth/v1/token?grant_type=password
 Content-Type: application/json
 
@@ -346,28 +348,28 @@ Response:
   "expires_in": 3600,
   "refresh_token": "..."
 }`}</Pre>
-      <H2>Use the token</H2>
-      <P>Pass the access token in the <Code>Authorization</Code> header on every API request:</P>
+      <H2>{t('Use the token')}</H2>
+      <P>{t('Pass the access token in the')} <Code>Authorization</Code> {t('header on every API request:')}</P>
       <Pre>{`GET /api/mandates
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}</Pre>
-      <H2>Token expiry & refresh</H2>
-      <P>Access tokens expire after <strong>1 hour</strong>. Use the refresh token to obtain a new access token without re-entering credentials:</P>
+      <H2>{t('Token expiry & refresh')}</H2>
+      <P>{t('Access tokens expire after')} <strong>{t('1 hour')}</strong>. {t('Use the refresh token to obtain a new access token without re-entering credentials:')}</P>
       <Pre>{`POST https://your-project.supabase.co/auth/v1/token?grant_type=refresh_token
 Content-Type: application/json
 
 { "refresh_token": "your-refresh-token" }`}</Pre>
-      <H2>Error responses</H2>
+      <H2>{t('Error responses')}</H2>
       <UL>
-        <LI><Code>401 Unauthorized</Code> — missing or invalid token</LI>
-        <LI><Code>403 Forbidden</Code> — token is valid but lacks permission for this resource</LI>
+        <LI><Code>401 Unauthorized</Code> — {t('missing or invalid token')}</LI>
+        <LI><Code>403 Forbidden</Code> — {t('token is valid but lacks permission for this resource')}</LI>
       </UL>
     </>
   ),
 
   'mandates-endpoints': (
     <>
-      <P>The Mandates API lets you list, create, and inspect mandates programmatically.</P>
-      <H2>List mandates</H2>
+      <P>{t('The Mandates API lets you list, create, and inspect mandates programmatically.')}</P>
+      <H2>{t('List mandates')}</H2>
       <Pre>{`GET /api/mandates
 Authorization: Bearer <token>
 
@@ -384,7 +386,7 @@ Response 200:
     }
   ]
 }`}</Pre>
-      <H2>Parse a mandate (preview only)</H2>
+      <H2>{t('Parse a mandate (preview only)')}</H2>
       <Pre>{`POST /api/mandates/parse
 Authorization: Bearer <token>
 Content-Type: application/json
@@ -400,7 +402,7 @@ Response 200:
   },
   "policyHash": "0xdef456..."
 }`}</Pre>
-      <H2>Deploy a mandate</H2>
+      <H2>{t('Deploy a mandate')}</H2>
       <Pre>{`POST /api/mandates
 Authorization: Bearer <token>
 Content-Type: application/json
@@ -418,7 +420,7 @@ Response 201:
   "txHash": "0x789abc...",
   "explorerUrl": "https://explorer.sepolia.mantle.xyz/tx/0x789abc..."
 }`}</Pre>
-      <H2>Get a mandate</H2>
+      <H2>{t('Get a mandate')}</H2>
       <Pre>{`GET /api/mandates/:id
 Authorization: Bearer <token>
 
@@ -428,8 +430,8 @@ Response 200: { mandate object }`}</Pre>
 
   'agents-deploy': (
     <>
-      <P>The Agents API manages agent deployment, status queries, and lifecycle control.</P>
-      <H2>List agents</H2>
+      <P>{t('The Agents API manages agent deployment, status queries, and lifecycle control.')}</P>
+      <H2>{t('List agents')}</H2>
       <Pre>{`GET /api/agents
 Authorization: Bearer <token>
 
@@ -446,7 +448,7 @@ Response 200:
     }
   ]
 }`}</Pre>
-      <H2>Deploy an agent</H2>
+      <H2>{t('Deploy an agent')}</H2>
       <Pre>{`POST /api/agents
 Authorization: Bearer <token>
 Content-Type: application/json
@@ -465,7 +467,7 @@ Response 201:
   "status": "DEPLOYING",
   "txHash": "0xabc123..."
 }`}</Pre>
-      <H2>Pause / Resume an agent</H2>
+      <H2>{t('Pause / Resume an agent')}</H2>
       <Pre>{`PATCH /api/agents/:id
 Authorization: Bearer <token>
 Content-Type: application/json
@@ -474,7 +476,7 @@ Content-Type: application/json
 
 Response 200:
 { "id": "agent-01j...", "status": "PAUSED" }`}</Pre>
-      <H2>Agent decision log</H2>
+      <H2>{t('Agent decision log')}</H2>
       <Pre>{`GET /api/agents/:id/logs?limit=50
 Authorization: Bearer <token>
 
@@ -495,8 +497,8 @@ Response 200:
 
   'websocket-stream': (
     <>
-      <P>The WebSocket event stream delivers real-time updates for agent events, trade executions, and risk alerts without polling.</P>
-      <H2>Connect</H2>
+      <P>{t('The WebSocket event stream delivers real-time updates for agent events, trade executions, and risk alerts without polling.')}</P>
+      <H2>{t('Connect')}</H2>
       <Pre>{`const ws = new WebSocket(
   'wss://your-project.supabase.co/realtime/v1/websocket?apikey=<anon-key>'
 )
@@ -509,15 +511,15 @@ ws.onopen = () => {
     ref: 1,
   }))
 }`}</Pre>
-      <H2>Event types</H2>
+      <H2>{t('Event types')}</H2>
       <UL>
-        <LI><Code>ORDER_EXECUTED</Code> — a trade was placed and logged on-chain</LI>
-        <LI><Code>AGENT_PAUSED</Code> — circuit breaker triggered or manual pause</LI>
-        <LI><Code>AGENT_RESUMED</Code> — agent restarted</LI>
-        <LI><Code>DRAWDOWN_ALERT</Code> — portfolio drawdown exceeded warning threshold (80% of limit)</LI>
-        <LI><Code>MANDATE_BREACH</Code> — an action would violate the mandate policy (blocked)</LI>
+        <LI><Code>ORDER_EXECUTED</Code> — {t('a trade was placed and logged on-chain')}</LI>
+        <LI><Code>AGENT_PAUSED</Code> — {t('circuit breaker triggered or manual pause')}</LI>
+        <LI><Code>AGENT_RESUMED</Code> — {t('agent restarted')}</LI>
+        <LI><Code>DRAWDOWN_ALERT</Code> — {t('portfolio drawdown exceeded warning threshold (80% of limit)')}</LI>
+        <LI><Code>MANDATE_BREACH</Code> — {t('an action would violate the mandate policy (blocked)')}</LI>
       </UL>
-      <H2>Sample event payload</H2>
+      <H2>{t('Sample event payload')}</H2>
       <Pre>{`{
   "event": "ORDER_EXECUTED",
   "payload": {
@@ -531,7 +533,7 @@ ws.onopen = () => {
     "ts":      "2026-05-23T14:22:01Z"
   }
 }`}</Pre>
-      <Note>The WebSocket stream is powered by Supabase Realtime. All events are also persisted to the <Code>trades</Code> and <Code>agent_logs</Code> tables, queryable via the REST API.</Note>
+      <Note>{t('The WebSocket stream is powered by Supabase Realtime. All events are also persisted to the')} <Code>trades</Code> {t('and')} <Code>agent_logs</Code> {t('tables, queryable via the REST API.')}</Note>
     </>
   ),
 
@@ -539,11 +541,11 @@ ws.onopen = () => {
 
   'mandate-policy-contract': (
     <>
-      <P><Code>MandatePolicy.sol</Code> is the immutable on-chain registry of mandate policy hashes. It provides a trustless proof that your agent&apos;s decisions are governed by your stated strategy.</P>
-      <H2>Contract address</H2>
+      <P><Code>MandatePolicy.sol</Code> {t("is the immutable on-chain registry of mandate policy hashes. It provides a trustless proof that your agent's decisions are governed by your stated strategy.")}</P>
+      <H2>{t('Contract address')}</H2>
       <Pre>{`Mantle Sepolia (testnet): 0x4a9f...3b2c
 Mantle Mainnet:           coming soon`}</Pre>
-      <H2>Key functions</H2>
+      <H2>{t('Key functions')}</H2>
       <H3>registerPolicy</H3>
       <Pre>{`function registerPolicy(
   bytes32 policyHash,
@@ -551,18 +553,18 @@ Mantle Mainnet:           coming soon`}</Pre>
 ) external returns (uint256 policyId)
 
 // Emits: PolicyRegistered(policyHash, agent, block.timestamp)`}</Pre>
-      <P>Called when you deploy a mandate. Stores the keccak256 hash of your JSON policy alongside the authorised agent address.</P>
+      <P>{t('Called when you deploy a mandate. Stores the keccak256 hash of your JSON policy alongside the authorised agent address.')}</P>
       <H3>verifyPolicy</H3>
       <Pre>{`function verifyPolicy(
   bytes32 policyHash,
   address agent
 ) external view returns (bool valid)`}</Pre>
-      <P>Called by <Code>AgentExecutor</Code> before every trade. Returns <Code>true</Code> if the agent is registered under the given hash. If <Code>false</Code>, the trade is rejected.</P>
+      <P>{t('Called by')} <Code>AgentExecutor</Code> {t('before every trade. Returns')} <Code>true</Code> {t('if the agent is registered under the given hash. If')} <Code>false</Code>, {t('the trade is rejected.')}</P>
       <H3>revokePolicy</H3>
       <Pre>{`function revokePolicy(bytes32 policyHash) external
 // Emits: PolicyRevoked(policyHash, block.timestamp)`}</Pre>
-      <P>Permanently revokes a mandate. Stops the registered agent immediately. Past executions remain on-chain.</P>
-      <H2>Events</H2>
+      <P>{t('Permanently revokes a mandate. Stops the registered agent immediately. Past executions remain on-chain.')}</P>
+      <H2>{t('Events')}</H2>
       <Pre>{`event PolicyRegistered(
   bytes32 indexed policyHash,
   address indexed agent,
@@ -577,11 +579,11 @@ event PolicyRevoked(
 
   'agent-executor-contract': (
     <>
-      <P><Code>AgentExecutor.sol</Code> is the execution gateway. It validates that an order is permitted by its mandate policy, calls <Code>RiskGuard</Code> for risk checks, and emits the on-chain audit event after a successful trade.</P>
-      <H2>Contract address</H2>
+      <P><Code>AgentExecutor.sol</Code> {t('is the execution gateway. It validates that an order is permitted by its mandate policy, calls')} <Code>RiskGuard</Code> {t('for risk checks, and emits the on-chain audit event after a successful trade.')}</P>
+      <H2>{t('Contract address')}</H2>
       <Pre>{`Mantle Sepolia (testnet): 0x7c3d...9e1f
 Mantle Mainnet:           coming soon`}</Pre>
-      <H2>Key functions</H2>
+      <H2>{t('Key functions')}</H2>
       <H3>executeOrder</H3>
       <Pre>{`function executeOrder(
   bytes32 policyHash,
@@ -592,8 +594,8 @@ Mantle Mainnet:           coming soon`}</Pre>
 ) external returns (bool success)
 
 // Emits: OrderExecuted(...) on success`}</Pre>
-      <P>Called by the off-chain execution engine after an order is placed on Bybit. The function verifies the policy hash, calls RiskGuard, and emits the audit event.</P>
-      <H2>The OrderExecuted event</H2>
+      <P>{t('Called by the off-chain execution engine after an order is placed on Bybit. The function verifies the policy hash, calls RiskGuard, and emits the audit event.')}</P>
+      <H2>{t('The OrderExecuted event')}</H2>
       <Pre>{`event OrderExecuted(
   bytes32 indexed policyHash,
   address indexed agent,
@@ -604,23 +606,23 @@ Mantle Mainnet:           coming soon`}</Pre>
   uint256         blockNumber,
   uint256         timestamp
 )`}</Pre>
-      <P>This event is the canonical on-chain record of every trade. It appears in the Audit tab and can be independently verified on Mantle Explorer.</P>
-      <H2>Failure modes</H2>
+      <P>{t('This event is the canonical on-chain record of every trade. It appears in the Audit tab and can be independently verified on Mantle Explorer.')}</P>
+      <H2>{t('Failure modes')}</H2>
       <UL>
-        <LI><Code>PolicyNotFound</Code> — policyHash is not registered in MandatePolicy</LI>
-        <LI><Code>AgentNotAuthorized</Code> — caller is not the registered agent for this hash</LI>
-        <LI><Code>RiskCheckFailed</Code> — RiskGuard rejected the order (returns reason string)</LI>
+        <LI><Code>PolicyNotFound</Code> — {t('policyHash is not registered in MandatePolicy')}</LI>
+        <LI><Code>AgentNotAuthorized</Code> — {t('caller is not the registered agent for this hash')}</LI>
+        <LI><Code>RiskCheckFailed</Code> — {t('RiskGuard rejected the order (returns reason string)')}</LI>
       </UL>
     </>
   ),
 
   'risk-guard-contract': (
     <>
-      <P><Code>RiskGuard.sol</Code> is the on-chain enforcement layer for risk parameters. It is the final, unforgeable check before any trade is logged. No agent can bypass it.</P>
-      <H2>Contract address</H2>
+      <P><Code>RiskGuard.sol</Code> {t('is the on-chain enforcement layer for risk parameters. It is the final, unforgeable check before any trade is logged. No agent can bypass it.')}</P>
+      <H2>{t('Contract address')}</H2>
       <Pre>{`Mantle Sepolia (testnet): 0x2b8e...4d7a
 Mantle Mainnet:           coming soon`}</Pre>
-      <H2>Key functions</H2>
+      <H2>{t('Key functions')}</H2>
       <H3>setLimits</H3>
       <Pre>{`function setLimits(
   address agent,
@@ -628,7 +630,7 @@ Mantle Mainnet:           coming soon`}</Pre>
   uint256 maxNotionalUSD,    // e.g. 500_00 = $500.00 (2 decimals)
   uint256 stopLossBps        // e.g. 300 = 3%
 ) external onlyOwner`}</Pre>
-      <P>Called when you save new risk parameters in <strong>Dashboard → Risk</strong>. Only the account owner (you) can set limits for your agents.</P>
+      <P>{t('Called when you save new risk parameters in')} <strong>{t('Dashboard → Risk')}</strong>. {t('Only the account owner (you) can set limits for your agents.')}</P>
       <H3>validateOrder</H3>
       <Pre>{`function validateOrder(
   address agent,
@@ -636,8 +638,8 @@ Mantle Mainnet:           coming soon`}</Pre>
   uint256 notionalUSD,
   uint256 currentDrawdownBps
 ) external view returns (bool valid, string memory reason)`}</Pre>
-      <P>Returns <Code>false</Code> with a human-readable reason if any limit is breached. <Code>AgentExecutor</Code> calls this before emitting <Code>OrderExecuted</Code>.</P>
-      <H2>Basis points reference</H2>
+      <P>{t('Returns')} <Code>false</Code> {t('with a human-readable reason if any limit is breached.')} <Code>AgentExecutor</Code> {t('calls this before emitting')} <Code>OrderExecuted</Code>.</P>
+      <H2>{t('Basis points reference')}</H2>
       <Pre>{`1 bps  = 0.01%
 100 bps = 1%
 1500 bps = 15%
@@ -647,18 +649,18 @@ Mantle Mainnet:           coming soon`}</Pre>
 
   'contract-addresses': (
     <>
-      <P>All MantleMandate contracts are deployed on Mantle Sepolia (testnet). Mainnet deployment is in progress and contract addresses will be published here upon launch.</P>
-      <H2>Mantle Sepolia</H2>
+      <P>{t('All MantleMandate contracts are deployed on Mantle Sepolia (testnet). Mainnet deployment is in progress and contract addresses will be published here upon launch.')}</P>
+      <H2>{t('Mantle Sepolia')}</H2>
       <Pre>{`MandatePolicy:  0x4a9f3b2c...
 AgentExecutor:  0x7c3d9e1f...
 RiskGuard:      0x2b8e4d7a...
 Chain ID:       5003
 Explorer:       https://explorer.sepolia.mantle.xyz`}</Pre>
-      <H2>Verify contracts</H2>
-      <P>All contracts are verified on Mantle Explorer. You can read the ABI, call read-only functions, and inspect transaction history directly from the explorer without any additional tools.</P>
-      <H2>Download ABIs</H2>
-      <P>ABIs are available in the <Code>blockchain/typechain-types/</Code> directory of the open-source repository. They are automatically generated from the Solidity source using Hardhat + TypeChain.</P>
-      <H2>Interact with contracts directly</H2>
+      <H2>{t('Verify contracts')}</H2>
+      <P>{t('All contracts are verified on Mantle Explorer. You can read the ABI, call read-only functions, and inspect transaction history directly from the explorer without any additional tools.')}</P>
+      <H2>{t('Download ABIs')}</H2>
+      <P>{t('ABIs are available in the')} <Code>blockchain/typechain-types/</Code> {t('directory of the open-source repository. They are automatically generated from the Solidity source using Hardhat + TypeChain.')}</P>
+      <H2>{t('Interact with contracts directly')}</H2>
       <Pre>{`import { createPublicClient, http } from 'viem'
 import { mantleSepoliaTestnet } from 'viem/chains'
 import { MANDATE_POLICY_ABI } from './abis'
@@ -681,35 +683,35 @@ const isValid = await client.readContract({
 
   'indicators-triggers': (
     <>
-      <P>Claude understands a wide range of technical indicators and market conditions. Use these terms in your mandate and they will be correctly extracted into the policy JSON.</P>
-      <H2>Price-based triggers</H2>
+      <P>{t('Claude understands a wide range of technical indicators and market conditions. Use these terms in your mandate and they will be correctly extracted into the policy JSON.')}</P>
+      <H2>{t('Price-based triggers')}</H2>
       <UL>
-        <LI><Code>price above $X</Code> / <Code>price below $X</Code> — absolute price level</LI>
-        <LI><Code>price above 200-day MA</Code> — relative to moving average</LI>
-        <LI><Code>price within X% of 52-week high</Code> — proximity condition</LI>
-        <LI><Code>price breaks out above resistance at $X</Code> — breakout trigger</LI>
+        <LI><Code>price above $X</Code> / <Code>price below $X</Code> — {t('absolute price level')}</LI>
+        <LI><Code>price above 200-day MA</Code> — {t('relative to moving average')}</LI>
+        <LI><Code>price within X% of 52-week high</Code> — {t('proximity condition')}</LI>
+        <LI><Code>price breaks out above resistance at $X</Code> — {t('breakout trigger')}</LI>
       </UL>
-      <H2>Momentum indicators</H2>
+      <H2>{t('Momentum indicators')}</H2>
       <UL>
-        <LI><Code>RSI(14) below 30</Code> / <Code>RSI above 70</Code> — Relative Strength Index (1h default, specify timeframe)</LI>
-        <LI><Code>MACD crosses above signal line</Code> — MACD crossover</LI>
+        <LI><Code>RSI(14) below 30</Code> / <Code>RSI above 70</Code> — {t('Relative Strength Index (1h default, specify timeframe)')}</LI>
+        <LI><Code>MACD crosses above signal line</Code> — {t('MACD crossover')}</LI>
         <LI><Code>MACD histogram turns positive</Code></LI>
         <LI><Code>stochastic RSI below 20</Code></LI>
       </UL>
-      <H2>Volume triggers</H2>
+      <H2>{t('Volume triggers')}</H2>
       <UL>
-        <LI><Code>volume 2x 20-day average</Code> — volume spike</LI>
-        <LI><Code>OBV trending upward for 3 days</Code> — On-Balance Volume</LI>
+        <LI><Code>volume 2x 20-day average</Code> — {t('volume spike')}</LI>
+        <LI><Code>OBV trending upward for 3 days</Code> — {t('On-Balance Volume')}</LI>
       </UL>
-      <H2>Time-based rules</H2>
+      <H2>{t('Time-based rules')}</H2>
       <UL>
         <LI><Code>only trade between 9am and 5pm UTC</Code></LI>
         <LI><Code>close all positions by Friday 6pm UTC</Code></LI>
         <LI><Code>maximum hold time 48 hours</Code></LI>
         <LI><Code>no trading on weekends</Code></LI>
       </UL>
-      <H2>Compound conditions</H2>
-      <P>Combine triggers with AND / OR. Claude correctly handles complex logic:</P>
+      <H2>{t('Compound conditions')}</H2>
+      <P>{t('Combine triggers with AND / OR. Claude correctly handles complex logic:')}</P>
       <Pre>{`"Buy ETH when RSI(1h) < 30 AND price is above the 50-day MA
 AND volume is at least 1.5x the 10-day average.
 Do NOT buy if the 4h RSI is also below 25 (extreme oversold, wait)."`}</Pre>
@@ -718,8 +720,8 @@ Do NOT buy if the 4h RSI is also below 25 (extreme oversold, wait)."`}</Pre>
 
   'risk-rule-syntax': (
     <>
-      <P>Risk rules define the boundaries of your agent&apos;s exposure. Claude recognises the following patterns — use whichever phrasing feels natural.</P>
-      <H2>Position sizing</H2>
+      <P>{t("Risk rules define the boundaries of your agent's exposure. Claude recognises the following patterns — use whichever phrasing feels natural.")}</P>
+      <H2>{t('Position sizing')}</H2>
       <Pre>{`"Never risk more than 2% of the portfolio per trade"
 → { "max_risk_pct": 2 }
 
@@ -728,7 +730,7 @@ Do NOT buy if the 4h RSI is also below 25 (extreme oversold, wait)."`}</Pre>
 
 "Allocate 1% of portfolio per signal"
 → { "position_size_pct": 1 }`}</Pre>
-      <H2>Stop-loss</H2>
+      <H2>{t('Stop-loss')}</H2>
       <Pre>{`"Stop-loss at 3% from entry"
 → { "stop_loss_pct": 3 }
 
@@ -737,43 +739,43 @@ Do NOT buy if the 4h RSI is also below 25 (extreme oversold, wait)."`}</Pre>
 
 "Trailing stop at 2%"
 → { "trailing_stop_pct": 2 }`}</Pre>
-      <H2>Take-profit</H2>
+      <H2>{t('Take-profit')}</H2>
       <Pre>{`"Take profit at 8% gain"
 → { "take_profit_pct": 8 }
 
 "Scale out: sell 50% at 5% gain, remainder at 10%"
 → { "scale_out": [{ "pct": 50, "at_gain": 5 }, { "pct": 50, "at_gain": 10 }] }`}</Pre>
-      <H2>Drawdown circuit breakers</H2>
+      <H2>{t('Drawdown circuit breakers')}</H2>
       <Pre>{`"Pause if daily loss exceeds 5%"
 → { "daily_drawdown_limit_pct": 5 }
 
 "Stop all trading if portfolio drops 15% from peak"
 → { "max_drawdown_pct": 15 }`}</Pre>
-      <Note>Risk rules in your mandate text and risk parameters in Dashboard → Risk are independent. The stricter of the two always applies. When in doubt, set conservative limits in both places.</Note>
+      <Note>{t('Risk rules in your mandate text and risk parameters in Dashboard → Risk are independent. The stricter of the two always applies. When in doubt, set conservative limits in both places.')}</Note>
     </>
   ),
 
   'example-mandates': (
     <>
-      <P>Copy any of these mandates directly into the New Mandate text area. Adjust thresholds to suit your risk tolerance.</P>
-      <H2>RSI Mean Reversion (Conservative)</H2>
+      <P>{t('Copy any of these mandates directly into the New Mandate text area. Adjust thresholds to suit your risk tolerance.')}</P>
+      <H2>{t('RSI Mean Reversion (Conservative)')}</H2>
       <Pre>{`Buy ETHUSDT when the 1-hour RSI drops below 28 and the daily RSI is above 40
 (confirming an uptrend). Sell when 1-hour RSI recovers to 60 or the position
 gains 6%. Stop-loss at 3% below entry. Never risk more than 1.5% of the
 portfolio per trade. Do not open new positions if the portfolio is down more
 than 8% from its monthly peak.`}</Pre>
-      <H2>Trend Following (Moderate)</H2>
+      <H2>{t('Trend Following (Moderate)')}</H2>
       <Pre>{`Buy BTCUSDT when price closes above the 50-day moving average AND the MACD
 histogram turns positive on the daily chart. Hold until price drops below
 the 20-day moving average or the MACD histogram turns negative. Trailing
 stop at 5%. Maximum position size 3% of portfolio.`}</Pre>
-      <H2>Multi-Asset Rotation (Aggressive)</H2>
+      <H2>{t('Multi-Asset Rotation (Aggressive)')}</H2>
       <Pre>{`Monitor ETHUSDT, BTCUSDT, and MANTUSDT. Each Monday, buy the asset with the
 strongest 14-day RSI momentum (but RSI must still be below 65 — avoid
 overbought). Sell the weakest performer if it has lost more than 4% this week.
 Stop-loss at 5% per position. Never hold more than 2 assets simultaneously.
 Maximum portfolio allocation 80% (keep 20% in cash).`}</Pre>
-      <H2>DeFi Yield Entry</H2>
+      <H2>{t('DeFi Yield Entry')}</H2>
       <Pre>{`Buy MANTUSDT when price is within 5% of its 30-day low AND 24-hour volume
 is above its 7-day average. Hold for a maximum of 7 days. Take profit at
 10% gain. Stop-loss at 4% loss. Maximum position 2% of portfolio. Do not
@@ -783,28 +785,28 @@ trade between midnight Saturday and midnight Sunday UTC.`}</Pre>
 
   'common-mistakes': (
     <>
-      <P>These are the most frequent issues users encounter when writing mandates, and how to avoid them.</P>
-      <H2>1. Conflicting rules</H2>
-      <P>Writing rules that contradict each other causes the AI to skip cycles or behave unpredictably.</P>
+      <P>{t('These are the most frequent issues users encounter when writing mandates, and how to avoid them.')}</P>
+      <H2>{t('1. Conflicting rules')}</H2>
+      <P>{t('Writing rules that contradict each other causes the AI to skip cycles or behave unpredictably.')}</P>
       <Pre>{`❌ "Buy when RSI < 30. Never buy in a downtrend.
      (The parser cannot define 'downtrend' without more context)"
 
 ✅ "Buy when RSI(1h) < 30 AND price is above the 200-day moving average."`}</Pre>
-      <H2>2. Missing exit conditions</H2>
-      <P>Every entry rule needs a corresponding exit rule. Without one, the agent holds the position indefinitely.</P>
+      <H2>{t('2. Missing exit conditions')}</H2>
+      <P>{t('Every entry rule needs a corresponding exit rule. Without one, the agent holds the position indefinitely.')}</P>
       <Pre>{`❌ "Buy ETH when RSI drops below 30."
 ✅ "Buy ETH when RSI drops below 30. Sell when RSI exceeds 65
     or position gains 8%, whichever comes first. Stop-loss at 4%."`}</Pre>
-      <H2>3. Too many conditions</H2>
-      <P>More than 4–5 compound AND conditions rarely all trigger simultaneously. Your agent will never trade.</P>
+      <H2>{t('3. Too many conditions')}</H2>
+      <P>{t('More than 4–5 compound AND conditions rarely all trigger simultaneously. Your agent will never trade.')}</P>
       <Pre>{`❌ "Buy when RSI < 25 AND MACD positive AND volume 3x AND price above 200MA
      AND stochastic < 20 AND candle is green AND it's Tuesday"
 
 ✅ "Buy when RSI(1h) < 30 AND price above 200-day MA"`}</Pre>
-      <H2>4. No risk limits</H2>
-      <P>Without position sizing rules, the agent will use default limits (2% max notional). Always be explicit.</P>
-      <H2>5. Forgetting the RiskGuard override</H2>
-      <P>Your mandate&apos;s risk rules and the Dashboard → Risk parameters are <em>independent</em>. If your mandate says &quot;risk 5% per trade&quot; but RiskGuard is set to 2%, the 2% limit wins. Check both places.</P>
+      <H2>{t('4. No risk limits')}</H2>
+      <P>{t('Without position sizing rules, the agent will use default limits (2% max notional). Always be explicit.')}</P>
+      <H2>{t('5. Forgetting the RiskGuard override')}</H2>
+      <P>{t("Your mandate's risk rules and the Dashboard → Risk parameters are")} <em>{t('independent')}</em>. {t('If your mandate says "risk 5% per trade" but RiskGuard is set to 2%, the 2% limit wins. Check both places.')}</P>
     </>
   ),
 
