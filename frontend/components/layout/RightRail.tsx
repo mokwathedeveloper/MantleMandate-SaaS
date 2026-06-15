@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { useAlertStore } from '@/store/alertStore'
 import { useRecentActivity, type ActivityItem } from '@/hooks/useRecentActivity'
 import { useRiskSummary, type RiskSummary } from '@/hooks/useRiskSummary'
-import { fetchOnChainAuditEvents, MANTLE_MAX_BLOCK_RANGE } from '@/hooks/useOnChain'
+import { fetchOnChainAuditEvents, MANTLE_AUDIT_LOOKBACK_BLOCKS } from '@/hooks/useOnChain'
 import { useTranslation } from '@/hooks/useTranslation'
 
 // ─────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ function RunAuditModal({ onClose, t }: { onClose: () => void; t: (s: string) => 
     }
   }
 
-  const blocks = MANTLE_MAX_BLOCK_RANGE.toLocaleString()
+  const blocks = MANTLE_AUDIT_LOOKBACK_BLOCKS.toLocaleString()
 
   return (
     <ActionModal title={t('Run Audit')} icon={ShieldCheck} onClose={onClose}>
