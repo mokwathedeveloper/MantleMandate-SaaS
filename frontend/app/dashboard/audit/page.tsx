@@ -586,7 +586,7 @@ export default function AuditPage() {
 
                 {/* Expanded detail */}
                 {expanded === entry.id && (
-                  <ExpandedRow entry={entry} onClose={() => setExpanded(null)} />
+                  <ExpandedRow entry={entry} onClose={() => setExpanded(null)} t={t} />
                 )}
               </div>
             ))
@@ -597,7 +597,10 @@ export default function AuditPage() {
       {/* ── Pagination ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm flex-wrap gap-3">
         <span className="text-text-secondary">
-          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, displayTotal)} of {displayTotal.toLocaleString()} transactions
+          {t('Showing {from}–{to} of {total} transactions')
+            .replace('{from}', String((page - 1) * perPage + 1))
+            .replace('{to}', String(Math.min(page * perPage, displayTotal)))
+            .replace('{total}', displayTotal.toLocaleString())}
         </span>
 
         <div className="flex items-center gap-1">
