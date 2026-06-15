@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Pencil, Plus, LogOut, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
+import { useTranslation } from '@/hooks/useTranslation'
 import { cn } from '@/lib/utils'
 
 function Toggle({ on, locked }: { on: boolean; locked?: boolean }) {
@@ -28,12 +29,12 @@ function AvatarCircle({ name }: { name: string }) {
   )
 }
 
-function EditableField({ label, value, type = 'text' }: { label: string; value: string; type?: string }) {
+function EditableField({ label, value, type = 'text', t }: { label: string; value: string; type?: string; t: (s: string) => string }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value)
   return (
     <div className="flex items-center gap-4 py-2 border-b border-border last:border-0">
-      <span className="text-sm text-text-secondary w-36 shrink-0">{label}</span>
+      <span className="text-sm text-text-secondary w-36 shrink-0">{t(label)}</span>
       {editing ? (
         <div className="flex items-center gap-2 flex-1">
           <input
@@ -43,8 +44,8 @@ function EditableField({ label, value, type = 'text' }: { label: string; value: 
             className="flex-1 bg-input border border-border rounded-md px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-primary"
             autoFocus
           />
-          <button onClick={() => setEditing(false)} className="text-xs bg-primary hover:bg-primary-hover text-white px-2 py-1 rounded transition-colors">Save</button>
-          <button onClick={() => setEditing(false)} className="text-xs text-text-secondary hover:text-text-primary">Cancel</button>
+          <button onClick={() => setEditing(false)} className="text-xs bg-primary hover:bg-primary-hover text-white px-2 py-1 rounded transition-colors">{t('Save')}</button>
+          <button onClick={() => setEditing(false)} className="text-xs text-text-secondary hover:text-text-primary">{t('Cancel')}</button>
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-1">
@@ -59,6 +60,7 @@ function EditableField({ label, value, type = 'text' }: { label: string; value: 
 }
 
 export default function ProfilePage() {
+  const t = useTranslation()
   const user   = useAuthStore(s => s.user)
   const logout = useLogout()
 
@@ -71,11 +73,11 @@ export default function ProfilePage() {
       {toast && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-card border border-border rounded-lg px-4 py-2.5 shadow-xl text-sm text-text-primary">
           <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-          {toast}
+          {t(toast)}
         </div>
       )}
-      <nav className="text-xs text-text-disabled">Home &rsaquo; User Profile</nav>
-      <h2 className="text-2xl font-bold text-text-primary">User Profile</h2>
+      <nav className="text-xs text-text-disabled">{t('Home')} &rsaquo; {t('User Profile')}</nav>
+      <h2 className="text-2xl font-bold text-text-primary">{t('User Profile')}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left (60%) */}
@@ -88,8 +90,8 @@ export default function ProfilePage() {
                 <p className="text-lg font-bold text-text-primary">{user?.name ?? '—'}</p>
                 <p className="text-sm text-text-secondary">{user?.email ?? '—'}</p>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => showToast('Photo upload coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Upload Photo</button>
-                  <button onClick={() => showToast('ENS resolution coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">Connect ENS</button>
+                  <button onClick={() => showToast('Photo upload coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">{t('Upload Photo')}</button>
+                  <button onClick={() => showToast('ENS resolution coming soon')} className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors">{t('Connect ENS')}</button>
                 </div>
               </div>
             </div>
@@ -97,40 +99,40 @@ export default function ProfilePage() {
 
           {/* Personal info */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-1">
-            <h4 className="text-sm font-semibold text-text-primary mb-3">Personal Information</h4>
-            <EditableField label="Full Name"      value={user?.name ?? ''} />
-            <EditableField label="Email Address"  value={user?.email ?? ''} type="email" />
-            <EditableField label="Date of Birth"  value="Jan 15, 1990" />
-            <EditableField label="Phone Number"   value="+1 (555) 000-0000" />
-            <EditableField label="Time Zone"      value="UTC+2" />
-            <EditableField label="Language"       value="English" />
+            <h4 className="text-sm font-semibold text-text-primary mb-3">{t('Personal Information')}</h4>
+            <EditableField label="Full Name"      value={user?.name ?? ''} t={t} />
+            <EditableField label="Email Address"  value={user?.email ?? ''} type="email" t={t} />
+            <EditableField label="Date of Birth"  value="Jan 15, 1990" t={t} />
+            <EditableField label="Phone Number"   value="+1 (555) 000-0000" t={t} />
+            <EditableField label="Time Zone"      value="UTC+2" t={t} />
+            <EditableField label="Language"       value={t('English')} t={t} />
           </div>
 
           {/* Security */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-            <h4 className="text-sm font-semibold text-text-primary">Security Settings</h4>
+            <h4 className="text-sm font-semibold text-text-primary">{t('Security Settings')}</h4>
 
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm text-text-primary">Two-Factor Authentication (2FA)</p>
-                <p className="text-xs text-text-secondary mt-0.5">SMS to +1 (555) 000-0000</p>
+                <p className="text-sm text-text-primary">{t('Two-Factor Authentication (2FA)')}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{t('SMS to +1 (555) 000-0000')}</p>
               </div>
               <div className="flex gap-2">
-                <span className="text-[10px] bg-success-bg text-success px-2 py-0.5 rounded font-semibold">ENABLED</span>
-                <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:border-primary transition-colors">Change Method</button>
+                <span className="text-[10px] bg-success-bg text-success px-2 py-0.5 rounded font-semibold">{t('ENABLED')}</span>
+                <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:border-primary transition-colors">{t('Change Method')}</button>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
               <div>
-                <p className="text-sm text-text-primary">Password</p>
-                <p className="text-xs text-text-secondary mt-0.5">Last changed: 3 months ago</p>
+                <p className="text-sm text-text-primary">{t('Password')}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{t('Last changed: 3 months ago')}</p>
               </div>
-              <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:border-primary hover:text-text-primary transition-colors">Change Password</button>
+              <button className="text-xs border border-border rounded px-2 py-1 text-text-secondary hover:border-primary hover:text-text-primary transition-colors">{t('Change Password')}</button>
             </div>
 
             <div className="border-t border-border pt-4 space-y-2">
-              <p className="text-sm text-text-primary">Active Sessions (2)</p>
+              <p className="text-sm text-text-primary">{t('Active Sessions ({n})').replace('{n}', '2')}</p>
               {[
                 { browser: 'Chrome on macOS',   loc: 'San Francisco', when: 'Active now' },
                 { browser: 'Firefox on Windows', loc: 'New York',      when: '2 hours ago' },
@@ -138,12 +140,12 @@ export default function ProfilePage() {
                 <div key={s.browser} className="flex items-center justify-between py-1.5">
                   <div>
                     <p className="text-xs text-text-primary">{s.browser}</p>
-                    <p className="text-[11px] text-text-disabled">{s.loc} · {s.when}</p>
+                    <p className="text-[11px] text-text-disabled">{t(s.loc)} · {t(s.when)}</p>
                   </div>
-                  <button onClick={() => showToast('Session revoked')} className="text-xs text-error hover:underline">Revoke</button>
+                  <button onClick={() => showToast('Session revoked')} className="text-xs text-error hover:underline">{t('Revoke')}</button>
                 </div>
               ))}
-              <button onClick={() => showToast('All other sessions revoked')} className="text-xs text-error hover:underline mt-1">Revoke All Other Sessions</button>
+              <button onClick={() => showToast('All other sessions revoked')} className="text-xs text-error hover:underline mt-1">{t('Revoke All Other Sessions')}</button>
             </div>
           </div>
         </div>
@@ -153,41 +155,41 @@ export default function ProfilePage() {
           {/* Plan */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-primary">{(user?.plan ?? 'operator').toUpperCase()}</p>
-            <p className="text-xl font-bold text-text-primary">$99 / month</p>
-            <p className="text-xs text-text-secondary">Since: May 5, 2026</p>
-            <p className="text-xs text-text-secondary">Renews: Jun 4, 2026</p>
-            <Link href="/dashboard/billing" className="mt-3 inline-block bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors">Manage Plan</Link>
+            <p className="text-xl font-bold text-text-primary">{t('$99 / month')}</p>
+            <p className="text-xs text-text-secondary">{t('Since: May 5, 2026')}</p>
+            <p className="text-xs text-text-secondary">{t('Renews: Jun 4, 2026')}</p>
+            <Link href="/dashboard/billing" className="mt-3 inline-block bg-primary hover:bg-primary-hover text-white text-xs px-3 py-1.5 rounded-md transition-colors">{t('Manage Plan')}</Link>
           </div>
 
           {/* Wallets */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-3">
             <div>
-              <h4 className="text-sm font-semibold text-text-primary">Connected Wallets</h4>
-              <p className="text-xs text-text-secondary mt-0.5">All wallets remain non-custodial.</p>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Connected Wallets')}</h4>
+              <p className="text-xs text-text-secondary mt-0.5">{t('All wallets remain non-custodial.')}</p>
             </div>
             <div className="border border-border rounded-md p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-mono text-xs text-text-primary">0x1a2b...9f3c</p>
-                  <p className="text-[10px] text-text-disabled mt-0.5">MANTLE NETWORK</p>
-                  <p className="text-[10px] font-semibold text-primary mt-0.5">PRIMARY EXECUTION WALLET</p>
+                  <p className="text-[10px] text-text-disabled mt-0.5">{t('MANTLE NETWORK')}</p>
+                  <p className="text-[10px] font-semibold text-primary mt-0.5">{t('PRIMARY EXECUTION WALLET')}</p>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => showToast('Wallet set as primary')} className="text-[10px] border border-border rounded px-1.5 py-0.5 text-text-secondary hover:text-text-primary transition-colors">Set Primary</button>
-                  <button onClick={() => showToast('Wallet removed')} className="text-[10px] border border-error/50 rounded px-1.5 py-0.5 text-error hover:bg-error-bg transition-colors">Remove</button>
+                  <button onClick={() => showToast('Wallet set as primary')} className="text-[10px] border border-border rounded px-1.5 py-0.5 text-text-secondary hover:text-text-primary transition-colors">{t('Set Primary')}</button>
+                  <button onClick={() => showToast('Wallet removed')} className="text-[10px] border border-error/50 rounded px-1.5 py-0.5 text-error hover:bg-error-bg transition-colors">{t('Remove')}</button>
                 </div>
               </div>
             </div>
             <Link href="/dashboard/wallets" className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border rounded-md py-2 text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors">
               <Plus className="h-3.5 w-3.5" />
-              Connect Another Wallet
+              {t('Connect Another Wallet')}
             </Link>
-            <p className="text-[11px] text-text-disabled">Your private keys are never stored by MantleMandate.</p>
+            <p className="text-[11px] text-text-disabled">{t('Your private keys are never stored by MantleMandate.')}</p>
           </div>
 
           {/* Notifications */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-3">
-            <h4 className="text-sm font-semibold text-text-primary">Notifications</h4>
+            <h4 className="text-sm font-semibold text-text-primary">{t('Notifications')}</h4>
             {[
               ['Email — Trade executions', true, false],
               ['Email — Weekly summary',   false, false],
@@ -195,36 +197,36 @@ export default function ProfilePage() {
               ['In-app — All alerts',      true, true],
             ].map(([lbl, on, locked]) => (
               <div key={String(lbl)} className="flex items-center justify-between">
-                <span className="text-xs text-text-secondary">{String(lbl)}</span>
+                <span className="text-xs text-text-secondary">{t(String(lbl))}</span>
                 <Toggle on={Boolean(on)} locked={Boolean(locked)} />
               </div>
             ))}
-            <Link href="/dashboard/settings" className="text-xs text-text-link hover:text-text-link-hover">Configure Telegram →</Link>
+            <Link href="/dashboard/settings" className="text-xs text-text-link hover:text-text-link-hover">{t('Configure Telegram →')}</Link>
           </div>
 
           {/* Danger zone */}
           <div className="border border-error/30 bg-card rounded-lg p-5 space-y-4">
-            <h4 className="text-sm font-semibold text-error">Danger Zone</h4>
+            <h4 className="text-sm font-semibold text-error">{t('Danger Zone')}</h4>
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium text-text-primary">Revoke All Agent Access</p>
-                <p className="text-xs text-text-secondary mt-0.5">Immediately stops all agents. Mandates are preserved.</p>
-                <button className="mt-2 text-xs border border-error text-error rounded-md px-3 py-1.5 hover:bg-error-bg transition-colors">Revoke All Access</button>
+                <p className="text-sm font-medium text-text-primary">{t('Revoke All Agent Access')}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{t('Immediately stops all agents. Mandates are preserved.')}</p>
+                <button className="mt-2 text-xs border border-error text-error rounded-md px-3 py-1.5 hover:bg-error-bg transition-colors">{t('Revoke All Access')}</button>
               </div>
               <div className="border-t border-border pt-3">
-                <p className="text-sm font-medium text-text-primary">Delete Account</p>
-                <p className="text-xs text-text-secondary mt-0.5">Permanently deletes all mandates, agents, and data. Cannot be undone.</p>
+                <p className="text-sm font-medium text-text-primary">{t('Delete Account')}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{t('Permanently deletes all mandates, agents, and data. Cannot be undone.')}</p>
                 <input
                   value={deleteInput}
                   onChange={e => setDel(e.target.value)}
-                  placeholder='Type "DELETE" to confirm'
+                  placeholder={t('Type "DELETE" to confirm')}
                   className="mt-2 bg-input border border-border rounded-md px-3 py-1.5 text-xs text-text-primary w-full focus:outline-none focus:border-error"
                 />
                 <button
                   disabled={deleteInput !== 'DELETE'}
                   className="mt-2 text-xs border border-error text-error rounded-md px-3 py-1.5 hover:bg-error-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Delete Account
+                  {t('Delete Account')}
                 </button>
               </div>
             </div>
@@ -236,7 +238,7 @@ export default function ProfilePage() {
             className="w-full flex items-center justify-center gap-1.5 border border-border rounded-md py-2.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
             <LogOut className="h-4 w-4" />
-            Log Out
+            {t('Log Out')}
           </button>
         </div>
       </div>
