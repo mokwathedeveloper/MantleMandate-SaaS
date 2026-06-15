@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AlertBanner } from '@/components/ui/AlertBanner'
+import { useTranslation } from '@/hooks/useTranslation'
 import { useAgent, usePauseAgent, useResumeAgent, useStopAgent, useRunAgentTick } from '@/hooks/useAgents'
 import { useMandate } from '@/hooks/useMandates'
 import { useAgentReputation } from '@/hooks/useOnChain'
@@ -50,6 +51,7 @@ const TABS: { id: TabId; label: string; icon: typeof Activity }[] = [
   { id: 'audit',     label: 'Audit Trail',   icon: Shield },
   { id: 'settings',  label: 'Settings',      icon: Settings2 },
 ]
+// Note: TABS labels are translated at render time via t(label).
 
 // ── data hooks ────────────────────────────────────────────────────────────────
 
@@ -76,11 +78,12 @@ function useAgentLogs(agentId: string) {
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab({
-  agent, trades, pnlPoints,
+  agent, trades, pnlPoints, t,
 }: {
   agent: ReturnType<typeof useAgent>['data']
   trades: Trade[]
   pnlPoints: { time: string; pnl: number }[]
+  t: (s: string) => string
 }) {
   const reputation = useAgentReputation(agent?.onchainAgentId != null ? BigInt(agent.onchainAgentId) : null)
 
@@ -104,7 +107,7 @@ function OverviewTab({
           { label: 'Avg Trade Size', value: formatCurrency(avgSize),             color: 'text-text-primary' },
         ].map(({ label, value, color }) => (
           <Card key={label} padding="sm">
-            <p className="text-xs text-text-secondary">{label}</p>
+            <p className="text-xs text-text-secondary">{t(label)}</p>
             <p className={cn('text-xl font-bold mt-1', color)}>{value}</p>
           </Card>
         ))}
@@ -114,7 +117,7 @@ function OverviewTab({
       {pnlPoints.length > 1 && (
         <Card padding="md">
           <CardHeader>
-            <CardTitle>Cumulative P&L</CardTitle>
+            <CardTitle>{t('Cumulative P&L')}</CardTitle>
             <span className={cn('text-sm font-semibold', agent.totalPnl >= 0 ? 'text-success' : 'text-error')}>
               {formatCurrency(agent.totalPnl)}
             </span>
@@ -134,7 +137,7 @@ function OverviewTab({
                   tickFormatter={(v) => `$${v}`} />
                 <Tooltip
                   contentStyle={{ background: '#161B22', border: '1px solid #30363D', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v) => [formatCurrency(Number(v)), 'P&L']}
+                  formatter={(v) => [formatCurrency(Number(v)), t('P&L')]}
                 />
                 <Area type="monotone" dataKey="pnl" stroke="#22C55E" strokeWidth={2}
                   fill="url(#pnlGrad)" dot={false} activeDot={{ r: 4 }} />
@@ -147,8 +150,8 @@ function OverviewTab({
       {/* Mandate compliance snapshot */}
       <Card padding="md">
         <CardHeader>
-          <CardTitle>Mandate Compliance</CardTitle>
-          <Badge variant="success" dot>Passing</Badge>
+          <CardTitle>{t('Mandate Compliance')}</CardTitle>
+          <Badge variant="success" dot>{t('Passing')}</Badge>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -160,8 +163,8 @@ function OverviewTab({
             ].map(({ rule, pass }) => (
               <div key={rule} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
                 <span className={cn('h-2 w-2 rounded-full shrink-0', pass ? 'bg-success' : 'bg-error')} />
-                <span className="text-sm text-text-primary flex-1">{rule}</span>
-                <Badge variant={pass ? 'success' : 'error'}>{pass ? 'Pass' : 'Fail'}</Badge>
+                <span className="text-sm text-text-primary flex-1">{t(rule)}</span>
+                <Badge variant={pass ? 'success' : 'error'}>{pass ? t('Pass') : t('Fail')}</Badge>
               </div>
             ))}
           </div>
@@ -172,21 +175,21 @@ function OverviewTab({
       {reputation.data && (
         <Card padding="md">
           <CardHeader>
-            <CardTitle>On-Chain Reputation</CardTitle>
+            <CardTitle>{t('On-Chain Reputation')}</CardTitle>
             <Badge variant="success" dot>AgentReputationRegistry</Badge>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-xs text-text-secondary">Decisions Committed</p>
+                <p className="text-xs text-text-secondary">{t('Decisions Committed')}</p>
                 <p className="text-xl font-bold mt-1 text-text-primary">{reputation.data.totalCommitted}</p>
               </div>
               <div>
-                <p className="text-xs text-text-secondary">Resolved</p>
+                <p className="text-xs text-text-secondary">{t('Resolved')}</p>
                 <p className="text-xl font-bold mt-1 text-text-primary">{reputation.data.totalResolved}</p>
               </div>
               <div>
-                <p className="text-xs text-text-secondary">Executed</p>
+                <p className="text-xs text-text-secondary">{t('Executed')}</p>
                 <p className="text-xl font-bold mt-1 text-success">{reputation.data.totalExecuted}</p>
               </div>
             </div>
@@ -199,96 +202,96 @@ function OverviewTab({
 
 // ── Trade History Tab ─────────────────────────────────────────────────────────
 
-function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) {
+function TradeHistoryTab({ trades, total, t }: { trades: Trade[]; total: number; t: (s: string) => string }) {
   return (
     <Card padding="md">
       <CardHeader>
-        <CardTitle>Trade History</CardTitle>
-        <span className="text-xs text-text-secondary">{total} total trades</span>
+        <CardTitle>{t('Trade History')}</CardTitle>
+        <span className="text-xs text-text-secondary">{t('{n} total trades').replace('{n}', String(total))}</span>
       </CardHeader>
       <CardContent>
         {trades.length === 0 ? (
           <div className="flex flex-col items-center py-12 gap-2 text-center">
             <Activity className="h-10 w-10 text-text-secondary opacity-40" />
-            <p className="text-sm text-text-secondary">No trades executed yet</p>
+            <p className="text-sm text-text-secondary">{t('No trades executed yet')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto -mx-4">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border text-text-secondary">
-                  <th className="px-4 py-2.5 text-left font-medium">Time</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Asset</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Direction</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Price</th>
-                  <th className="px-4 py-2.5 text-right font-medium">P&L</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Status</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Mandate Rule</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Block</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Time')}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Asset')}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Direction')}</th>
+                  <th className="px-4 py-2.5 text-right font-medium">{t('Amount')}</th>
+                  <th className="px-4 py-2.5 text-right font-medium">{t('Price')}</th>
+                  <th className="px-4 py-2.5 text-right font-medium">{t('P&L')}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Status')}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Mandate Rule')}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t('Block')}</th>
                 </tr>
               </thead>
               <tbody>
-                {trades.map((t) => (
-                  <tr key={t.id} className="border-b border-border/50 hover:bg-surface/50 transition-colors">
+                {trades.map((trade) => (
+                  <tr key={trade.id} className="border-b border-border/50 hover:bg-surface/50 transition-colors">
                     <td className="px-4 py-2.5 text-text-secondary whitespace-nowrap">
-                      {new Date(t.createdAt).toLocaleString('en-US', {
+                      {new Date(trade.createdAt).toLocaleString('en-US', {
                         month: 'short', day: 'numeric',
                         hour: '2-digit', minute: '2-digit',
                       })}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <TokenIcon symbol={t.assetPair.split('/')[0]} size="sm" />
-                        <span className="font-medium text-text-primary">{t.assetPair}</span>
+                        <TokenIcon symbol={trade.assetPair.split('/')[0]} size="sm" />
+                        <span className="font-medium text-text-primary">{trade.assetPair}</span>
                       </div>
                     </td>
                     <td className={cn('px-4 py-2.5 font-semibold uppercase',
-                      t.direction === 'buy' ? 'text-success' : 'text-error'
+                      trade.direction === 'buy' ? 'text-success' : 'text-error'
                     )}>
-                      {t.direction}
+                      {trade.direction === 'buy' ? t('buy') : t('sell')}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-text-primary">{formatCurrency(t.amountUsd)}</td>
+                    <td className="px-4 py-2.5 text-right text-text-primary">{formatCurrency(trade.amountUsd)}</td>
                     <td className="px-4 py-2.5 text-right text-text-primary">
-                      {t.price > 0 ? `$${t.price.toLocaleString()}` : '—'}
+                      {trade.price > 0 ? `$${trade.price.toLocaleString()}` : '—'}
                     </td>
                     <td className={cn('px-4 py-2.5 text-right font-medium',
-                      t.pnl == null ? 'text-text-secondary' : t.pnl >= 0 ? 'text-success' : 'text-error'
+                      trade.pnl == null ? 'text-text-secondary' : trade.pnl >= 0 ? 'text-success' : 'text-error'
                     )}>
-                      {t.pnl != null ? formatCurrency(t.pnl) : '—'}
+                      {trade.pnl != null ? formatCurrency(trade.pnl) : '—'}
                     </td>
                     <td className="px-4 py-2.5">
-                      <Badge variant={TRADE_STATUS_VARIANT[t.status]}>{t.status}</Badge>
+                      <Badge variant={TRADE_STATUS_VARIANT[trade.status]}>{t(trade.status)}</Badge>
                     </td>
                     <td className="px-4 py-2.5 text-text-secondary max-w-[180px]">
-                      <span className="truncate block">{t.mandateRuleApplied ?? '—'}</span>
-                      {t.reasoningCid && (
+                      <span className="truncate block">{trade.mandateRuleApplied ?? '—'}</span>
+                      {trade.reasoningCid && (
                         <a
-                          href={t.reasoningPinned ? `https://ipfs.io/ipfs/${t.reasoningCid}` : undefined}
-                          target={t.reasoningPinned ? '_blank' : undefined}
-                          rel={t.reasoningPinned ? 'noreferrer' : undefined}
-                          title={t.reasoningPinned ? `View reasoning on IPFS: ${t.reasoningCid}` : `Reasoning CID (not pinned to IPFS): ${t.reasoningCid}`}
+                          href={trade.reasoningPinned ? `https://ipfs.io/ipfs/${trade.reasoningCid}` : undefined}
+                          target={trade.reasoningPinned ? '_blank' : undefined}
+                          rel={trade.reasoningPinned ? 'noreferrer' : undefined}
+                          title={trade.reasoningPinned ? `${t('View reasoning on IPFS:')} ${trade.reasoningCid}` : `${t('Reasoning CID (not pinned to IPFS):')} ${trade.reasoningCid}`}
                           className={cn(
                             'inline-flex items-center gap-1 mt-0.5 text-[10px] font-mono',
-                            t.reasoningPinned ? 'text-text-link hover:opacity-70' : 'text-text-disabled cursor-default'
+                            trade.reasoningPinned ? 'text-text-link hover:opacity-70' : 'text-text-disabled cursor-default'
                           )}
                         >
                           <Hash className="h-2.5 w-2.5" />
-                          {t.reasoningCid.slice(0, 10)}…
-                          {t.commitmentTxHash && <CheckCircle2 className="h-2.5 w-2.5 text-success" />}
+                          {trade.reasoningCid.slice(0, 10)}…
+                          {trade.commitmentTxHash && <CheckCircle2 className="h-2.5 w-2.5 text-success" />}
                         </a>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      {t.txHash ? (
+                      {trade.txHash ? (
                         <a
-                          href={`${MANTLE_TESTNET_EXPLORER}/tx/${t.txHash}`}
+                          href={`${MANTLE_TESTNET_EXPLORER}/tx/${trade.txHash}`}
                           target="_blank"
                           rel="noreferrer"
                           className="flex items-center gap-1 text-text-secondary hover:text-primary transition-colors"
                         >
                           <ExternalLink className="h-3 w-3" />
-                          {t.blockNumber ? `#${t.blockNumber}` : 'View'}
+                          {trade.blockNumber ? `#${trade.blockNumber}` : t('View')}
                         </a>
                       ) : (
                         <span className="text-text-disabled">—</span>
@@ -307,7 +310,7 @@ function TradeHistoryTab({ trades, total }: { trades: Trade[]; total: number }) 
 
 // ── Mandate Tab ───────────────────────────────────────────────────────────────
 
-function MandateTab({ mandateId }: { mandateId: string }) {
+function MandateTab({ mandateId, t }: { mandateId: string; t: (s: string) => string }) {
   const { data: mandate, isLoading } = useMandate(mandateId)
   const [copied, setCopied] = useState(false)
 
@@ -330,8 +333,8 @@ function MandateTab({ mandateId }: { mandateId: string }) {
 
   if (!mandate) {
     return (
-      <AlertBanner severity="warning" title="Mandate not found">
-        Could not load the mandate associated with this agent.
+      <AlertBanner severity="warning" title={t('Mandate not found')}>
+        {t('Could not load the mandate associated with this agent.')}
       </AlertBanner>
     )
   }
@@ -345,20 +348,20 @@ function MandateTab({ mandateId }: { mandateId: string }) {
       {/* Mandate name + status */}
       <div className="flex items-center gap-3">
         <h3 className="text-lg font-semibold text-text-primary">{mandate.name}</h3>
-        <Badge variant={mandate.status === 'active' ? 'success' : 'default'}>{mandate.status}</Badge>
+        <Badge variant={mandate.status === 'active' ? 'success' : 'default'}>{t(mandate.status)}</Badge>
         <Link
           href={`/dashboard/mandates/${mandate.id}`}
           className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
         >
           <ExternalLink className="h-3.5 w-3.5" />
-          Edit mandate
+          {t('Edit mandate')}
         </Link>
       </div>
 
       {/* Plain-English mandate text */}
       <Card padding="md">
         <CardHeader>
-          <CardTitle>Plain-English Mandate</CardTitle>
+          <CardTitle>{t('Plain-English Mandate')}</CardTitle>
           <Badge variant="primary">{mandate.baseCurrency}</Badge>
         </CardHeader>
         <CardContent>
@@ -372,10 +375,10 @@ function MandateTab({ mandateId }: { mandateId: string }) {
       {parsedRows.length > 0 && (
         <Card padding="md">
           <CardHeader>
-            <CardTitle>Parsed Policy</CardTitle>
+            <CardTitle>{t('Parsed Policy')}</CardTitle>
             <span className="text-xs text-success flex items-center gap-1">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Verified by Claude AI
+              {t('Verified by Claude AI')}
             </span>
           </CardHeader>
           <CardContent>
@@ -383,7 +386,7 @@ function MandateTab({ mandateId }: { mandateId: string }) {
               {parsedRows.map(([key, value]) => (
                 <div key={key} className="flex items-start justify-between gap-2 text-sm py-1.5 border-b border-border/50 last:border-0">
                   <span className="text-text-secondary capitalize shrink-0">
-                    {key.replace(/_/g, ' ')}
+                    {t(key.replace(/_/g, ' '))}
                   </span>
                   <span className="text-text-primary font-medium text-right break-all">
                     {typeof value === 'object' ? JSON.stringify(value) : String(value)}
@@ -400,7 +403,7 @@ function MandateTab({ mandateId }: { mandateId: string }) {
         <CardHeader>
           <div className="flex items-center gap-1.5">
             <Hash className="h-4 w-4 text-text-secondary" />
-            <CardTitle>On-Chain Policy Hash</CardTitle>
+            <CardTitle>{t('On-Chain Policy Hash')}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -418,7 +421,7 @@ function MandateTab({ mandateId }: { mandateId: string }) {
                     ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     : <Copy className="h-3.5 w-3.5" />
                   }
-                  {copied ? 'Copied!' : 'Copy hash'}
+                  {copied ? t('Copied!') : t('Copy hash')}
                 </button>
                 {mandate.onChainTx && (
                   <a
@@ -428,17 +431,17 @@ function MandateTab({ mandateId }: { mandateId: string }) {
                     className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    View on Mantle Explorer
+                    {t('View on Mantle Explorer')}
                   </a>
                 )}
               </div>
               <p className="text-xs text-text-secondary">
-                SHA-256 fingerprint of your parsed policy. Posted on Mantle Network.
+                {t('SHA-256 fingerprint of your parsed policy. Posted on Mantle Network.')}
               </p>
             </div>
           ) : (
             <p className="text-sm text-text-secondary italic">
-              Policy hash will be generated when this mandate is deployed on-chain.
+              {t('Policy hash will be generated when this mandate is deployed on-chain.')}
             </p>
           )}
         </CardContent>
@@ -449,16 +452,16 @@ function MandateTab({ mandateId }: { mandateId: string }) {
 
 // ── Audit Trail Tab ───────────────────────────────────────────────────────────
 
-function AuditTrailTab({ logs, total }: { logs: AuditLog[]; total: number }) {
+function AuditTrailTab({ logs, total, t }: { logs: AuditLog[]; total: number; t: (s: string) => string }) {
   return (
     <Card padding="md">
       <CardHeader>
-        <CardTitle>Decision Audit Log</CardTitle>
-        <span className="text-xs text-text-secondary">{total} events</span>
+        <CardTitle>{t('Decision Audit Log')}</CardTitle>
+        <span className="text-xs text-text-secondary">{t('{n} events').replace('{n}', String(total))}</span>
       </CardHeader>
       <CardContent>
         {logs.length === 0 ? (
-          <p className="text-sm text-text-secondary text-center py-10">No audit events yet</p>
+          <p className="text-sm text-text-secondary text-center py-10">{t('No audit events yet')}</p>
         ) : (
           <div className="space-y-0">
             {logs.map((log) => (
@@ -467,7 +470,7 @@ function AuditTrailTab({ logs, total }: { logs: AuditLog[]; total: number }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold text-text-primary capitalize">
-                      {log.eventType.replace(/_/g, ' ')}
+                      {t(log.eventType.replace(/_/g, ' '))}
                     </span>
                     <span className="text-[10px] text-text-secondary">
                       {new Date(log.createdAt).toLocaleString('en-US', {
@@ -495,7 +498,7 @@ function AuditTrailTab({ logs, total }: { logs: AuditLog[]; total: number }) {
                       className="flex items-center gap-1 text-[10px] text-text-secondary hover:text-primary transition-colors mt-0.5 w-fit"
                     >
                       <ExternalLink className="h-2.5 w-2.5" />
-                      {log.blockNumber ? `Block #${log.blockNumber}` : 'View on Explorer'}
+                      {log.blockNumber ? `${t('Block')} #${log.blockNumber}` : t('View on Explorer')}
                     </a>
                   )}
                 </div>
@@ -513,50 +516,51 @@ function AuditTrailTab({ logs, total }: { logs: AuditLog[]; total: number }) {
 function SettingsTab({
   agent,
   onPause, onResume, onStop,
-  pausing, resuming, stopping,
+  pausing, resuming, stopping, t,
 }: {
   agent: NonNullable<ReturnType<typeof useAgent>['data']>
   onPause: () => void; onResume: () => void; onStop: () => void
   pausing: boolean; resuming: boolean; stopping: boolean
+  t: (s: string) => string
 }) {
   return (
     <div className="space-y-5 max-w-xl">
       {/* Status controls */}
       <Card padding="md">
-        <CardHeader><CardTitle>Agent Controls</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t('Agent Controls')}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b border-border">
               <div>
-                <p className="text-sm font-medium text-text-primary">Current Status</p>
-                <p className="text-xs text-text-secondary mt-0.5">Agent&apos;s live operating state</p>
+                <p className="text-sm font-medium text-text-primary">{t('Current Status')}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{t("Agent's live operating state")}</p>
               </div>
-              <Badge variant={STATUS_VARIANT[agent.status]} dot>{agent.status}</Badge>
+              <Badge variant={STATUS_VARIANT[agent.status]} dot>{t(agent.status)}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
               {agent.status === 'active' && (
                 <>
                   <Button variant="secondary" size="sm" loading={pausing} onClick={onPause}>
-                    <Pause className="h-3.5 w-3.5" /> Pause Agent
+                    <Pause className="h-3.5 w-3.5" /> {t('Pause Agent')}
                   </Button>
                   <Button variant="danger" size="sm" loading={stopping} onClick={onStop}>
-                    <Square className="h-3.5 w-3.5" /> Stop Agent
+                    <Square className="h-3.5 w-3.5" /> {t('Stop Agent')}
                   </Button>
                 </>
               )}
               {agent.status === 'paused' && (
                 <>
                   <Button variant="primary" size="sm" loading={resuming} onClick={onResume}>
-                    <Play className="h-3.5 w-3.5" /> Resume Agent
+                    <Play className="h-3.5 w-3.5" /> {t('Resume Agent')}
                   </Button>
                   <Button variant="danger" size="sm" loading={stopping} onClick={onStop}>
-                    <Square className="h-3.5 w-3.5" /> Stop Agent
+                    <Square className="h-3.5 w-3.5" /> {t('Stop Agent')}
                   </Button>
                 </>
               )}
               {(agent.status === 'stopped' || agent.status === 'failed') && (
                 <p className="text-sm text-text-secondary">
-                  This agent has been stopped. Deploy a new agent from the Agents page to continue trading.
+                  {t('This agent has been stopped. Deploy a new agent from the Agents page to continue trading.')}
                 </p>
               )}
             </div>
@@ -566,18 +570,18 @@ function SettingsTab({
 
       {/* Agent info */}
       <Card padding="md">
-        <CardHeader><CardTitle>Agent Information</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t('Agent Information')}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
             {[
               ['Agent ID',       agent.id],
               ['Mandate',        agent.mandateName],
-              ['Capital Cap',    agent.capitalCap > 0 ? formatCurrency(agent.capitalCap) : 'No limit'],
+              ['Capital Cap',    agent.capitalCap > 0 ? formatCurrency(agent.capitalCap) : t('No limit')],
               ['Deployed At',    agent.deployedAt ? formatDate(agent.deployedAt) : '—'],
-              ['Last Trade',     agent.lastTradeAt ? formatDate(agent.lastTradeAt) : 'No trades yet'],
+              ['Last Trade',     agent.lastTradeAt ? formatDate(agent.lastTradeAt) : t('No trades yet')],
             ].map(([k, v]) => (
               <div key={k} className="flex items-start justify-between gap-4 py-2 border-b border-border/50 last:border-0">
-                <span className="text-text-secondary shrink-0">{k}</span>
+                <span className="text-text-secondary shrink-0">{t(k)}</span>
                 <span className="text-text-primary font-medium text-right break-all">{v}</span>
               </div>
             ))}
@@ -588,11 +592,11 @@ function SettingsTab({
       {/* Danger zone */}
       <Card padding="md" className="border-error/30">
         <CardHeader>
-          <CardTitle className="text-error">Danger Zone</CardTitle>
+          <CardTitle className="text-error">{t('Danger Zone')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-text-secondary mb-3">
-            Stopping an agent is irreversible. All open positions will be closed at market price.
+            {t('Stopping an agent is irreversible. All open positions will be closed at market price.')}
           </p>
           <Button
             variant="danger"
@@ -601,7 +605,7 @@ function SettingsTab({
             onClick={onStop}
             disabled={agent.status === 'stopped' || agent.status === 'failed'}
           >
-            <Square className="h-3.5 w-3.5" /> Permanently Stop Agent
+            <Square className="h-3.5 w-3.5" /> {t('Permanently Stop Agent')}
           </Button>
         </CardContent>
       </Card>
@@ -613,6 +617,7 @@ function SettingsTab({
 
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
+  const t = useTranslation()
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
   const { data: agent, isLoading } = useAgent(id)
@@ -660,15 +665,15 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
   if (!agent) {
     return (
       <div className="p-4 sm:p-6">
-        <AlertBanner severity="warning" title="Agent not found">
-          This agent doesn&apos;t exist or you don&apos;t have access to it.
+        <AlertBanner severity="warning" title={t('Agent not found')}>
+          {t("This agent doesn't exist or you don't have access to it.")}
         </AlertBanner>
         <Link
           href="/dashboard/agents"
           className="mt-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to Agents
+          {t('Back to Agents')}
         </Link>
       </div>
     )
@@ -685,9 +690,9 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-text-primary">{agent.name}</h1>
-              <Badge variant={STATUS_VARIANT[agent.status]} dot>{agent.status}</Badge>
+              <Badge variant={STATUS_VARIANT[agent.status]} dot>{t(agent.status)}</Badge>
             </div>
-            <p className="text-sm text-text-secondary mt-0.5">Running: {agent.mandateName}</p>
+            <p className="text-sm text-text-secondary mt-0.5">{t('Running:')} {agent.mandateName}</p>
           </div>
         </div>
 
@@ -696,23 +701,23 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           {agent.status === 'active' && (
             <>
               <Button variant="primary" size="sm" loading={ticking} onClick={() => runTick(id)}>
-                <Zap className="h-3.5 w-3.5" /> Run Trading Cycle
+                <Zap className="h-3.5 w-3.5" /> {t('Run Trading Cycle')}
               </Button>
               <Button variant="secondary" size="sm" loading={pausing} onClick={() => pause(id)}>
-                <Pause className="h-3.5 w-3.5" /> Pause
+                <Pause className="h-3.5 w-3.5" /> {t('Pause')}
               </Button>
               <Button variant="danger" size="sm" loading={stopping} onClick={() => stop(id)}>
-                <Square className="h-3.5 w-3.5" /> Stop
+                <Square className="h-3.5 w-3.5" /> {t('Stop')}
               </Button>
             </>
           )}
           {agent.status === 'paused' && (
             <>
               <Button variant="primary" size="sm" loading={resuming} onClick={() => resume(id)}>
-                <Play className="h-3.5 w-3.5" /> Resume
+                <Play className="h-3.5 w-3.5" /> {t('Resume')}
               </Button>
               <Button variant="danger" size="sm" loading={stopping} onClick={() => stop(id)}>
-                <Square className="h-3.5 w-3.5" /> Stop
+                <Square className="h-3.5 w-3.5" /> {t('Stop')}
               </Button>
             </>
           )}
@@ -721,7 +726,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {/* Trading cycle result */}
       {tickError && (
-        <AlertBanner severity="error" title="Trading cycle failed" onDismiss={() => resetTick()}>
+        <AlertBanner severity="error" title={t('Trading cycle failed')} onDismiss={() => resetTick()}>
           {tickError.message}
         </AlertBanner>
       )}
@@ -730,15 +735,15 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           severity={tickResult.executed ? 'success' : 'info'}
           title={
             tickResult.executed
-              ? `Order executed on-chain: ${tickResult.decision.action.toUpperCase()} ${tickResult.decision.asset}`
-              : `AI recommendation: ${tickResult.decision.action.toUpperCase()} (no on-chain trade)`
+              ? `${t('Order executed on-chain:')} ${tickResult.decision.action.toUpperCase()} ${tickResult.decision.asset}`
+              : `${t('AI recommendation:')} ${tickResult.decision.action.toUpperCase()} ${t('(no on-chain trade)')}`
           }
           onDismiss={() => resetTick()}
         >
           <p>{tickResult.decision.reasoning}</p>
           {tickResult.decision.rsi != null && (
             <p className="mt-1 opacity-80">
-              RSI(14, 1h): {tickResult.decision.rsi.toFixed(2)} · Confidence: {tickResult.decision.confidence}%
+              RSI(14, 1h): {tickResult.decision.rsi.toFixed(2)} · {t('Confidence:')} {tickResult.decision.confidence}%
             </p>
           )}
           {!tickResult.executed && tickResult.reason && (
@@ -746,7 +751,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           )}
           {tickResult.executed && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-              {tickResult.pnl != null && <span>Estimated P&amp;L: {formatCurrency(tickResult.pnl)}</span>}
+              {tickResult.pnl != null && <span>{t('Estimated P&L:')} {formatCurrency(tickResult.pnl)}</span>}
               {tickResult.txHash && (
                 <a
                   href={`${MANTLE_TESTNET_EXPLORER}/tx/${tickResult.txHash}`}
@@ -755,7 +760,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   className="flex items-center gap-1 underline hover:opacity-80 transition-opacity"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  View transaction on Mantle Explorer
+                  {t('View transaction on Mantle Explorer')}
                 </a>
               )}
               {tickResult.swapTxHash && (
@@ -766,7 +771,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
                   className="flex items-center gap-1 underline hover:opacity-80 transition-opacity"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  View swap on Mantle Explorer
+                  {t('View swap on Mantle Explorer')}
                 </a>
               )}
             </div>
@@ -788,26 +793,26 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
             )}
           >
             <Icon className="h-3.5 w-3.5" />
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} />
+        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} t={t} />
       )}
 
       {activeTab === 'trades' && (
-        <TradeHistoryTab trades={trades} total={trades.length} />
+        <TradeHistoryTab trades={trades} total={trades.length} t={t} />
       )}
 
       {activeTab === 'mandate' && (
-        <MandateTab mandateId={agent.mandateId} />
+        <MandateTab mandateId={agent.mandateId} t={t} />
       )}
 
       {activeTab === 'audit' && (
-        <AuditTrailTab logs={logs} total={logsData?.total ?? logs.length} />
+        <AuditTrailTab logs={logs} total={logsData?.total ?? logs.length} t={t} />
       )}
 
       {activeTab === 'settings' && (
@@ -819,6 +824,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           pausing={pausing}
           resuming={resuming}
           stopping={stopping}
+          t={t}
         />
       )}
     </div>
