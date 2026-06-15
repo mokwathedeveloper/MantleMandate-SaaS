@@ -10,6 +10,7 @@ import { useAlertStore } from '@/store/alertStore'
 import { useRecentActivity, type ActivityItem } from '@/hooks/useRecentActivity'
 import { useRiskSummary, type RiskSummary } from '@/hooks/useRiskSummary'
 import { fetchOnChainAuditEvents, MANTLE_MAX_BLOCK_RANGE } from '@/hooks/useOnChain'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ─────────────────────────────────────────────────────────────────
 // Reusable rail components
@@ -29,7 +30,7 @@ function RailSection({ title, action, children }: { title: string; action?: Reac
   )
 }
 
-function PolicyEngineCard({ count24h }: { count24h: number }) {
+function PolicyEngineCard({ count24h, t }: { count24h: number; t: (s: string) => string }) {
   return (
     <div className="px-4 pt-4">
       <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 flex items-center gap-2.5">
@@ -38,11 +39,11 @@ function PolicyEngineCard({ count24h }: { count24h: number }) {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-semibold text-success">Policy Engine Online</p>
+          <p className="text-[12px] font-semibold text-success">{t('Policy Engine Online')}</p>
           <p className="text-[11px] text-text-secondary leading-tight mt-0.5">
             {count24h === 0
-              ? 'No events in the last 24h'
-              : `${count24h.toLocaleString()} event${count24h === 1 ? '' : 's'} / 24h`}
+              ? t('No events in the last 24h')
+              : t(count24h === 1 ? '{n} event / 24h' : '{n} events / 24h').replace('{n}', count24h.toLocaleString())}
           </p>
         </div>
         <CheckCircle2 className="h-4 w-4 text-success" />
@@ -51,9 +52,20 @@ function PolicyEngineCard({ count24h }: { count24h: number }) {
   )
 }
 
-function RecentActivityList({ items }: { items: ActivityItem[] }) {
+const TIME_AGO_RE = /^(\d+)\s*(min ago|h ago|d ago)$/
+
+function translateTimeAgo(value: string, t: (s: string) => string): string {
+  if (value === 'just now') return t('just now')
+  const match = value.match(TIME_AGO_RE)
+  if (!match) return value
+  const [, n, unit] = match
+  const key = unit === 'min ago' ? '{n} min ago' : unit === 'h ago' ? '{n}h ago' : '{n}d ago'
+  return t(key).replace('{n}', n)
+}
+
+function RecentActivityList({ items, t }: { items: ActivityItem[]; t: (s: string) => string }) {
   if (items.length === 0) {
-    return <p className="text-[12px] text-text-secondary py-1">No recent activity yet.</p>
+    return <p className="text-[12px] text-text-secondary py-1">{t('No recent activity yet.')}</p>
   }
   return (
     <div className="space-y-2.5">
@@ -61,8 +73,8 @@ function RecentActivityList({ items }: { items: ActivityItem[] }) {
         <div key={a.id} className="flex items-start gap-2.5">
           <Activity className="h-3.5 w-3.5 text-text-disabled shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] text-text-primary leading-snug">{a.label}</p>
-            <p className="text-[10px] text-text-disabled mt-0.5">{a.time}</p>
+            <p className="text-[12px] text-text-primary leading-snug">{t(a.label)}</p>
+            <p className="text-[10px] text-text-disabled mt-0.5">{translateTimeAgo(a.time, t)}</p>
           </div>
         </div>
       ))}
@@ -111,7 +123,7 @@ function ActionModal({
 // Run Audit modal — real on-chain scan via AgentExecutor events
 // ─────────────────────────────────────────────────────────────────
 
-function RunAuditModal({ onClose }: { onClose: () => void }) {
+function RunAuditModal({ onClose, t }: { onClose: () => void; t: (s: string) => string }) {
   const [running, setRunning] = useState(false)
   const [result, setResult]   = useState<number | null>(null)
   const [failed, setFailed]   = useState(false)
@@ -129,8 +141,10 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const blocks = MANTLE_MAX_BLOCK_RANGE.toLocaleString()
+
   return (
-    <ActionModal title="Run Audit" icon={ShieldCheck} onClose={onClose}>
+    <ActionModal title={t('Run Audit')} icon={ShieldCheck} onClose={onClose}>
       <div className="p-4 space-y-3">
         {result !== null ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
@@ -138,11 +152,15 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
               <ShieldCheck className="h-6 w-6 text-success" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-text-primary">Audit complete</p>
+              <p className="text-sm font-semibold text-text-primary">{t('Audit complete')}</p>
               <p className="text-xs text-text-secondary mt-1">
                 {result === 0
-                  ? `No on-chain order executions found in the last ${MANTLE_MAX_BLOCK_RANGE.toLocaleString()} blocks on Mantle Sepolia.`
-                  : `Found ${result} on-chain order execution${result === 1 ? '' : 's'} in the last ${MANTLE_MAX_BLOCK_RANGE.toLocaleString()} blocks.`}
+                  ? t('No on-chain order executions found in the last {blocks} blocks on Mantle Sepolia.').replace('{blocks}', blocks)
+                  : t(result === 1
+                      ? 'Found {n} on-chain order execution in the last {blocks} blocks.'
+                      : 'Found {n} on-chain order executions in the last {blocks} blocks.')
+                      .replace('{n}', String(result))
+                      .replace('{blocks}', blocks)}
               </p>
             </div>
             <div className="flex gap-2 pt-1 w-full">
@@ -151,52 +169,51 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 className="flex-1 text-center py-2 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors"
               >
-                View Audit Log →
+                {t('View Audit Log →')}
               </Link>
               <button
                 onClick={onClose}
                 className="px-3 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
               >
-                Close
+                {t('Close')}
               </button>
             </div>
           </div>
         ) : failed ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <p className="text-sm font-semibold text-error">Audit failed</p>
+            <p className="text-sm font-semibold text-error">{t('Audit failed')}</p>
             <p className="text-xs text-text-secondary">
-              Couldn&apos;t reach the Mantle Sepolia RPC. Please try again.
+              {t("Couldn't reach the Mantle Sepolia RPC. Please try again.")}
             </p>
             <button
               onClick={handleRun}
               className="px-3 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
             >
-              Retry
+              {t('Retry')}
             </button>
           </div>
         ) : running ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <Loader2 className="h-6 w-6 text-primary animate-spin" />
-            <p className="text-xs text-text-secondary">Scanning AgentExecutor events on Mantle Sepolia…</p>
+            <p className="text-xs text-text-secondary">{t('Scanning AgentExecutor events on Mantle Sepolia…')}</p>
           </div>
         ) : (
           <>
             <p className="text-xs text-text-secondary">
-              Scans the AgentExecutor contract for on-chain order executions in the last{' '}
-              {MANTLE_MAX_BLOCK_RANGE.toLocaleString()} blocks on Mantle Sepolia.
+              {t('Scans the AgentExecutor contract for on-chain order executions in the last {blocks} blocks on Mantle Sepolia.').replace('{blocks}', blocks)}
             </p>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleRun}
                 className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors"
               >
-                <ShieldCheck className="h-3.5 w-3.5" /> Start Audit
+                <ShieldCheck className="h-3.5 w-3.5" /> {t('Start Audit')}
               </button>
               <button
                 onClick={onClose}
                 className="px-3 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </>
@@ -212,14 +229,14 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
 
 type ModalKey = 'audit'
 
-function QuickActionGrid({ onAction }: { onAction: (m: ModalKey) => void }) {
+function QuickActionGrid({ onAction, t }: { onAction: (m: ModalKey) => void; t: (s: string) => string }) {
   return (
     <button
       onClick={() => onAction('audit')}
       className="w-full flex items-center gap-1.5 rounded-md border border-border bg-page hover:border-primary/40 hover:bg-primary/5 px-2.5 py-2 transition-colors text-left"
     >
       <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-      <span className="text-[11px] font-medium text-text-primary truncate">Run Audit</span>
+      <span className="text-[11px] font-medium text-text-primary truncate">{t('Run Audit')}</span>
     </button>
   )
 }
@@ -228,18 +245,18 @@ function QuickActionGrid({ onAction }: { onAction: (m: ModalKey) => void }) {
 // Risk summary
 // ─────────────────────────────────────────────────────────────────
 
-function RiskSummaryCard({ summary }: { summary: RiskSummary }) {
+function RiskSummaryCard({ summary, t }: { summary: RiskSummary; t: (s: string) => string }) {
   if (!summary.hasData) {
     return (
       <div className="space-y-2">
         <p className="text-[12px] text-text-secondary leading-snug">
-          No active agents yet — risk metrics will appear once an agent is deployed.
+          {t('No active agents yet — risk metrics will appear once an agent is deployed.')}
         </p>
         <Link
           href="/dashboard/risk"
           className="block w-full text-center text-[11px] font-medium text-primary hover:text-primary-hover py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
         >
-          Open Risk Engine →
+          {t('Open Risk Engine →')}
         </Link>
       </div>
     )
@@ -267,14 +284,14 @@ function RiskSummaryCard({ summary }: { summary: RiskSummary }) {
           score >= 60 && 'bg-error/15 text-error',
         )}>
           <span className={cn('h-1.5 w-1.5 rounded-full', dotTone)} />
-          {level}
+          {t(level)}
         </span>
       </div>
       <Link
         href="/dashboard/risk"
         className="block w-full text-center text-[11px] font-medium text-primary hover:text-primary-hover py-1.5 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
       >
-        View report →
+        {t('View report →')}
       </Link>
     </div>
   )
@@ -291,6 +308,7 @@ export function RightRail() {
   const [activeModal, setActiveModal] = useState<ModalKey | null>(null)
   const { data: activity } = useRecentActivity(4)
   const { data: riskSummary } = useRiskSummary()
+  const t = useTranslation()
 
   return (
     <>
@@ -299,38 +317,38 @@ export function RightRail() {
         <div className="flex items-center justify-between px-4 py-4 border-b border-border shrink-0">
           <h4 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
             <Bell className="h-3.5 w-3.5 text-text-secondary" />
-            Real-Time Ops
+            {t('Real-Time Ops')}
           </h4>
           {unreadCount > 0 && (
             <span className="text-[10px] font-semibold text-error bg-error/15 px-1.5 py-0.5 rounded-full">
-              {unreadCount} new
+              {t('{n} new').replace('{n}', String(unreadCount))}
             </span>
           )}
         </div>
 
-        <PolicyEngineCard count24h={activity?.count24h ?? 0} />
+        <PolicyEngineCard count24h={activity?.count24h ?? 0} t={t} />
 
-        <RailSection title="Recent Activity" action={
+        <RailSection title={t('Recent Activity')} action={
           <Link href="/dashboard/audit" className="text-[10px] text-text-link hover:text-text-link-hover">
-            View all
+            {t('View all')}
           </Link>
         }>
-          <RecentActivityList items={activity?.items ?? []} />
+          <RecentActivityList items={activity?.items ?? []} t={t} />
         </RailSection>
 
-        <RailSection title="Quick Actions">
-          <QuickActionGrid onAction={setActiveModal} />
+        <RailSection title={t('Quick Actions')}>
+          <QuickActionGrid onAction={setActiveModal} t={t} />
         </RailSection>
 
-        <RailSection title="Risk Summary" action={
+        <RailSection title={t('Risk Summary')} action={
           <Gauge className="h-3 w-3 text-text-disabled" />
         }>
-          <RiskSummaryCard summary={riskSummary ?? EMPTY_RISK_SUMMARY} />
+          <RiskSummaryCard summary={riskSummary ?? EMPTY_RISK_SUMMARY} t={t} />
         </RailSection>
       </aside>
 
       {/* Modals */}
-      {activeModal === 'audit' && <RunAuditModal onClose={() => setActiveModal(null)} />}
+      {activeModal === 'audit' && <RunAuditModal onClose={() => setActiveModal(null)} t={t} />}
     </>
   )
 }
