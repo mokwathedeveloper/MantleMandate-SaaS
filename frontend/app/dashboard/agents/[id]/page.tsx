@@ -21,6 +21,7 @@ import { useMandate } from '@/hooks/useMandates'
 import { useAgentReputation } from '@/hooks/useOnChain'
 import { useQuery } from '@tanstack/react-query'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
+import { usePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/hooks/usePreferences'
 import { cn } from '@/lib/utils'
 import { MANTLE_TESTNET_EXPLORER } from '@/lib/constants'
 import type { BadgeVariant } from '@/components/ui/Badge'
@@ -78,12 +79,13 @@ function useAgentLogs(agentId: string) {
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab({
-  agent, trades, pnlPoints, t,
+  agent, trades, pnlPoints, t, prefs,
 }: {
   agent: ReturnType<typeof useAgent>['data']
   trades: Trade[]
   pnlPoints: { time: string; pnl: number }[]
   t: (s: string) => string
+  prefs: Partial<UserPreferences>
 }) {
   const reputation = useAgentReputation(agent?.onchainAgentId != null ? BigInt(agent.onchainAgentId) : null)
 
@@ -100,11 +102,11 @@ function OverviewTab({
       {/* Extended KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { label: 'Lifetime P&L',   value: formatCurrency(agent.totalPnl),     color: agent.totalPnl >= 0 ? 'text-success' : 'text-error' },
+          { label: 'Lifetime P&L',   value: formatCurrency(agent.totalPnl, prefs),     color: agent.totalPnl >= 0 ? 'text-success' : 'text-error' },
           { label: 'Lifetime ROI',   value: formatPercent(agent.totalRoi),       color: agent.totalRoi >= 0 ? 'text-success' : 'text-error' },
           { label: 'Total Trades',   value: String(trades.length),               color: 'text-text-primary' },
           { label: 'Win Rate',       value: `${winRate}%`,                       color: winRate >= 50 ? 'text-success' : 'text-warning' },
-          { label: 'Avg Trade Size', value: formatCurrency(avgSize),             color: 'text-text-primary' },
+          { label: 'Avg Trade Size', value: formatCurrency(avgSize, prefs),             color: 'text-text-primary' },
         ].map(({ label, value, color }) => (
           <Card key={label} padding="sm">
             <p className="text-xs text-text-secondary">{t(label)}</p>
@@ -119,7 +121,7 @@ function OverviewTab({
           <CardHeader>
             <CardTitle>{t('Cumulative P&L')}</CardTitle>
             <span className={cn('text-sm font-semibold', agent.totalPnl >= 0 ? 'text-success' : 'text-error')}>
-              {formatCurrency(agent.totalPnl)}
+              {formatCurrency(agent.totalPnl, prefs)}
             </span>
           </CardHeader>
           <CardContent>
@@ -137,7 +139,7 @@ function OverviewTab({
                   tickFormatter={(v) => `$${v}`} />
                 <Tooltip
                   contentStyle={{ background: '#161B22', border: '1px solid #30363D', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v) => [formatCurrency(Number(v)), t('P&L')]}
+                  formatter={(v) => [formatCurrency(Number(v), prefs), t('P&L')]}
                 />
                 <Area type="monotone" dataKey="pnl" stroke="#22C55E" strokeWidth={2}
                   fill="url(#pnlGrad)" dot={false} activeDot={{ r: 4 }} />
@@ -202,7 +204,7 @@ function OverviewTab({
 
 // ── Trade History Tab ─────────────────────────────────────────────────────────
 
-function TradeHistoryTab({ trades, total, t }: { trades: Trade[]; total: number; t: (s: string) => string }) {
+function TradeHistoryTab({ trades, total, t, prefs }: { trades: Trade[]; total: number; t: (s: string) => string; prefs: Partial<UserPreferences> }) {
   return (
     <Card padding="md">
       <CardHeader>
@@ -251,14 +253,14 @@ function TradeHistoryTab({ trades, total, t }: { trades: Trade[]; total: number;
                     )}>
                       {trade.direction === 'buy' ? t('buy') : t('sell')}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-text-primary">{formatCurrency(trade.amountUsd)}</td>
+                    <td className="px-4 py-2.5 text-right text-text-primary">{formatCurrency(trade.amountUsd, prefs)}</td>
                     <td className="px-4 py-2.5 text-right text-text-primary">
                       {trade.price > 0 ? `$${trade.price.toLocaleString()}` : '—'}
                     </td>
                     <td className={cn('px-4 py-2.5 text-right font-medium',
                       trade.pnl == null ? 'text-text-secondary' : trade.pnl >= 0 ? 'text-success' : 'text-error'
                     )}>
-                      {trade.pnl != null ? formatCurrency(trade.pnl) : '—'}
+                      {trade.pnl != null ? formatCurrency(trade.pnl, prefs) : '—'}
                     </td>
                     <td className="px-4 py-2.5">
                       <Badge variant={TRADE_STATUS_VARIANT[trade.status]}>{t(trade.status)}</Badge>
@@ -516,12 +518,13 @@ function AuditTrailTab({ logs, total, t }: { logs: AuditLog[]; total: number; t:
 function SettingsTab({
   agent,
   onPause, onResume, onStop,
-  pausing, resuming, stopping, t,
+  pausing, resuming, stopping, t, prefs,
 }: {
   agent: NonNullable<ReturnType<typeof useAgent>['data']>
   onPause: () => void; onResume: () => void; onStop: () => void
   pausing: boolean; resuming: boolean; stopping: boolean
   t: (s: string) => string
+  prefs: Partial<UserPreferences>
 }) {
   return (
     <div className="space-y-5 max-w-xl">
@@ -576,9 +579,9 @@ function SettingsTab({
             {[
               ['Agent ID',       agent.id],
               ['Mandate',        agent.mandateName],
-              ['Capital Cap',    agent.capitalCap > 0 ? formatCurrency(agent.capitalCap) : t('No limit')],
-              ['Deployed At',    agent.deployedAt ? formatDate(agent.deployedAt) : '—'],
-              ['Last Trade',     agent.lastTradeAt ? formatDate(agent.lastTradeAt) : t('No trades yet')],
+              ['Capital Cap',    agent.capitalCap > 0 ? formatCurrency(agent.capitalCap, prefs) : t('No limit')],
+              ['Deployed At',    agent.deployedAt ? formatDate(agent.deployedAt, prefs) : '—'],
+              ['Last Trade',     agent.lastTradeAt ? formatDate(agent.lastTradeAt, prefs) : t('No trades yet')],
             ].map(([k, v]) => (
               <div key={k} className="flex items-start justify-between gap-4 py-2 border-b border-border/50 last:border-0">
                 <span className="text-text-secondary shrink-0">{t(k)}</span>
@@ -618,6 +621,7 @@ function SettingsTab({
 export default function AgentDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
   const t = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
   const { data: agent, isLoading } = useAgent(id)
@@ -751,7 +755,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           )}
           {tickResult.executed && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-              {tickResult.pnl != null && <span>{t('Estimated P&L:')} {formatCurrency(tickResult.pnl)}</span>}
+              {tickResult.pnl != null && <span>{t('Estimated P&L:')} {formatCurrency(tickResult.pnl, prefs)}</span>}
               {tickResult.txHash && (
                 <a
                   href={`${MANTLE_TESTNET_EXPLORER}/tx/${tickResult.txHash}`}
@@ -800,11 +804,11 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} t={t} />
+        <OverviewTab agent={agent} trades={trades} pnlPoints={pnlPoints} t={t} prefs={prefs} />
       )}
 
       {activeTab === 'trades' && (
-        <TradeHistoryTab trades={trades} total={trades.length} t={t} />
+        <TradeHistoryTab trades={trades} total={trades.length} t={t} prefs={prefs} />
       )}
 
       {activeTab === 'mandate' && (
@@ -825,6 +829,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
           resuming={resuming}
           stopping={stopping}
           t={t}
+          prefs={prefs}
         />
       )}
     </div>
