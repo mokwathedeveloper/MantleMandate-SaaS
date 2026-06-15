@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { useSwapPoolStats } from '@/hooks/useOnChain'
+import { useTranslation } from '@/hooks/useTranslation'
 import { SWAP_POOL_ADDRESS } from '@/lib/contracts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -49,19 +50,19 @@ function useUserTrades() {
   })
 }
 
-function timeAgo(timestampMs: number): string {
-  if (!timestampMs) return 'never'
+function timeAgo(timestampMs: number, t: (s: string) => string): string {
+  if (!timestampMs) return t('never')
   const diffMs = Date.now() - timestampMs
   const sec = Math.floor(diffMs / 1000)
-  if (sec < 60) return `${sec}s ago`
+  if (sec < 60) return t('{n}s ago').replace('{n}', String(sec))
   const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  return `${Math.floor(min / 60)}h ago`
+  if (min < 60) return t('{n}m ago').replace('{n}', String(min))
+  return t('{n}h ago').replace('{n}', String(Math.floor(min / 60)))
 }
 
 // ── Trade History Panel ────────────────────────────────────────────────────
 
-function TradeHistoryPanel({ trades, onClose }: { trades: TradeRow[]; onClose: () => void }) {
+function TradeHistoryPanel({ trades, onClose, t }: { trades: TradeRow[]; onClose: () => void; t: (s: string) => string }) {
   return (
     <div className="fixed inset-0 z-50 flex bg-black/60" onClick={onClose}>
       <div
@@ -69,7 +70,7 @@ function TradeHistoryPanel({ trades, onClose }: { trades: TradeRow[]; onClose: (
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-border">
-          <h3 className="text-sm font-semibold text-text-primary">MockSwapPool — Trade History</h3>
+          <h3 className="text-sm font-semibold text-text-primary">MockSwapPool — {t('Trade History')}</h3>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Close panel">
             <X className="h-4 w-4" />
           </button>
@@ -78,33 +79,33 @@ function TradeHistoryPanel({ trades, onClose }: { trades: TradeRow[]; onClose: (
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
           {trades.length === 0 ? (
             <p className="text-center py-12 text-sm text-text-disabled">
-              No trades have been routed through MockSwapPool yet.
+              {t('No trades have been routed through MockSwapPool yet.')}
             </p>
           ) : (
-            trades.map((t, i) => (
+            trades.map((trade, i) => (
               <div key={i} className="flex items-center justify-between py-2.5 text-xs border-b border-border last:border-b-0">
                 <div>
                   <p className="text-text-primary font-medium">
-                    {t.asset_pair} {t.direction === 'buy' ? 'Buy' : 'Sell'}
+                    {trade.asset_pair} {trade.direction === 'buy' ? t('Buy') : t('Sell')}
                   </p>
                   <p className="text-text-disabled mt-0.5">
-                    {new Date(t.created_at).toLocaleString()} · {t.status}
+                    {new Date(trade.created_at).toLocaleString()} · {t(trade.status)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={cn('font-semibold', (t.pnl ?? 0) >= 0 ? 'text-success' : 'text-error')}>
-                    {t.pnl != null ? `${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : '—'}
+                  <p className={cn('font-semibold', (trade.pnl ?? 0) >= 0 ? 'text-success' : 'text-error')}>
+                    {trade.pnl != null ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : '—'}
                   </p>
-                  {t.tx_hash ? (
+                  {trade.tx_hash ? (
                     <a
-                      href={`${EXPLORER_TX_BASE}${t.tx_hash}`}
+                      href={`${EXPLORER_TX_BASE}${trade.tx_hash}`}
                       target="_blank" rel="noreferrer"
                       className="text-text-link hover:opacity-70 transition-opacity inline-flex items-center gap-1 mt-0.5"
                     >
                       tx <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : (
-                    <p className="text-text-disabled mt-0.5">no tx</p>
+                    <p className="text-text-disabled mt-0.5">{t('no tx')}</p>
                   )}
                 </div>
               </div>
@@ -119,6 +120,7 @@ function TradeHistoryPanel({ trades, onClose }: { trades: TradeRow[]; onClose: (
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProtocolsPage() {
+  const t = useTranslation()
   const [showHistory, setShowHistory] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -143,14 +145,14 @@ export default function ProtocolsPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      {showHistory && <TradeHistoryPanel trades={protocolTrades} onClose={() => setShowHistory(false)} />}
+      {showHistory && <TradeHistoryPanel trades={protocolTrades} onClose={() => setShowHistory(false)} t={t} />}
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Protocol Integration</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('Protocol Integration')}</h2>
           <p className="text-sm mt-0.5 text-text-secondary">
-            MantleMandate agents execute swaps on Mantle Sepolia Testnet through a single on-chain venue.
+            {t('MantleMandate agents execute swaps on Mantle Sepolia Testnet through a single on-chain venue.')}
           </p>
         </div>
         <button
@@ -159,7 +161,7 @@ export default function ProtocolsPage() {
           className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm bg-card border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors disabled:opacity-50"
         >
           <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-          Refresh Reserves
+          {t('Refresh Reserves')}
         </button>
       </div>
 
@@ -176,47 +178,45 @@ export default function ProtocolsPage() {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text-primary">MockSwapPool</p>
               <span className="text-[9px] font-bold uppercase tracking-wider text-primary">
-                Primary Execution Venue
+                {t('Primary Execution Venue')}
               </span>
             </div>
           </div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 bg-success-bg text-success border border-success/20">
-            ACTIVE
+            {t('ACTIVE')}
           </span>
         </div>
 
         <p className="text-xs leading-relaxed text-text-secondary">
-          Minimal constant-product AMM (x·y=k, 0.3% fee) deployed by this project on Mantle Sepolia.
-          Used by AI trading agents to execute real on-chain mUSD ⇄ mWETH swaps when Merchant Moe and
-          Agni Finance have no testnet liquidity.
+          {t('Minimal constant-product AMM (x·y=k, 0.3% fee) deployed by this project on Mantle Sepolia. Used by AI trading agents to execute real on-chain mUSD ⇄ mWETH swaps when Merchant Moe and Agni Finance have no testnet liquidity.')}
         </p>
 
         {/* Metrics 2x2 */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Pool Reserves</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t('Pool Reserves')}</p>
             <p className="text-sm font-semibold mt-0.5 text-text-primary">
               {poolError
                 ? '—'
                 : poolLoading
-                  ? 'Loading…'
+                  ? t('Loading…')
                   : `${poolStats?.reserveUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} mUSD / ${poolStats?.reserveWeth.toLocaleString(undefined, { maximumFractionDigits: 4 })} mWETH`}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Last Refreshed</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t('Last Refreshed')}</p>
             <p className="text-sm font-semibold mt-0.5 text-text-primary">
-              {poolError ? 'RPC unreachable' : timeAgo(dataUpdatedAt)}
+              {poolError ? t('RPC unreachable') : timeAgo(dataUpdatedAt, t)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Your Volume Routed</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t('Your Volume Routed')}</p>
             <p className="text-sm font-semibold mt-0.5 text-text-primary">
               ${volumeThisProtocol.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Your Allocation</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t('Your Allocation')}</p>
             <p className="text-sm font-semibold mt-0.5 text-text-primary">
               {volumeAll > 0 ? `${allocationPct}%` : '—'}
             </p>
@@ -226,7 +226,7 @@ export default function ProtocolsPage() {
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] text-text-disabled shrink-0">Contract:</span>
+            <span className="text-[11px] text-text-disabled shrink-0">{t('Contract:')}</span>
             <span className="text-xs font-mono truncate text-text-primary">{SWAP_POOL_ADDRESS}</span>
             <button
               onClick={() => {
@@ -252,7 +252,7 @@ export default function ProtocolsPage() {
             onClick={() => setShowHistory(true)}
             className="px-2.5 py-1 text-xs rounded font-medium border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors shrink-0"
           >
-            Trade History ({protocolTrades.length})
+            {t('Trade History ({n})').replace('{n}', String(protocolTrades.length))}
           </button>
         </div>
       </div>
@@ -260,16 +260,16 @@ export default function ProtocolsPage() {
       {/* ── Summary footer ────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 text-xs border-t border-border text-text-secondary">
         <span>
-          1 protocol connected
-          {!poolError && poolStats && ` · Pool reserves: ${poolStats.reserveUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} mUSD / ${poolStats.reserveWeth.toLocaleString(undefined, { maximumFractionDigits: 4 })} mWETH`}
-          {' · '}Last refreshed: {poolError ? 'unavailable' : timeAgo(dataUpdatedAt)}
+          {t('1 protocol connected')}
+          {!poolError && poolStats && ` · ${t('Pool reserves:')} ${poolStats.reserveUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} mUSD / ${poolStats.reserveWeth.toLocaleString(undefined, { maximumFractionDigits: 4 })} mWETH`}
+          {' · '}{t('Last refreshed:')} {poolError ? t('unavailable') : timeAgo(dataUpdatedAt, t)}
         </span>
         <a
           href={EXPLORER_ADDRESS_URL}
           target="_blank" rel="noreferrer"
           className="flex items-center gap-1.5 text-text-link hover:opacity-70 transition-opacity"
         >
-          View pool on explorer
+          {t('View pool on explorer')}
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
