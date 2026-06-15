@@ -1,8 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
+import { useAgents } from '@/hooks/useAgents'
+import { useMandates } from '@/hooks/useMandates'
+import { useTrades } from '@/hooks/useTrades'
+import { usePreferences, useUpdatePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
+import { useTranslation } from '@/hooks/useTranslation'
+import { UI_LOCALES } from '@/lib/i18n'
+import { supabase } from '@/lib/supabase'
 import {
   CheckCircle2, Eye, EyeOff, Plus, Trash2,
   Copy, Check, X, ExternalLink,
@@ -18,16 +25,38 @@ type Section =
 
 interface ApiKey { id: string; name: string; created: string; lastUsed: string; permissions: string }
 
-const INITIAL_KEYS: ApiKey[] = [
-  { id: '1', name: 'Bybit Integration',  created: 'Apr 1, 2026',  lastUsed: '2 min ago', permissions: 'Read only' },
-  { id: '2', name: 'Custom Dashboard',   created: 'Mar 15, 2026', lastUsed: '1 day ago', permissions: 'Read only' },
-]
+const INITIAL_KEYS: ApiKey[] = []
 
 const EMAIL_TOGGLE_LABELS = [
   'Trade executions', 'Trade failures', 'Drawdown alerts', 'Mandate breach alerts',
   'Daily performance summary', 'Weekly summary', 'System updates', 'Marketing emails',
 ]
 const EMAIL_TOGGLE_DEFAULTS = [true, true, true, true, false, false, true, false]
+
+// Plan-tier usage limits — mirrors the tiers shown on the Billing page
+// (operator / strategist / institution).
+const PLAN_LIMITS: Record<string, { agents: number; mandates: number; trades: number }> = {
+  operator:    { agents: 3,  mandates: 5,   trades: 250 },
+  strategist:  { agents: 10, mandates: 25,  trades: 2500 },
+  institution: { agents: 50, mandates: 100, trades: 25000 },
+}
+
+function parseUserAgent(ua: string): string {
+  let browser = 'Unknown browser'
+  if (ua.includes('Edg/')) browser = 'Edge'
+  else if (ua.includes('Chrome/')) browser = 'Chrome'
+  else if (ua.includes('Firefox/')) browser = 'Firefox'
+  else if (ua.includes('Safari/')) browser = 'Safari'
+
+  let os = 'Unknown OS'
+  if (ua.includes('Windows')) os = 'Windows'
+  else if (ua.includes('Mac OS')) os = 'macOS'
+  else if (ua.includes('Android')) os = 'Android'
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS'
+  else if (ua.includes('Linux')) os = 'Linux'
+
+  return `${browser} on ${os}`
+}
 
 // ─── Primitives ─────────────────────────────────────────────────────────────
 
@@ -71,26 +100,26 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
   )
 }
 
-function SaveActions({ label = 'Save Changes', onSave, onCancel }: { label?: string; onSave: () => void; onCancel?: () => void }) {
+function SaveActions({ label, onSave, onCancel, t }: { label?: string; onSave: () => void; onCancel?: () => void; t: (s: string) => string }) {
   return (
     <div className="flex gap-2 pt-4 border-t border-border mt-2">
       <button
         onClick={onSave}
         className="bg-primary hover:bg-primary-hover text-white text-sm px-4 py-2 rounded-md transition-colors"
       >
-        {label}
+        {label ?? t('Save Changes')}
       </button>
       <button
         onClick={onCancel}
         className="border border-border text-text-secondary text-sm px-4 py-2 rounded-md hover:text-text-primary transition-colors"
       >
-        Cancel
+        {t('Cancel')}
       </button>
     </div>
   )
 }
 
-function CopyOnceButton({ text }: { text: string }) {
+function CopyOnceButton({ text, t }: { text: string; t: (s: string) => string }) {
   const [copied, setCopied] = useState(false)
   const copy = () => {
     navigator.clipboard.writeText(text)
@@ -103,7 +132,7 @@ function CopyOnceButton({ text }: { text: string }) {
       className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-md text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
     >
       {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? 'Copied!' : 'Copy Key'}
+      {copied ? t('Copied!') : t('Copy Key')}
     </button>
   )
 }
@@ -141,14 +170,36 @@ const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
 
 export default function SettingsPage() {
   const user = useAuthStore(s => s.user)
+  const session = useAuthStore(s => s.session)
   const [section, setSection] = useState<Section>('general')
   const [toast, setToast] = useState<string | null>(null)
-  const save = (msg = 'Settings saved') => setToast(msg)
+  const t = useTranslation()
+  const save = (msg?: string) => setToast(msg ?? t('Settings saved'))
+
+  // ── Usage data (real) ──
+  const { data: agents }   = useAgents()
+  const { data: mandates } = useMandates()
+  const { data: trades }   = useTrades({ per_page: 1 })
 
   // ── General state ──
   const [username]  = useState(user?.name ?? '')
-  const [timezone]  = useState('UTC+2 (Eastern European Time)')
+  const [timezone, setTimezone] = useState('—')
   const [lang, setLang] = useState('English')
+
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const offsetMin = -new Date().getTimezoneOffset()
+      const sign = offsetMin >= 0 ? '+' : '-'
+      const abs = Math.abs(offsetMin)
+      const hh = Math.floor(abs / 60)
+      const mm = abs % 60
+      const offsetStr = mm === 0 ? `${hh}` : `${hh}:${String(mm).padStart(2, '0')}`
+      setTimezone(`UTC${sign}${offsetStr} (${tz})`)
+    } catch {
+      setTimezone('UTC')
+    }
+  }, [])
 
   // ── Password state ──
   const [showCur, setShowCur]       = useState(false)
@@ -165,15 +216,128 @@ export default function SettingsPage() {
   }
 
   // ── Display state ──
-  const [theme, setTheme]           = useState<'dark' | 'light' | 'system'>('dark')
-  const [layout, setLayout]         = useState<'expanded' | 'compact'>('expanded')
-  const [timeRange, setTimeRange]   = useState('1 Month')
-  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY')
-  const [numFormat, setNumFormat]   = useState('1,234.56')
-  const [currency, setCurrency]     = useState('USD ($)')
+  const [theme, setTheme]           = useState<'dark' | 'light' | 'system'>(DEFAULT_PREFERENCES.theme)
+  const [layout, setLayout]         = useState<'expanded' | 'compact'>(DEFAULT_PREFERENCES.layout)
+  const [timeRange, setTimeRange]   = useState(DEFAULT_PREFERENCES.timeRange)
+  const [dateFormat, setDateFormat] = useState(DEFAULT_PREFERENCES.dateFormat)
+  const [numFormat, setNumFormat]   = useState(DEFAULT_PREFERENCES.numberFormat)
+  const [currency, setCurrency]     = useState(DEFAULT_PREFERENCES.currency)
 
-  // ── 2FA state ──
+  // ── Preferences (real, persisted to profiles.preferences) ──
+  const { data: savedPrefs } = usePreferences()
+  const updatePreferences = useUpdatePreferences()
+  const prefsLoadedRef = useRef(false)
+
+  useEffect(() => {
+    if (!savedPrefs || prefsLoadedRef.current) return
+    prefsLoadedRef.current = true
+    setTheme(savedPrefs.theme)
+    setLayout(savedPrefs.layout)
+    setTimeRange(savedPrefs.timeRange)
+    setDateFormat(savedPrefs.dateFormat)
+    setNumFormat(savedPrefs.numberFormat)
+    setCurrency(savedPrefs.currency)
+    setLang(savedPrefs.language)
+    setTelegramUrl(savedPrefs.telegramUrl)
+    if (savedPrefs.emailToggles.length === EMAIL_TOGGLE_LABELS.length) {
+      setEmailToggles(savedPrefs.emailToggles)
+    }
+  }, [savedPrefs])
+
+  const saveDisplayPrefs = () => {
+    updatePreferences.mutate({ theme, layout, timeRange, dateFormat, numberFormat: numFormat, currency })
+    save(t('Display preferences saved'))
+  }
+
+  const saveLanguagePrefs = () => {
+    updatePreferences.mutate({ language: lang })
+    save(t('Language preference saved'))
+  }
+
+  const saveNotificationPrefs = () => {
+    updatePreferences.mutate({ emailToggles, telegramUrl })
+    save(t('Notification preferences saved'))
+  }
+
+  // ── 2FA state (real Supabase MFA) ──
   const [show2faModal, setShow2faModal] = useState(false)
+  const [mfaFactor, setMfaFactor] = useState<{ id: string; friendly_name?: string; created_at: string } | null>(null)
+  const [mfaLoading, setMfaLoading] = useState(true)
+  const [show2faEnrollModal, setShow2faEnrollModal] = useState(false)
+  const [enrollData, setEnrollData] = useState<{ id: string; qrCode: string; secret: string } | null>(null)
+  const [enrollCode, setEnrollCode] = useState('')
+  const [enrollError, setEnrollError] = useState<string | null>(null)
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.mfa.listFactors().then((result: Awaited<ReturnType<typeof supabase.auth.mfa.listFactors>>) => {
+      const totp = result.data?.totp?.[0]
+      setMfaFactor(totp ? { id: totp.id, friendly_name: totp.friendly_name, created_at: totp.created_at } : null)
+      setMfaLoading(false)
+    })
+  }, [])
+
+  const startEnroll2fa = async () => {
+    setEnrollError(null)
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' })
+    if (error) { setEnrollError(error.message); return }
+    setEnrollData({ id: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret })
+    setEnrollCode('')
+    setShow2faEnrollModal(true)
+  }
+
+  const closeEnroll2faModal = () => {
+    setShow2faEnrollModal(false)
+    setEnrollData(null)
+    setEnrollCode('')
+    setEnrollError(null)
+  }
+
+  const verifyEnroll2fa = async () => {
+    if (!enrollData) return
+    setEnrollSubmitting(true)
+    setEnrollError(null)
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: enrollData.id, code: enrollCode })
+    setEnrollSubmitting(false)
+    if (error) { setEnrollError(error.message); return }
+    setMfaFactor({ id: enrollData.id, created_at: new Date().toISOString() })
+    closeEnroll2faModal()
+    save(t('Two-factor authentication enabled'))
+  }
+
+  const disable2fa = async () => {
+    if (!mfaFactor) return
+    const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactor.id })
+    if (error) return
+    setMfaFactor(null)
+    setShow2faModal(false)
+    save(t('Two-factor authentication disabled'))
+  }
+
+  // ── Active session state ──
+  const [currentSessionLabel, setCurrentSessionLabel] = useState<string | null>(null)
+  useEffect(() => {
+    setCurrentSessionLabel(parseUserAgent(navigator.userAgent))
+  }, [])
+
+  const signOutOtherSessions = async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'others' })
+    if (!error) save(t('Signed out of all other sessions'))
+  }
+
+  const lastSignIn = session?.user?.last_sign_in_at ?? null
+
+  // ── Usage (real) ──
+  const activeAgentsCount = (agents ?? []).filter(a => a.status === 'active').length
+  const mandatesCount = mandates?.total ?? 0
+  const tradesCount = trades?.total ?? 0
+  const planLimits = PLAN_LIMITS[user?.plan ?? 'operator']
+
+  const usageItems = [
+    { label: 'Active Agents',   used: activeAgentsCount, total: planLimits.agents },
+    { label: 'Mandates',        used: mandatesCount,      total: planLimits.mandates },
+    { label: 'Trades Executed', used: tradesCount,        total: planLimits.trades },
+  ]
 
   // ── API Key state ──
   const [keys, setKeys]               = useState<ApiKey[]>(INITIAL_KEYS)
@@ -212,8 +376,8 @@ export default function SettingsPage() {
     <div className="p-4 sm:p-6 space-y-4">
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
 
-      <nav className="text-xs text-text-disabled">Home &rsaquo; Settings</nav>
-      <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
+      <nav className="text-xs text-text-disabled">{t('Home')} &rsaquo; {t('Settings')}</nav>
+      <h2 className="text-2xl font-bold text-text-primary">{t('Settings')}</h2>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
 
@@ -222,7 +386,7 @@ export default function SettingsPage() {
           {NAV_GROUPS.map(g => (
             <div key={g.group}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-text-disabled mb-1 px-2">
-                {g.group}
+                {t(g.group)}
               </p>
               {g.items.map((item, idx) => {
                 if (item.href) {
@@ -232,7 +396,7 @@ export default function SettingsPage() {
                       href={item.href}
                       className="flex items-center gap-1 w-full text-left text-[13px] font-medium px-2 py-1.5 rounded transition-colors text-text-secondary hover:text-text-primary"
                     >
-                      {item.label}
+                      {t(item.label)}
                       <ExternalLink className="h-3 w-3 opacity-40 shrink-0" />
                     </Link>
                   )
@@ -249,7 +413,7 @@ export default function SettingsPage() {
                         : 'text-text-secondary hover:text-text-primary border-transparent',
                     )}
                   >
-                    {item.label}
+                    {t(item.label)}
                   </button>
                 )
               })}
@@ -263,60 +427,60 @@ export default function SettingsPage() {
           {/* ──────────── General ──────────── */}
           {section === 'general' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Account Information</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Account Information')}</h4>
               <div className="space-y-3">
                 {/* Email */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-text-secondary w-40 shrink-0">Email</span>
+                  <span className="text-sm text-text-secondary w-40 shrink-0">{t('Email')}</span>
                   <span className="text-sm text-text-primary flex-1">{user?.email ?? '—'}</span>
-                  <span className="text-xs text-success font-medium shrink-0">Verified ✓</span>
+                  <span className="text-xs text-success font-medium shrink-0">{t('Verified ✓')}</span>
                   <button className="text-xs border border-border rounded px-2 py-1 h-7 text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0">
-                    Change Email
+                    {t('Change Email')}
                   </button>
                 </div>
                 {/* Username */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-text-secondary w-40 shrink-0">Username</span>
+                  <span className="text-sm text-text-secondary w-40 shrink-0">{t('Username')}</span>
                   <span className="text-sm text-text-primary flex-1">{username}</span>
                   <button className="text-xs border border-border rounded px-2 py-1 h-7 text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0">
-                    Change
+                    {t('Change')}
                   </button>
                 </div>
                 {/* Time Zone */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-text-secondary w-40 shrink-0">Time Zone</span>
+                  <span className="text-sm text-text-secondary w-40 shrink-0">{t('Time Zone')}</span>
                   <span className="text-sm text-text-primary flex-1">{timezone}</span>
                   <button className="text-xs border border-border rounded px-2 py-1 h-7 text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0">
-                    Change
+                    {t('Change')}
                   </button>
                 </div>
                 {/* Language */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-text-secondary w-40 shrink-0">Language</span>
-                  <span className="text-sm text-text-primary flex-1">{lang}</span>
+                  <span className="text-sm text-text-secondary w-40 shrink-0">{t('Language')}</span>
+                  <span className="text-sm text-text-primary flex-1">{t(lang)}</span>
                   <button
                     onClick={() => setSection('language')}
                     className="text-xs border border-border rounded px-2 py-1 h-7 text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0"
                   >
-                    Change
+                    {t('Change')}
                   </button>
                 </div>
               </div>
-              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
+              <SaveActions t={t} onSave={() => save()} onCancel={() => setToast(t('Changes discarded'))} />
             </div>
           )}
 
           {/* ──────────── Password ──────────── */}
           {section === 'password' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Change Password</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Change Password')}</h4>
               {[
                 { label: 'Current password',     show: showCur,  toggle: () => setShowCur(v => !v) },
                 { label: 'New password',          show: showNew,  toggle: () => setShowNew(v => !v) },
                 { label: 'Confirm new password',  show: showConf, toggle: () => setShowConf(v => !v) },
               ].map(f => (
                 <div key={f.label} className="space-y-1">
-                  <label className="text-xs text-text-secondary">{f.label}</label>
+                  <label className="text-xs text-text-secondary">{t(f.label)}</label>
                   <div className="relative">
                     <input
                       type={f.show ? 'text' : 'password'}
@@ -332,7 +496,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
-              <SaveActions label="Update Password" onSave={() => save('Password updated')} onCancel={() => setToast('Changes discarded')} />
+              <SaveActions t={t} label={t('Update Password')} onSave={() => save(t('Password updated'))} onCancel={() => setToast(t('Changes discarded'))} />
             </div>
           )}
 
@@ -340,20 +504,20 @@ export default function SettingsPage() {
           {section === 'notifications' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-5">
               <div>
-                <h4 className="text-sm font-semibold text-text-primary">Notification Preferences</h4>
+                <h4 className="text-sm font-semibold text-text-primary">{t('Notification Preferences')}</h4>
                 <p className="text-xs text-text-secondary mt-0.5">
-                  Control how MantleMandate notifies you about your agents and trades.
+                  {t('Control how MantleMandate notifies you about your agents and trades.')}
                 </p>
               </div>
 
               {/* Email toggles */}
               <div className="space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                  Email Notifications
+                  {t('Email Notifications')}
                 </p>
                 {EMAIL_TOGGLE_LABELS.map((lbl, i) => (
                   <div key={lbl} className="flex items-center justify-between">
-                    <span className="text-sm text-text-secondary">{lbl}</span>
+                    <span className="text-sm text-text-secondary">{t(lbl)}</span>
                     <Toggle
                       on={emailToggles[i]}
                       onChange={v => setEmailToggles(prev => prev.map((p, j) => j === i ? v : p))}
@@ -365,21 +529,21 @@ export default function SettingsPage() {
               {/* In-app */}
               <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                  In-App Notifications
+                  {t('In-App Notifications')}
                 </p>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">All system alerts</span>
+                  <span className="text-sm text-text-secondary">{t('All system alerts')}</span>
                   <Toggle on locked />
                 </div>
                 <p className="text-xs text-text-disabled italic">
-                  In-app alerts cannot be disabled for system-critical events (errors, mandate breaches).
+                  {t('In-app alerts cannot be disabled for system-critical events (errors, mandate breaches).')}
                 </p>
               </div>
 
               {/* Telegram */}
               <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                  Telegram Webhook
+                  {t('Telegram Webhook')}
                 </p>
                 <div className="flex gap-2 items-center flex-wrap">
                   <input
@@ -392,39 +556,39 @@ export default function SettingsPage() {
                     onClick={testTelegram}
                     className="px-3 py-2 border border-border rounded-md text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0"
                   >
-                    Test Connection
+                    {t('Test Connection')}
                   </button>
                   <button
-                    onClick={() => save('Telegram webhook saved')}
+                    onClick={() => save(t('Telegram webhook saved'))}
                     className="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs rounded-md transition-colors shrink-0"
                   >
-                    Save
+                    {t('Save')}
                   </button>
                 </div>
                 {telegramStatus === 'connected' && (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
-                    <Check className="h-3.5 w-3.5" /> Connected ✓
+                    <Check className="h-3.5 w-3.5" /> {t('Connected ✓')}
                   </span>
                 )}
                 {telegramStatus === 'failed' && (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-error">
-                    <X className="h-3.5 w-3.5" /> Connection failed
+                    <X className="h-3.5 w-3.5" /> {t('Connection failed')}
                   </span>
                 )}
               </div>
 
-              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
+              <SaveActions t={t} onSave={saveNotificationPrefs} onCancel={() => setToast(t('Changes discarded'))} />
             </div>
           )}
 
           {/* ──────────── Display ──────────── */}
           {section === 'display' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-5">
-              <h4 className="text-sm font-semibold text-text-primary">Display Preferences</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Display Preferences')}</h4>
 
               {/* Theme — radio buttons */}
               <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm text-text-secondary w-40 shrink-0">Default theme</span>
+                <span className="text-sm text-text-secondary w-40 shrink-0">{t('Default theme')}</span>
                 <div className="flex items-center gap-4 flex-wrap">
                   {([['dark', 'Dark Mode'], ['light', 'Light Mode'], ['system', 'System']] as const).map(([val, label]) => (
                     <label key={val} className="flex items-center gap-1.5 cursor-pointer">
@@ -436,7 +600,7 @@ export default function SettingsPage() {
                         onChange={() => setTheme(val)}
                         className="accent-primary"
                       />
-                      <span className="text-sm text-text-secondary">{label}</span>
+                      <span className="text-sm text-text-secondary">{t(label)}</span>
                     </label>
                   ))}
                 </div>
@@ -444,7 +608,7 @@ export default function SettingsPage() {
 
               {/* Layout — radio buttons */}
               <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm text-text-secondary w-40 shrink-0">Dashboard layout</span>
+                <span className="text-sm text-text-secondary w-40 shrink-0">{t('Dashboard layout')}</span>
                 <div className="flex items-center gap-4">
                   {(['expanded', 'compact'] as const).map(val => (
                     <label key={val} className="flex items-center gap-1.5 cursor-pointer">
@@ -456,7 +620,7 @@ export default function SettingsPage() {
                         onChange={() => setLayout(val)}
                         className="accent-primary"
                       />
-                      <span className="text-sm text-text-secondary capitalize">{val}</span>
+                      <span className="text-sm text-text-secondary capitalize">{t(val)}</span>
                     </label>
                   ))}
                 </div>
@@ -470,70 +634,97 @@ export default function SettingsPage() {
                 { label: 'Currency display',   value: currency,    set: setCurrency,    options: ['USD ($)', 'EUR (€)', 'GBP (£)', 'MNT'] },
               ].map(r => (
                 <div key={r.label} className="flex items-center gap-4">
-                  <span className="text-sm text-text-secondary w-40 shrink-0">{r.label}</span>
+                  <span className="text-sm text-text-secondary w-40 shrink-0">{t(r.label)}</span>
                   <select
                     value={r.value}
                     onChange={e => r.set(e.target.value)}
                     className="bg-input border border-border rounded-md px-3 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
                   >
-                    {r.options.map(o => <option key={o}>{o}</option>)}
+                    {r.options.map(o => <option key={o} value={o}>{t(o)}</option>)}
                   </select>
                 </div>
               ))}
 
-              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
+              <SaveActions t={t} onSave={saveDisplayPrefs} onCancel={() => setToast(t('Changes discarded'))} />
             </div>
           )}
 
           {/* ──────────── Language ──────────── */}
           {section === 'language' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Language</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Language')}</h4>
               <div className="flex items-center gap-4">
-                <span className="text-sm text-text-secondary w-40 shrink-0">Interface language</span>
+                <span className="text-sm text-text-secondary w-40 shrink-0">{t('Interface language')}</span>
                 <select
                   value={lang}
                   onChange={e => setLang(e.target.value)}
                   className="bg-input border border-border rounded-md px-3 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
                 >
                   {['English', 'French', 'Spanish', 'German', 'Chinese (Simplified)', 'Japanese'].map(l => (
-                    <option key={l}>{l}</option>
+                    <option key={l} value={l}>{t(l)}</option>
                   ))}
                 </select>
               </div>
-              <SaveActions onSave={() => save()} onCancel={() => setToast('Changes discarded')} />
+              {lang !== 'English' && lang !== 'French' && (
+                <p className="text-xs text-text-secondary">
+                  {t('More languages are coming soon. Your preference is saved and will be applied automatically once they ship.')}
+                </p>
+              )}
+              <SaveActions t={t} onSave={saveLanguagePrefs} onCancel={() => setToast(t('Changes discarded'))} />
             </div>
           )}
 
           {/* ──────────── Two-Factor Auth ──────────── */}
           {section === '2fa' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Two-Factor Authentication</h4>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs px-2 py-0.5 rounded font-semibold uppercase border bg-success-bg text-success border-success/30">
-                  ENABLED ✓
-                </span>
-                <button
-                  onClick={() => setShow2faModal(true)}
-                  className="text-xs border border-error text-error rounded px-2 py-1 hover:bg-error/10 transition-colors"
-                >
-                  Disable 2FA
-                </button>
-                <button className="text-xs border border-border text-text-secondary rounded px-2 py-1 hover:border-primary hover:text-text-primary transition-colors">
-                  Change Method
-                </button>
-              </div>
-              <div className="space-y-1.5 text-sm">
-                <div className="flex gap-2">
-                  <span className="text-text-secondary w-16 shrink-0">Method:</span>
-                  <span className="text-text-primary">SMS to +1 (555) 000-0000</span>
-                </div>
-                <div className="flex gap-2 items-center flex-wrap">
-                  <span className="text-text-secondary w-16 shrink-0">Backup:</span>
-                  <span className="text-text-primary">Recovery codes generated</span>
-                  <button className="text-xs text-text-link hover:text-text-link-hover">[View Codes]</button>
-                </div>
-              </div>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Two-Factor Authentication')}</h4>
+              {mfaLoading ? (
+                <p className="text-sm text-text-secondary">{t('Loading…')}</p>
+              ) : mfaFactor ? (
+                <>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold uppercase border bg-success-bg text-success border-success/30">
+                      {t('ENABLED ✓')}
+                    </span>
+                    <button
+                      onClick={() => setShow2faModal(true)}
+                      className="text-xs border border-error text-error rounded px-2 py-1 hover:bg-error/10 transition-colors"
+                    >
+                      {t('Disable 2FA')}
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex gap-2">
+                      <span className="text-text-secondary w-20 shrink-0">{t('Method:')}</span>
+                      <span className="text-text-primary">{t('Authenticator app (TOTP)')}{mfaFactor.friendly_name ? ` — ${mfaFactor.friendly_name}` : ''}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-text-secondary w-20 shrink-0">{t('Enrolled:')}</span>
+                      <span className="text-text-primary">
+                        {new Date(mfaFactor.created_at).toLocaleDateString(UI_LOCALES[lang] ?? 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold uppercase border bg-surface text-text-secondary border-border">
+                      {t('NOT ENABLED')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-text-secondary">
+                    {t('Add an extra layer of security to your account using a TOTP authenticator app (e.g. Google Authenticator, 1Password).')}
+                  </p>
+                  {enrollError && <p className="text-sm text-error">{enrollError}</p>}
+                  <button
+                    onClick={startEnroll2fa}
+                    className="bg-primary hover:bg-primary-hover text-white text-sm px-4 py-2 rounded-md transition-colors"
+                  >
+                    {t('Enable 2FA')}
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -541,32 +732,29 @@ export default function SettingsPage() {
           {section === 'sessions' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-text-primary">Active Sessions (2)</h4>
-                <button className="text-xs text-error hover:underline">Revoke All Other Sessions</button>
+                <h4 className="text-sm font-semibold text-text-primary">{t('Active Sessions')}</h4>
+                <button onClick={signOutOtherSessions} className="text-xs text-error hover:underline">
+                  {t('Sign Out Other Sessions')}
+                </button>
               </div>
-              {[
-                { browser: 'Chrome on macOS',    location: 'San Francisco', when: 'Active now',  current: true },
-                { browser: 'Firefox on Windows', location: 'New York',      when: '2 hours ago', current: false },
-              ].map(s => (
-                <div key={s.browser} className="flex items-center justify-between border border-border rounded-md p-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-text-primary">{s.browser}</p>
-                      {s.current && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-text-secondary mt-0.5">{s.location} · {s.when}</p>
+              <div className="flex items-center justify-between border border-border rounded-md p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-text-primary">{currentSessionLabel ?? t('This device')}</p>
+                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                      {t('Current')}
+                    </span>
                   </div>
-                  {!s.current && (
-                    <button className="text-xs border border-border rounded px-2 py-1 text-error hover:bg-error/10 transition-colors">
-                      Revoke
-                    </button>
-                  )}
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    {lastSignIn
+                      ? `${t('Last sign-in:')} ${new Date(lastSignIn).toLocaleString(UI_LOCALES[lang] ?? 'en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                      : t('Active now')}
+                  </p>
                 </div>
-              ))}
+              </div>
+              <p className="text-xs text-text-secondary">
+                {t('"Sign Out Other Sessions" revokes access from all devices except this one.')}
+              </p>
             </div>
           )}
 
@@ -575,9 +763,9 @@ export default function SettingsPage() {
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                  <h4 className="text-sm font-semibold text-text-primary">API Keys</h4>
+                  <h4 className="text-sm font-semibold text-text-primary">{t('API Keys')}</h4>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    API keys allow external applications to interact with MantleMandate.
+                    {t('API keys allow external applications to interact with MantleMandate.')}
                   </p>
                 </div>
                 <button
@@ -585,7 +773,7 @@ export default function SettingsPage() {
                   className="flex items-center gap-1.5 border border-border rounded-md px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Generate New API Key
+                  {t('Generate New API Key')}
                 </button>
               </div>
 
@@ -596,7 +784,7 @@ export default function SettingsPage() {
                   style={{ gridTemplateColumns: '25% 18% 18% 20% auto' }}
                 >
                   {['NAME', 'CREATED', 'LAST USED', 'PERMISSIONS', 'ACTIONS'].map(h => (
-                    <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{h}</span>
+                    <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t(h)}</span>
                   ))}
                 </div>
                 {keys.map((k, i) => (
@@ -607,19 +795,19 @@ export default function SettingsPage() {
                   >
                     <span className="text-sm text-text-primary font-medium">{k.name}</span>
                     <span className="text-xs text-text-secondary">{k.created}</span>
-                    <span className="text-xs text-text-secondary">{k.lastUsed}</span>
-                    <span className="text-xs text-text-secondary">{k.permissions}</span>
+                    <span className="text-xs text-text-secondary">{t(k.lastUsed)}</span>
+                    <span className="text-xs text-text-secondary">{t(k.permissions)}</span>
                     <button
                       onClick={() => setKeys(prev => prev.filter(x => x.id !== k.id))}
                       className="flex items-center gap-1 text-xs text-error hover:underline"
                     >
-                      <Trash2 className="h-3 w-3" /> Revoke
+                      <Trash2 className="h-3 w-3" /> {t('Revoke')}
                     </button>
                   </div>
                 ))}
                 {keys.length === 0 && (
                   <div className="px-4 py-6 text-center text-sm text-text-secondary">
-                    No API keys yet.
+                    {t('No API keys yet.')}
                   </div>
                 )}
               </div>{/* /minWidth */}
@@ -630,15 +818,15 @@ export default function SettingsPage() {
           {/* ──────────── Plan & Billing (redirect) ──────────── */}
           {section === 'billing' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-3">
-              <h4 className="text-sm font-semibold text-text-primary">Plan & Billing</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Plan & Billing')}</h4>
               <p className="text-sm text-text-secondary">
-                Manage your subscription plan and payment methods on the Billing page.
+                {t('Manage your subscription plan and payment methods on the Billing page.')}
               </p>
               <Link
                 href="/dashboard/billing"
                 className="inline-flex items-center gap-1.5 text-sm text-text-link hover:text-text-link-hover"
               >
-                Go to Billing page <ExternalLink className="h-3.5 w-3.5" />
+                {t('Go to Billing page')} <ExternalLink className="h-3.5 w-3.5" />
               </Link>
             </div>
           )}
@@ -646,19 +834,14 @@ export default function SettingsPage() {
           {/* ──────────── Usage ──────────── */}
           {section === 'usage' && (
             <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-              <h4 className="text-sm font-semibold text-text-primary">Usage</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Usage')}</h4>
               <div className="space-y-4">
-                {[
-                  { label: 'Active Agents',           used: 2,     total: 5 },
-                  { label: 'Mandates',                used: 3,     total: 10 },
-                  { label: 'API Calls (this month)',  used: 12400, total: 50000 },
-                  { label: 'Trades Executed',         used: 84,    total: 500 },
-                ].map(item => {
+                {usageItems.map(item => {
                   const pct = Math.round((item.used / item.total) * 100)
                   return (
                     <div key={item.label} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-text-secondary">{item.label}</span>
+                        <span className="text-text-secondary">{t(item.label)}</span>
                         <span className="text-text-primary font-medium">
                           {item.used.toLocaleString()} / {item.total.toLocaleString()}
                         </span>
@@ -677,7 +860,7 @@ export default function SettingsPage() {
                 href="/dashboard/billing"
                 className="inline-flex items-center gap-1.5 text-sm text-text-link hover:text-text-link-hover mt-2"
               >
-                Manage plan <ExternalLink className="h-3.5 w-3.5" />
+                {t('Manage plan')} <ExternalLink className="h-3.5 w-3.5" />
               </Link>
             </div>
           )}
@@ -685,18 +868,18 @@ export default function SettingsPage() {
           {/* ──────────── Danger Zone ──────────── */}
           {section === 'danger' && (
             <div className="border border-error/30 bg-card rounded-lg p-5 space-y-5">
-              <h4 className="text-sm font-semibold text-error">Danger Zone</h4>
+              <h4 className="text-sm font-semibold text-error">{t('Danger Zone')}</h4>
 
               {/* Pause All Agents */}
               <div className="flex items-start justify-between gap-4 pb-5 border-b border-border">
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Pause All Agents</p>
+                  <p className="text-sm font-medium text-text-primary">{t('Pause All Agents')}</p>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    Immediately pause all active AI agents. Mandates are preserved.
+                    {t('Immediately pause all active AI agents. Mandates are preserved.')}
                   </p>
                 </div>
                 <button className="shrink-0 border border-orange-500 text-orange-400 rounded-md px-3 py-1.5 text-sm hover:bg-orange-500/10 transition-colors">
-                  Pause All Agents
+                  {t('Pause All Agents')}
                 </button>
               </div>
 
@@ -704,9 +887,9 @@ export default function SettingsPage() {
               <div className="space-y-3 pb-5 border-b border-border">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-text-primary">Delete All Mandates</p>
+                    <p className="text-sm font-medium text-text-primary">{t('Delete All Mandates')}</p>
                     <p className="text-xs text-text-secondary mt-0.5">
-                      Permanently delete all mandates and their associated agents. This cannot be undone.
+                      {t('Permanently delete all mandates and their associated agents. This cannot be undone.')}
                     </p>
                   </div>
                   <button
@@ -718,12 +901,12 @@ export default function SettingsPage() {
                         : 'opacity-40 cursor-not-allowed',
                     )}
                   >
-                    Delete All Mandates
+                    {t('Delete All Mandates')}
                   </button>
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs text-text-disabled">
-                    Type <code className="text-error font-mono text-xs">DELETE ALL</code> to confirm
+                    {t('Type')} <code className="text-error font-mono text-xs">DELETE ALL</code> {t('to confirm')}
                   </p>
                   <input
                     value={deleteAllInput}
@@ -738,9 +921,9 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-text-primary">Delete Account</p>
+                    <p className="text-sm font-medium text-text-primary">{t('Delete Account')}</p>
                     <p className="text-xs text-text-secondary mt-0.5">
-                      Permanently delete your account, mandates, agents, and all data.
+                      {t('Permanently delete your account, mandates, agents, and all data.')}
                     </p>
                   </div>
                   <button
@@ -752,12 +935,12 @@ export default function SettingsPage() {
                         : 'opacity-40 cursor-not-allowed',
                     )}
                   >
-                    Delete Account
+                    {t('Delete Account')}
                   </button>
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs text-text-disabled">
-                    Type <code className="text-error font-mono text-xs">DELETE</code> to confirm
+                    {t('Type')} <code className="text-error font-mono text-xs">DELETE</code> {t('to confirm')}
                   </p>
                   <input
                     value={deleteAccountInput}
@@ -778,7 +961,7 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-xl w-[400px] p-6 space-y-4">
             <div className="flex items-start justify-between">
-              <h3 className="text-base font-semibold text-text-primary">Disable Two-Factor Authentication</h3>
+              <h3 className="text-base font-semibold text-text-primary">{t('Disable Two-Factor Authentication')}</h3>
               <button
                 onClick={() => setShow2faModal(false)}
                 className="text-text-secondary hover:text-text-primary shrink-0"
@@ -787,28 +970,20 @@ export default function SettingsPage() {
               </button>
             </div>
             <p className="text-sm text-text-secondary">
-              Disabling 2FA will make your account less secure. Enter your current password to confirm.
+              {t('Disabling 2FA will make your account less secure. Are you sure you want to continue?')}
             </p>
-            <div className="space-y-1">
-              <label className="text-xs text-text-secondary">Current password</label>
-              <input
-                type="password"
-                className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-error"
-                placeholder="••••••••"
-              />
-            </div>
             <div className="flex gap-2">
               <button
-                onClick={() => { setShow2faModal(false); save('Two-factor authentication disabled') }}
+                onClick={disable2fa}
                 className="flex-1 bg-error hover:bg-error/80 text-white text-sm py-2.5 rounded-md transition-colors"
               >
-                Disable 2FA
+                {t('Disable 2FA')}
               </button>
               <button
                 onClick={() => setShow2faModal(false)}
                 className="px-4 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </div>
@@ -821,7 +996,7 @@ export default function SettingsPage() {
           <div className="bg-card border border-border rounded-xl w-[420px] p-6 space-y-4">
             <div className="flex items-start justify-between">
               <h3 className="text-base font-semibold text-text-primary">
-                {generatedKey ? 'API Key Generated' : 'Generate New API Key'}
+                {generatedKey ? t('API Key Generated') : t('Generate New API Key')}
               </h3>
               <button onClick={closeKeyModal} className="text-text-secondary hover:text-text-primary shrink-0">
                 <X className="h-4 w-4" />
@@ -831,35 +1006,35 @@ export default function SettingsPage() {
             {generatedKey ? (
               <>
                 <p className="text-sm text-text-secondary">
-                  Copy your API key now. It will{' '}
-                  <span className="text-warning font-semibold">not be shown again.</span>
+                  {t('Copy your API key now. It will')}{' '}
+                  <span className="text-warning font-semibold">{t('not be shown again.')}</span>
                 </p>
                 <div className="bg-page border border-border rounded-md p-3 font-mono text-xs text-text-primary break-all select-all">
                   {generatedKey}
                 </div>
                 <div className="flex gap-2">
-                  <CopyOnceButton text={generatedKey} />
+                  <CopyOnceButton text={generatedKey} t={t} />
                   <button
                     onClick={closeKeyModal}
                     className="flex-1 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary transition-colors py-1.5"
                   >
-                    Done
+                    {t('Done')}
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <div className="space-y-1">
-                  <label className="text-xs text-text-secondary">Key name</label>
+                  <label className="text-xs text-text-secondary">{t('Key name')}</label>
                   <input
                     value={newKeyName}
                     onChange={e => setNewKeyName(e.target.value)}
                     className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary"
-                    placeholder="e.g. Trading Bot Integration"
+                    placeholder={t('e.g. Trading Bot Integration')}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-text-secondary">Permissions</label>
+                  <label className="text-xs text-text-secondary">{t('Permissions')}</label>
                   <div className="space-y-1.5">
                     {['Read only', 'Read + Write'].map(p => (
                       <label key={p} className="flex items-center gap-2 cursor-pointer">
@@ -871,7 +1046,7 @@ export default function SettingsPage() {
                           onChange={() => setNewKeyPerm(p)}
                           className="accent-primary"
                         />
-                        <span className="text-sm text-text-secondary">{p}</span>
+                        <span className="text-sm text-text-secondary">{t(p)}</span>
                       </label>
                     ))}
                   </div>
@@ -882,17 +1057,70 @@ export default function SettingsPage() {
                     disabled={!newKeyName.trim()}
                     className="flex-1 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm py-2.5 rounded-md transition-colors"
                   >
-                    Generate
+                    {t('Generate')}
                   </button>
                   <button
                     onClick={closeKeyModal}
                     className="px-4 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary transition-colors"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </button>
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Enable 2FA Modal ── */}
+      {show2faEnrollModal && enrollData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl w-[400px] p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-base font-semibold text-text-primary">{t('Enable Two-Factor Authentication')}</h3>
+              <button onClick={closeEnroll2faModal} className="text-text-secondary hover:text-text-primary shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-text-secondary">
+              {t('Scan this QR code with your authenticator app, then enter the 6-digit code it generates.')}
+            </p>
+            <div className="flex justify-center bg-white rounded-md p-3">
+              <img src={enrollData.qrCode} alt="2FA QR code" className="h-40 w-40" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-text-secondary">{t('Or enter this code manually')}</label>
+              <div className="bg-page border border-border rounded-md p-2.5 font-mono text-xs text-text-primary break-all select-all">
+                {enrollData.secret}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-text-secondary">{t('Verification code')}</label>
+              <input
+                value={enrollCode}
+                onChange={e => setEnrollCode(e.target.value)}
+                maxLength={6}
+                inputMode="numeric"
+                className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary tracking-widest text-center focus:outline-none focus:border-primary"
+                placeholder="000000"
+              />
+            </div>
+            {enrollError && <p className="text-sm text-error">{enrollError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={verifyEnroll2fa}
+                disabled={enrollCode.length !== 6 || enrollSubmitting}
+                className="flex-1 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm py-2.5 rounded-md transition-colors"
+              >
+                {enrollSubmitting ? t('Verifying…') : t('Verify & Enable')}
+              </button>
+              <button
+                onClick={closeEnroll2faModal}
+                className="px-4 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                {t('Cancel')}
+              </button>
+            </div>
           </div>
         </div>
       )}
