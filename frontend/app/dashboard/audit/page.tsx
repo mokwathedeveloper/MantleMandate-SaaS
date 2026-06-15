@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 import { fetchOnChainAuditEvents, type OnChainEvent } from '@/hooks/useOnChain'
 import { MANTLE_TESTNET_EXPLORER as EXPLORER, CONTRACTS as _CONTRACTS, AGENT_REPUTATION_REGISTRY_CONTRACT } from '@/lib/constants'
 
@@ -84,17 +85,17 @@ const STATUS_CLASS: Record<TxStatus, string> = {
   PENDING: 'bg-warning-bg text-warning border border-warning/20',
 }
 
-function StatusBadge({ status }: { status: TxStatus }) {
+function StatusBadge({ status, t }: { status: TxStatus; t: (s: string) => string }) {
   return (
     <span className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded whitespace-nowrap', STATUS_CLASS[status])}>
-      {status}
+      {t(status)}
     </span>
   )
 }
 
 // ── Expanded row detail ───────────────────────────────────────────────────────
 
-function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => void }) {
+function ExpandedRow({ entry, onClose, t }: { entry: AuditEntry; onClose: () => void; t: (s: string) => string }) {
   const [copiedTx,  setCopiedTx]  = useState(false)
   const [copiedDec, setCopiedDec] = useState(false)
 
@@ -106,9 +107,9 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
       <div className="px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-            Transaction Detail
+            {t('Transaction Detail')}
           </p>
-          <button onClick={onClose} className="text-text-disabled hover:text-text-secondary transition-colors" aria-label="Close detail">
+          <button onClick={onClose} className="text-text-disabled hover:text-text-secondary transition-colors" aria-label={t('Close detail')}>
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -116,12 +117,12 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-xs">
           {/* Full TX Hash */}
           <div className="sm:col-span-2">
-            <span className="block mb-1 text-text-disabled">Full TX Hash</span>
+            <span className="block mb-1 text-text-disabled">{t('Full TX Hash')}</span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] text-text-primary truncate">
                 {entry.txHash}
               </span>
-              <button onClick={copyTx} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label="Copy TX hash">
+              <button onClick={copyTx} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label={t('Copy TX hash')}>
                 {copiedTx
                   ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   : <Copy className="h-3.5 w-3.5" />
@@ -131,23 +132,23 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </div>
 
           <div>
-            <span className="block mb-1 text-text-disabled">Mandate</span>
+            <span className="block mb-1 text-text-disabled">{t('Mandate')}</span>
             <span className="text-text-primary">{entry.mandate}</span>
           </div>
 
           <div>
-            <span className="block mb-1 text-text-disabled">Agent</span>
+            <span className="block mb-1 text-text-disabled">{t('Agent')}</span>
             <span className="text-text-primary">{entry.agent}</span>
           </div>
 
           {/* Decision Hash */}
           <div className="sm:col-span-2">
-            <span className="block mb-1 text-text-disabled">Decision Hash</span>
+            <span className="block mb-1 text-text-disabled">{t('Decision Hash')}</span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] text-text-secondary truncate">
                 {truncateHash(entry.decisionHash)}
               </span>
-              <button onClick={copyDec} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label="Copy decision hash">
+              <button onClick={copyDec} className="text-text-secondary hover:text-text-primary transition-colors shrink-0" aria-label={t('Copy decision hash')}>
                 {copiedDec
                   ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   : <Copy className="h-3.5 w-3.5" />
@@ -157,17 +158,17 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
           </div>
 
           <div className="sm:col-span-2">
-            <span className="block mb-1 text-text-disabled">Rule Applied</span>
+            <span className="block mb-1 text-text-disabled">{t('Rule Applied')}</span>
             <span className="text-text-primary">{entry.ruleApplied}</span>
           </div>
 
           <div>
-            <span className="block mb-1 text-text-disabled">Gas Used</span>
+            <span className="block mb-1 text-text-disabled">{t('Gas Used')}</span>
             <span className="text-text-primary">{entry.gasUsed > 0 ? entry.gasUsed.toLocaleString() : '—'}</span>
           </div>
 
           <div>
-            <span className="block mb-1 text-text-disabled">Gas Price</span>
+            <span className="block mb-1 text-text-disabled">{t('Gas Price')}</span>
             <span className="text-text-primary">{entry.gasPrice}</span>
           </div>
         </div>
@@ -180,7 +181,7 @@ function ExpandedRow({ entry, onClose }: { entry: AuditEntry; onClose: () => voi
             className="inline-flex items-center gap-1.5 mt-4 text-xs text-text-link hover:opacity-70 transition-opacity"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            View on Mantle Explorer
+            {t('View on Mantle Explorer')}
           </a>
         )}
       </div>
@@ -214,6 +215,7 @@ const COLS = '14% 12% 10% 11% 15% 10% 10% 8% 10%'
 const HEADERS = ['TX HASH', 'TIMESTAMP', 'FROM', 'TO', 'MANDATE', 'AMOUNT', 'STATUS', 'BLOCK', 'ACTIONS']
 
 export default function AuditPage() {
+  const t = useTranslation()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [search,   setSearch]   = useState('')
   const [page,     setPage]     = useState(1)
@@ -248,8 +250,8 @@ export default function AuditPage() {
   const handleShare = useCallback(async () => {
     const token = Math.random().toString(36).slice(2, 10)
     try { await navigator.clipboard.writeText(`${window.location.origin}/public/audit/${token}`) } catch {}
-    setToast('Public audit link copied to clipboard')
-  }, [])
+    setToast(t('Public audit link copied to clipboard'))
+  }, [t])
 
   const handleExport = useCallback(() => {
     const header = 'TX Hash,Timestamp,From,To,Mandate,Amount,Status,Block\n'
@@ -261,8 +263,8 @@ export default function AuditPage() {
     const a    = document.createElement('a')
     a.href = url; a.download = 'audit-trail.csv'; a.click()
     URL.revokeObjectURL(url)
-    setToast('audit-trail.csv downloaded')
-  }, [])
+    setToast(t('{file} downloaded').replace('{file}', 'audit-trail.csv'))
+  }, [t])
 
   const removeFilter = (key: string) => {
     if (key === 'status')  { setStatus('All Status') }
@@ -275,7 +277,7 @@ export default function AuditPage() {
     if (s !== 'All Status') {
       setActiveFilters(prev => {
         const filtered = prev.filter(f => f.key !== 'status')
-        return [...filtered, { key: 'status', label: `Status: ${s}` }]
+        return [...filtered, { key: 'status', label: `${t('Status:')} ${t(s)}` }]
       })
     } else {
       setActiveFilters(prev => prev.filter(f => f.key !== 'status'))
@@ -292,9 +294,9 @@ export default function AuditPage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">On-Chain Audit Viewer</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('On-Chain Audit Viewer')}</h2>
           <p className="text-sm mt-0.5 text-text-secondary">
-            Every decision and trade recorded immutably on Mantle Network.
+            {t('Every decision and trade recorded immutably on Mantle Network.')}
           </p>
         </div>
 
@@ -304,7 +306,7 @@ export default function AuditPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
             <Link2 className="h-4 w-4" />
-            Share Public Audit Link
+            {t('Share Public Audit Link')}
           </button>
 
           <button
@@ -312,7 +314,7 @@ export default function AuditPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
             <Download className="h-4 w-4" />
-            Export CSV
+            {t('Export CSV')}
           </button>
 
           <a
@@ -321,7 +323,7 @@ export default function AuditPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-border text-text-secondary hover:border-primary hover:text-text-primary transition-colors"
           >
-            View on Mantle Explorer
+            {t('View on Mantle Explorer')}
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -331,7 +333,7 @@ export default function AuditPage() {
       <div className="bg-page border border-border rounded-lg px-4 py-3 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 text-xs shrink-0 text-text-disabled">
           <FileCode className="h-3.5 w-3.5" />
-          <span className="font-semibold uppercase tracking-wider">Live Contracts · Mantle Sepolia</span>
+          <span className="font-semibold uppercase tracking-wider">{t('Live Contracts · Mantle Sepolia')}</span>
         </div>
         <div className="flex flex-wrap gap-2 ml-auto">
           {(Object.entries(CONTRACTS) as [string, string][]).map(([name, addr]) => (
@@ -375,18 +377,18 @@ export default function AuditPage() {
           },
           {
             label:    'Last 7 Days',
-            value:    `${liveEntries.length} transaction${liveEntries.length !== 1 ? 's' : ''}`,
+            value:    t(liveEntries.length === 1 ? '{n} transaction' : '{n} transactions').replace('{n}', String(liveEntries.length)),
             sub:      liveEntries.length > 0 ? 'Live data' : '',
             subClass: 'text-success',
           },
         ] as { label: string; value: string; sub: string; valClass?: string; subClass?: string }[]).map(c => (
           <div key={c.label} className="bg-card border border-border rounded-lg p-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 text-text-secondary">
-              {c.label}
+              {t(c.label)}
             </p>
             <p className={cn('text-lg font-bold truncate', c.valClass ?? 'text-text-primary')}>{c.value}</p>
             {c.sub && (
-              <p className={cn('text-xs mt-0.5', c.subClass ?? 'text-text-secondary')}>{c.sub}</p>
+              <p className={cn('text-xs mt-0.5', c.subClass ?? 'text-text-secondary')}>{t(c.sub)}</p>
             )}
           </div>
         ))}
@@ -397,14 +399,14 @@ export default function AuditPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Date range */}
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
-            <span>Date:</span>
+            <span>{t('Date:')}</span>
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
               className="rounded-md px-2 py-1.5 text-xs bg-card border border-border text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             />
-            <span>to</span>
+            <span>{t('to')}</span>
             <input
               type="date"
               value={dateTo}
@@ -424,12 +426,13 @@ export default function AuditPage() {
               <select
                 value={f.value}
                 onChange={e => f.onChange?.(e.target.value)}
+                aria-label={t(f.label)}
                 className={cn(
                   'appearance-none rounded-md pl-3 pr-7 py-1.5 text-xs bg-card border focus:outline-none cursor-pointer',
                   f.value.startsWith('All') ? 'border-border text-text-secondary' : 'border-primary text-text-link'
                 )}
               >
-                {f.opts.map(o => <option key={o}>{o}</option>)}
+                {f.opts.map(o => <option key={o} value={o}>{t(o)}</option>)}
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none text-text-disabled" />
             </div>
@@ -441,7 +444,7 @@ export default function AuditPage() {
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search by hash or address..."
+              placeholder={t('Search by hash or address...')}
               className="w-full rounded-md pl-8 pr-3 py-1.5 text-xs bg-card border border-border text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary"
             />
           </div>
@@ -456,7 +459,7 @@ export default function AuditPage() {
                 className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-surface border border-border text-text-secondary"
               >
                 {f.label}
-                <button onClick={() => removeFilter(f.key)} className="hover:opacity-70" aria-label={`Remove ${f.label} filter`}>
+                <button onClick={() => removeFilter(f.key)} className="hover:opacity-70" aria-label={`${t('Remove')} ${f.label} ${t('filter')}`}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -465,7 +468,7 @@ export default function AuditPage() {
               onClick={() => { setStatus('All Status'); setMandate('All Mandates'); setActiveFilters([]) }}
               className="text-xs text-text-link hover:opacity-70 transition-opacity"
             >
-              Clear all
+              {t('Clear all')}
             </button>
           </div>
         )}
@@ -481,8 +484,9 @@ export default function AuditPage() {
         )}>
           <span className="text-[8px] leading-none">●</span>
           {liveEntries.length > 0
-            ? `${liveEntries.length} live on-chain transaction${liveEntries.length !== 1 ? 's' : ''} fetched from the AgentExecutor contract`
-            : 'No on-chain transactions found in the recent block range — real transactions will appear here once agents execute trades on Mantle Network'}
+            ? t(liveEntries.length === 1 ? '{n} live on-chain transaction fetched from the AgentExecutor contract' : '{n} live on-chain transactions fetched from the AgentExecutor contract')
+                .replace('{n}', String(liveEntries.length))
+            : t('No on-chain transactions found in the recent block range — real transactions will appear here once agents execute trades on Mantle Network')}
         </div>
       )}
 
@@ -496,7 +500,7 @@ export default function AuditPage() {
           >
             {HEADERS.map(h => (
               <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-                {h}
+                {t(h)}
               </span>
             ))}
           </div>
@@ -505,15 +509,15 @@ export default function AuditPage() {
           {entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center bg-card">
               <Shield className="h-12 w-12 mb-4 text-text-disabled" />
-              <p className="font-semibold text-base mb-1 text-text-primary">No on-chain activity yet</p>
+              <p className="font-semibold text-base mb-1 text-text-primary">{t('No on-chain activity yet')}</p>
               <p className="text-sm max-w-sm mb-6 text-text-secondary">
-                Once your AI agent executes its first trade on Mantle Network, every transaction will appear here with full verification.
+                {t('Once your AI agent executes its first trade on Mantle Network, every transaction will appear here with full verification.')}
               </p>
               <Link
                 href="/dashboard/agents"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-white bg-primary hover:opacity-90 transition-opacity"
               >
-                Deploy Your First Agent →
+                {t('Deploy Your First Agent →')}
               </Link>
             </div>
           ) : (
@@ -561,7 +565,7 @@ export default function AuditPage() {
                   <span className="text-xs font-medium text-text-primary">{entry.amount}</span>
 
                   {/* Status */}
-                  <StatusBadge status={entry.status} />
+                  <StatusBadge status={entry.status} t={t} />
 
                   {/* Block */}
                   <span className="text-text-secondary font-mono text-[11px]">
