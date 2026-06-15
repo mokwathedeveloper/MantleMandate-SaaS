@@ -8,9 +8,11 @@ import {
   ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency, formatCompactCurrency, formatDateShort } from '@/lib/utils'
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import { usePortfolioHistory } from '@/hooks/usePortfolio'
+import { usePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/hooks/usePreferences'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -88,18 +90,19 @@ function StatCard({
 // ── CustomTooltip ─────────────────────────────────────────────────────────────
 
 function CustomTooltip({
-  active, payload, label,
+  active, payload, label, prefs,
 }: {
   active?: boolean
   payload?: { value: number }[]
   label?: string
+  prefs: Partial<UserPreferences>
 }) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-surface border border-border rounded-md px-3 py-2 shadow-modal">
       <p className="text-[11px] text-text-secondary mb-0.5">{label}</p>
       <p className="text-[13px] font-bold text-text-primary">
-        ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        {formatCurrency(payload[0].value, prefs)}
       </p>
     </div>
   )
@@ -108,7 +111,9 @@ function CustomTooltip({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PortfolioPage() {
+  const t = useTranslation()
   const [chartDays, setChartDays] = useState(30)
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
 
   const {
     data: snapshot, isLoading: loadingSnap, isError: snapError,
@@ -145,10 +150,10 @@ export default function PortfolioPage() {
 
   const pnlChartData = useMemo(
     () => (pnlHistory ?? []).map(p => ({
-      date: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: formatDateShort(p.date, prefs),
       value: p.value,
     })),
-    [pnlHistory],
+    [pnlHistory, prefs],
   )
 
   const allocationByProtocol = useMemo(() => {
@@ -179,69 +184,69 @@ export default function PortfolioPage() {
       {/* Error banner */}
       {hasError && (
         <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 flex items-center gap-2">
-          <span className="text-sm font-semibold text-error">API error</span>
+          <span className="text-sm font-semibold text-error">{t('API error')}</span>
           <span className="text-sm text-text-secondary">
-            — portfolio data unavailable, showing last known values.
+            — {t('portfolio data unavailable, showing last known values.')}
           </span>
         </div>
       )}
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">Portfolio</h2>
+        <h2 className="text-2xl font-bold text-text-primary">{t('Portfolio')}</h2>
         <p className="text-sm text-text-secondary mt-1">
-          Live view of all positions and performance across your agents
+          {t('Live view of all positions and performance across your agents')}
         </p>
       </div>
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
-          label="Total Portfolio Value"
-          value={`$${snap.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-          sub="Live estimate"
+          label={t('Total Portfolio Value')}
+          value={formatCurrency(snap.totalValue, prefs)}
+          sub={t('Live estimate')}
         />
         <StatCard
-          label="Total P&L"
-          value={`${snap.totalPnl >= 0 ? '+' : ''}$${Math.abs(snap.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-          sub={`${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}% all time`}
+          label={t('Total P&L')}
+          value={`${snap.totalPnl >= 0 ? '+' : '-'}${formatCurrency(Math.abs(snap.totalPnl), prefs)}`}
+          sub={`${snap.totalRoi >= 0 ? '+' : ''}${snap.totalRoi.toFixed(2)}% ${t('all time')}`}
           valueClass={snap.totalPnl >= 0 ? 'text-success' : 'text-error'}
         />
         <StatCard
-          label="24h Change"
-          value={`${snap.dayPnl >= 0 ? '+' : ''}$${Math.abs(snap.dayPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          label={t('24h Change')}
+          value={`${snap.dayPnl >= 0 ? '+' : '-'}${formatCurrency(Math.abs(snap.dayPnl), prefs)}`}
           sub={`${snap.dayPnlPct >= 0 ? '+' : ''}${snap.dayPnlPct.toFixed(2)}%`}
           valueClass={snap.dayPnl >= 0 ? 'text-success' : 'text-error'}
         />
         <StatCard
-          label="Sharpe Ratio"
+          label={t('Sharpe Ratio')}
           value={snap.sharpeRatio !== null ? snap.sharpeRatio.toFixed(2) : '—'}
-          sub={`Win rate: ${snap.winRate.toFixed(1)}%`}
+          sub={`${t('Win rate:')} ${snap.winRate.toFixed(1)}%`}
         />
       </div>
 
       {/* Secondary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
-          label="Max Drawdown"
+          label={t('Max Drawdown')}
           value={`${snap.maxDrawdown.toFixed(2)}%`}
           valueClass={snap.maxDrawdown < 5 ? 'text-success' : snap.maxDrawdown < 15 ? 'text-warning' : 'text-error'}
         />
-        <StatCard label="Active Positions" value={String(openPositions.length)} />
-        <StatCard label="Closed Positions" value={String(closedPositions.length)} />
+        <StatCard label={t('Active Positions')} value={String(openPositions.length)} />
+        <StatCard label={t('Closed Positions')} value={String(closedPositions.length)} />
         <StatCard
-          label="Protocols Active"
+          label={t('Protocols Active')}
           value={String(activeProtocols.length)}
           sub={activeProtocols.length > 0
             ? activeProtocols.map(p => PROTOCOL_LABELS[p] ?? p).join(' · ')
-            : 'No open positions'}
+            : t('No open positions')}
         />
       </div>
 
       {/* PnL Chart */}
       <div className="bg-card border border-border rounded-lg p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <h4 className="text-sm font-semibold text-text-primary">Portfolio Value</h4>
+          <h4 className="text-sm font-semibold text-text-primary">{t('Portfolio Value')}</h4>
           <div className="flex flex-wrap gap-1">
             {[7, 14, 30].map(d => (
               <button
@@ -261,9 +266,9 @@ export default function PortfolioPage() {
         </div>
         {pnlChartData.length === 0 ? (
           <div className="flex h-[200px] flex-col items-center justify-center gap-1 text-center">
-            <p className="text-sm font-semibold text-text-primary">No portfolio history yet</p>
+            <p className="text-sm font-semibold text-text-primary">{t('No portfolio history yet')}</p>
             <p className="text-xs text-text-secondary">
-              Snapshots accumulate daily once your agents start trading.
+              {t('Snapshots accumulate daily once your agents start trading.')}
             </p>
           </div>
         ) : (
@@ -290,10 +295,10 @@ export default function PortfolioPage() {
               tick={{ fontSize: 10, fill: '#8B949E' }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+              tickFormatter={v => formatCompactCurrency(v, prefs)}
               domain={['auto', 'auto']}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip prefs={prefs} />} />
             <Area
               type="monotone"
               dataKey="value"
@@ -311,8 +316,8 @@ export default function PortfolioPage() {
       {/* Positions table */}
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-card border-b border-border">
-          <h4 className="text-sm font-semibold text-text-primary">Open Positions</h4>
-          <span className="text-[11px] text-text-secondary">{openPositions.length} positions</span>
+          <h4 className="text-sm font-semibold text-text-primary">{t('Open Positions')}</h4>
+          <span className="text-[11px] text-text-secondary">{t('{n} positions').replace('{n}', String(openPositions.length))}</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -325,7 +330,7 @@ export default function PortfolioPage() {
                     scope="col"
                     className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary whitespace-nowrap"
                   >
-                    {h}
+                    {t(h)}
                   </th>
                 ))}
               </tr>
@@ -336,12 +341,12 @@ export default function PortfolioPage() {
                   <td colSpan={9} className="py-16">
                     <div className="flex flex-col items-center justify-center gap-3 text-center">
                       <BarChart2 className="h-10 w-10 text-text-secondary opacity-40" />
-                      <p className="text-sm font-semibold text-text-primary">No open positions</p>
+                      <p className="text-sm font-semibold text-text-primary">{t('No open positions')}</p>
                       <NextLink
                         href="/dashboard/agents/deploy"
                         className="text-xs text-text-link hover:text-text-link-hover transition-colors"
                       >
-                        Deploy an agent →
+                        {t('Deploy an agent →')}
                       </NextLink>
                     </div>
                   </td>
@@ -382,24 +387,24 @@ export default function PortfolioPage() {
                             'text-[11px] font-bold uppercase',
                             p.direction === 'long' ? 'text-success' : 'text-error',
                           )}>
-                            {p.direction}
+                            {t(p.direction === 'long' ? 'long' : 'short')}
                           </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-text-primary tabular-nums">
-                        ${p.size.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                        {formatCurrency(p.size, prefs, { minimumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-3 text-xs text-text-secondary tabular-nums">
-                        ${p.entryPrice.toLocaleString('en-US', { minimumFractionDigits: p.entryPrice < 10 ? 4 : 2 })}
+                        {formatCurrency(p.entryPrice, prefs, { minimumFractionDigits: p.entryPrice < 10 ? 4 : 2 })}
                       </td>
                       <td className="px-4 py-3 text-xs text-text-primary tabular-nums">
-                        ${p.currentPrice.toLocaleString('en-US', { minimumFractionDigits: p.currentPrice < 10 ? 4 : 2 })}
+                        {formatCurrency(p.currentPrice, prefs, { minimumFractionDigits: p.currentPrice < 10 ? 4 : 2 })}
                       </td>
                       <td className={cn(
                         'px-4 py-3 text-xs font-semibold tabular-nums',
                         positive ? 'text-success' : 'text-error',
                       )}>
-                        {positive ? '+' : ''}${Math.abs(p.pnl).toFixed(2)}
+                        {positive ? '+' : '-'}{formatCurrency(Math.abs(p.pnl), prefs)}
                       </td>
                       <td className={cn(
                         'px-4 py-3 text-xs font-semibold tabular-nums',
@@ -414,7 +419,7 @@ export default function PortfolioPage() {
                             ? 'bg-success-bg text-success border border-success/20'
                             : 'bg-card text-text-secondary border border-border',
                         )}>
-                          {p.status}
+                          {t(p.status === 'open' ? 'open' : 'closed')}
                         </span>
                       </td>
                     </tr>
@@ -431,9 +436,9 @@ export default function PortfolioPage() {
 
         {/* Allocation by protocol */}
         <div className="bg-card border border-border rounded-lg p-5">
-          <h4 className="text-sm font-semibold text-text-primary mb-4">Allocation by Protocol</h4>
+          <h4 className="text-sm font-semibold text-text-primary mb-4">{t('Allocation by Protocol')}</h4>
           {allocationByProtocol.length === 0 ? (
-            <p className="text-xs text-text-secondary">No open positions to allocate.</p>
+            <p className="text-xs text-text-secondary">{t('No open positions to allocate.')}</p>
           ) : (
           <div className="flex flex-col gap-3">
             {allocationByProtocol.map(({ protocol, pct }) => (
@@ -459,7 +464,7 @@ export default function PortfolioPage() {
 
         {/* Risk exposure */}
         <div className="bg-card border border-border rounded-lg p-5">
-          <h4 className="text-sm font-semibold text-text-primary mb-4">Risk Exposure</h4>
+          <h4 className="text-sm font-semibold text-text-primary mb-4">{t('Risk Exposure')}</h4>
           <div className="flex flex-col divide-y divide-border">
             {[
               {
@@ -484,7 +489,7 @@ export default function PortfolioPage() {
               },
             ].map(r => (
               <div key={r.label} className="flex items-center justify-between py-2.5">
-                <span className="text-xs text-text-secondary">{r.label}</span>
+                <span className="text-xs text-text-secondary">{t(r.label)}</span>
                 <span className={cn('text-sm font-semibold', r.valueClass)}>{r.value}</span>
               </div>
             ))}
