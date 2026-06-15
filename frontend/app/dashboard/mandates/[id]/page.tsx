@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import { useTranslation } from '@/hooks/useTranslation'
+import { usePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ function ViewSkeleton() {
 
 export default function MandateViewPage({ params }: { params: { id: string } }) {
   const t = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const { id }   = params
   const router   = useRouter()
   const [copied, setCopied] = useState(false)
@@ -193,7 +195,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
           </div>
           <p className="text-xs text-text-secondary mt-1">
             {t('ID:')} <span className="font-mono">{mandate.id}</span>
-            {' · '}{t('Created')} {formatDate(mandate.createdAt)}
+            {' · '}{t('Created')} {formatDate(mandate.createdAt, prefs)}
           </p>
         </div>
 
@@ -274,7 +276,7 @@ export default function MandateViewPage({ params }: { params: { id: string } }) 
           {
             icon: Calendar,
             label: t('Last Updated'),
-            value: formatDate(mandate.updatedAt),
+            value: formatDate(mandate.updatedAt, prefs),
             color: 'text-text-secondary',
             bg: 'bg-surface',
           },
