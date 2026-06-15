@@ -7,6 +7,7 @@ import { useMandates } from '@/hooks/useMandates'
 import { useAuthStore } from '@/store/authStore'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatDate, cn } from '@/lib/utils'
+import { usePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/hooks/usePreferences'
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import type { Mandate } from '@/types/mandate'
 
@@ -29,7 +30,7 @@ const STRATEGY_ICONS: Record<string, string> = {
 
 // ── MandateCard ───────────────────────────────────────────────────────────────
 
-function MandateCard({ mandate, t }: { mandate: Mandate; t: (s: string) => string }) {
+function MandateCard({ mandate, t, prefs }: { mandate: Mandate; t: (s: string) => string; prefs: Partial<UserPreferences> }) {
   const st   = STATUS_CLASS[mandate.status] ?? STATUS_CLASS.draft
   const icon = mandate.strategyType ? (STRATEGY_ICONS[mandate.strategyType] ?? '📋') : '📋'
 
@@ -98,7 +99,7 @@ function MandateCard({ mandate, t }: { mandate: Mandate; t: (s: string) => strin
             {mandate.onChainTx && (
               <TrendingUp className="h-3 w-3 text-text-link" aria-label="On-chain transaction exists" />
             )}
-            <span className="text-[11px] text-text-disabled">{formatDate(mandate.createdAt)}</span>
+            <span className="text-[11px] text-text-disabled">{formatDate(mandate.createdAt, prefs)}</span>
           </div>
         </div>
       </div>
@@ -122,6 +123,7 @@ const FILTER_TABS: { key: StatusFilter; label: string }[] = [
 
 export default function MandatesPage() {
   const t = useTranslation()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search,       setSearch]       = useState('')
 
@@ -251,7 +253,7 @@ export default function MandatesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(m => <MandateCard key={m.id} mandate={m} t={t} />)}
+          {filtered.map(m => <MandateCard key={m.id} mandate={m} t={t} prefs={prefs} />)}
         </div>
       )}
 
