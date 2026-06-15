@@ -279,7 +279,7 @@ export const fr: Record<string, string> = {
   'Total Volume': 'Volume total',
   'Verified on-chain': 'Vérifié on-chain',
   'Success Rate': 'Taux de réussite',
-  'Last 7 Days': '7 derniers jours',
+  'Last 24 Hours': 'Dernières 24 heures',
   '{n} transaction': '{n} transaction',
   '{n} transactions': '{n} transactions',
   'Live data': 'Données en direct',
