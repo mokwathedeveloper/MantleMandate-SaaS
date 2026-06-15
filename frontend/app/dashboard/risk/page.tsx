@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useRiskSummary } from '@/hooks/useRiskSummary'
 import { useMandates } from '@/hooks/useMandates'
 import { useAgents } from '@/hooks/useAgents'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ── Preset definitions ────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ function sliderColor(v: number, label: string): string {
 }
 
 function RangeSlider({
-  label, description, min, max, value, onChange, format, colorFn,
+  label, description, min, max, value, onChange, format, colorFn, t,
 }: {
   label: string
   description: string
@@ -50,6 +51,7 @@ function RangeSlider({
   onChange: (v: number) => void
   format?: (v: number) => string
   colorFn?: (v: number) => string
+  t: (s: string) => string
 }) {
   const pct     = ((value - min) / (max - min)) * 100
   const color   = colorFn ? colorFn(value) : sliderColor(value, label)
@@ -59,8 +61,8 @@ function RangeSlider({
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <p className="text-sm font-medium text-text-primary">{label}</p>
-          <p className="text-xs mt-0.5 text-text-secondary">{description}</p>
+          <p className="text-sm font-medium text-text-primary">{t(label)}</p>
+          <p className="text-xs mt-0.5 text-text-secondary">{t(description)}</p>
         </div>
         {/* Dynamic color — must be inline */}
         <span className="text-xl font-bold shrink-0" style={{ color }}>
@@ -85,7 +87,7 @@ function RangeSlider({
           max={max}
           value={value}
           onChange={e => onChange(Number(e.target.value))}
-          aria-label={label}
+          aria-label={t(label)}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value}
@@ -172,6 +174,7 @@ function usePositions() {
 export default function RiskPage() {
   const { user } = useAuthStore()
   const qc = useQueryClient()
+  const t = useTranslation()
 
   const [maxDrawdown,   setMaxDrawdown]   = useState(15)
   const [maxNotional,   setMaxNotional]   = useState(10000)
@@ -323,8 +326,9 @@ export default function RiskPage() {
       setChanged(false)
       setToastMsg(
         activeMandates.length > 0
-          ? `Risk settings applied to ${activeMandates.length} active mandate${activeMandates.length === 1 ? '' : 's'}`
-          : 'Risk settings saved — no active mandates to apply to yet'
+          ? t(activeMandates.length === 1 ? 'Risk settings applied to {n} active mandate' : 'Risk settings applied to {n} active mandates')
+              .replace('{n}', String(activeMandates.length))
+          : t('Risk settings saved — no active mandates to apply to yet')
       )
     },
   })
@@ -368,7 +372,7 @@ export default function RiskPage() {
     if (protocolAllocation.length > 0) {
       const top = protocolAllocation[0]
       m.push({
-        label: `Venue Concentration (${top.name})`,
+        label: `${t('Venue Concentration')} (${top.name})`,
         value: `${top.pct}%`,
         warn: top.pct > 50,
       })
@@ -382,7 +386,7 @@ export default function RiskPage() {
     })
 
     return m
-  }, [activeAgents.length, avgDrawdown, drawdownLimit, largestPosition, maxNotional, openPositions.length, maxPositions, protocolAllocation, dailyPnl, maxDailyLoss])
+  }, [activeAgents.length, avgDrawdown, drawdownLimit, largestPosition, maxNotional, openPositions.length, maxPositions, protocolAllocation, dailyPnl, maxDailyLoss, t])
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -391,9 +395,9 @@ export default function RiskPage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Risk Engine</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('Risk Engine')}</h2>
           <p className="text-sm mt-0.5 text-text-secondary">
-            Hard limits your AI agents can never exceed. Applied to all mandates unless overridden.
+            {t('Hard limits your AI agents can never exceed. Applied to all mandates unless overridden.')}
           </p>
         </div>
 
@@ -404,7 +408,7 @@ export default function RiskPage() {
               onClick={() => setShowTemplate(v => !v)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm border border-border text-text-secondary hover:text-text-primary hover:border-text-disabled transition-colors"
             >
-              Load Template
+              {t('Load Template')}
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
 
@@ -421,12 +425,12 @@ export default function RiskPage() {
                         : 'text-text-secondary hover:bg-card hover:text-text-primary',
                     )}
                   >
-                    {activePreset === k && '✓ '}{k}
+                    {activePreset === k && '✓ '}{t(k)}
                   </button>
                 ))}
                 <div className="border-t border-border">
                   <button className="w-full text-left px-4 py-2.5 text-sm text-text-disabled cursor-not-allowed">
-                    Custom
+                    {t('Custom')}
                   </button>
                 </div>
               </div>
@@ -444,7 +448,7 @@ export default function RiskPage() {
                 : 'bg-surface text-text-disabled cursor-not-allowed',
             )}
           >
-            Apply Changes
+            {t('Apply Changes')}
           </button>
         </div>
       </div>
@@ -458,9 +462,9 @@ export default function RiskPage() {
           {/* Section 1: Global Thresholds */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-5">
             <div>
-              <h4 className="text-sm font-semibold text-text-primary">Global Risk Thresholds</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Global Risk Thresholds')}</h4>
               <p className="text-xs mt-0.5 text-text-secondary">
-                These apply across all agents unless a mandate specifies tighter limits.
+                {t('These apply across all agents unless a mandate specifies tighter limits.')}
               </p>
             </div>
 
@@ -471,6 +475,7 @@ export default function RiskPage() {
               format={v => `${v.toFixed(2)}%`}
               colorFn={v => v < 10 ? '#22C55E' : v <= 20 ? '#F5C542' : '#EF4444'}
               onChange={v => mark(() => setMaxDrawdown(v))}
+              t={t}
             />
 
             <RangeSlider
@@ -480,6 +485,7 @@ export default function RiskPage() {
               format={v => `$${v.toLocaleString()}`}
               colorFn={() => '#0066FF'}
               onChange={v => mark(() => setMaxNotional(v))}
+              t={t}
             />
 
             <RangeSlider
@@ -488,6 +494,7 @@ export default function RiskPage() {
               min={1} max={50} value={maxPositions}
               colorFn={() => '#0066FF'}
               onChange={v => mark(() => setMaxPositions(v))}
+              t={t}
             />
 
             <RangeSlider
@@ -497,6 +504,7 @@ export default function RiskPage() {
               format={v => `${v.toFixed(2)}%`}
               colorFn={() => '#F5C542'}
               onChange={v => mark(() => setStopLoss(v))}
+              t={t}
             />
 
             <RangeSlider
@@ -506,13 +514,14 @@ export default function RiskPage() {
               format={v => `${v.toFixed(2)}%`}
               colorFn={v => v < 10 ? '#22C55E' : v <= 20 ? '#F5C542' : '#EF4444'}
               onChange={v => mark(() => setDrawdownLimit(v))}
+              t={t}
             />
 
             {/* Max Daily Loss — plain input */}
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">Max Daily Loss ($)</p>
+              <p className="text-sm font-medium text-text-primary">{t('Max Daily Loss ($)')}</p>
               <p className="text-xs text-text-secondary">
-                If total realized + unrealized loss exceeds this today, all agents pause until midnight UTC.
+                {t('If total realized + unrealized loss exceeds this today, all agents pause until midnight UTC.')}
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-medium text-text-disabled">$</span>
@@ -530,15 +539,15 @@ export default function RiskPage() {
           {/* Section 2: Venue Selection & Allocation */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-4">
             <div>
-              <h4 className="text-sm font-semibold text-text-primary">Venue Selection &amp; Allocation</h4>
+              <h4 className="text-sm font-semibold text-text-primary">{t('Venue Selection & Allocation')}</h4>
               <p className="text-xs mt-0.5 text-text-secondary">
-                Allocation limits based on real trade volume across protocols you&apos;ve used.
+                {t("Allocation limits based on real trade volume across protocols you've used.")}
               </p>
             </div>
 
             {protocolAllocation.length === 0 ? (
               <p className="text-xs text-text-secondary">
-                No trade activity yet — allocation limits will appear once your agents start trading.
+                {t('No trade activity yet — allocation limits will appear once your agents start trading.')}
               </p>
             ) : (
               <>
@@ -548,11 +557,11 @@ export default function RiskPage() {
                     {/* Table header */}
                     <div className="grid text-[10px] font-semibold uppercase tracking-wider px-3 py-2 rounded-md bg-page text-text-disabled"
                       style={{ gridTemplateColumns: '1fr 80px 140px 90px 80px' }}>
-                      <span>Protocol</span>
-                      <span>Status</span>
-                      <span>Max Allocation</span>
-                      <span className="text-right">Volume</span>
-                      <span className="text-right">Actions</span>
+                      <span>{t('Protocol')}</span>
+                      <span>{t('Status')}</span>
+                      <span>{t('Max Allocation')}</span>
+                      <span className="text-right">{t('Volume')}</span>
+                      <span className="text-right">{t('Actions')}</span>
                     </div>
 
                     {protocolAllocation.map((p, i) => {
@@ -580,7 +589,7 @@ export default function RiskPage() {
 
                           {/* Status */}
                           <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded w-fit bg-success-bg text-success border border-success/20">
-                            ACTIVE ✓
+                            {t('ACTIVE')} ✓
                           </span>
 
                           {/* Allocation slider — dynamic width must be inline */}
@@ -593,7 +602,7 @@ export default function RiskPage() {
                               <input
                                 name={`alloc-${p.name}`}
                                 type="range" min={0} max={100} value={pct}
-                                aria-label={`${p.name} allocation`}
+                                aria-label={`${p.name} ${t('allocation')}`}
                                 aria-valuemin={0}
                                 aria-valuemax={100}
                                 aria-valuenow={pct}
@@ -613,7 +622,7 @@ export default function RiskPage() {
                               href="/dashboard/protocols"
                               className="text-[11px] px-2 py-0.5 rounded border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors inline-block"
                             >
-                              Configure
+                              {t('Configure')}
                             </Link>
                           </div>
                         </div>
@@ -631,8 +640,8 @@ export default function RiskPage() {
                     ? <CheckCircle2 className="h-3.5 w-3.5" />
                     : <AlertTriangle className="h-3.5 w-3.5" />
                   }
-                  Total: {allocTotal}%
-                  {allocOk ? ' ✓' : ' — adjust before applying'}
+                  {t('Total:')} {allocTotal}%
+                  {allocOk ? ' ✓' : ` — ${t('adjust before applying')}`}
                 </div>
               </>
             )}
@@ -640,7 +649,7 @@ export default function RiskPage() {
 
           {/* Section 3: Cooldown Periods */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-4">
-            <h4 className="text-sm font-semibold text-text-primary">Cooldown Periods</h4>
+            <h4 className="text-sm font-semibold text-text-primary">{t('Cooldown Periods')}</h4>
 
             {([
               { label: 'After stop-loss triggered',               key: 'stopLoss' as const },
@@ -649,14 +658,14 @@ export default function RiskPage() {
               { label: 'Between repeat trades (same asset)',      key: 'repeat'   as const },
             ]).map(row => (
               <div key={row.key} className="flex flex-wrap items-center justify-between gap-2 py-1">
-                <span className="text-sm text-text-secondary">{row.label}</span>
+                <span className="text-sm text-text-secondary">{t(row.label)}</span>
                 <select
                   value={cooldowns[row.key]}
                   onChange={e => mark(() => setCooldowns(prev => ({ ...prev, [row.key]: e.target.value })))}
-                  aria-label={row.label}
+                  aria-label={t(row.label)}
                   className="rounded-md px-3 py-1.5 text-sm text-text-secondary bg-page border border-border focus:outline-none focus:border-primary cursor-pointer min-w-28 transition-colors"
                 >
-                  {COOLDOWN_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                  {COOLDOWN_OPTIONS.map(o => <option key={o} value={o}>{t(o)}</option>)}
                 </select>
               </div>
             ))}
@@ -669,7 +678,7 @@ export default function RiskPage() {
           {/* Portfolio Risk Score */}
           <div className="bg-card border border-border rounded-lg p-5 space-y-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-              Portfolio Risk Score
+              {t('Portfolio Risk Score')}
             </p>
 
             <div className="text-center space-y-3">
@@ -685,15 +694,15 @@ export default function RiskPage() {
 
               <div className={cn('flex items-center justify-center gap-1.5', riskColor)}>
                 <CheckCircle2 className="h-4 w-4" />
-                <span className="text-sm font-bold">{hasRisk ? level.toUpperCase() : 'NO DATA'}</span>
+                <span className="text-sm font-bold">{hasRisk ? t(level).toUpperCase() : t('NO DATA')}</span>
               </div>
-              <p className="text-xs text-text-secondary">{riskMessage}</p>
+              <p className="text-xs text-text-secondary">{t(riskMessage)}</p>
             </div>
           </div>
 
           {/* Current Exposure */}
           <div className="bg-card border border-border rounded-lg p-5">
-            <h4 className="text-sm font-semibold text-text-primary mb-4">Current Exposure</h4>
+            <h4 className="text-sm font-semibold text-text-primary mb-4">{t('Current Exposure')}</h4>
 
             <div className="flex flex-col">
               {METRICS.map((m, i) => (
@@ -704,18 +713,18 @@ export default function RiskPage() {
                     i < METRICS.length - 1 && 'border-b border-border',
                   )}
                 >
-                  <span className="text-xs text-text-secondary">{m.label}</span>
+                  <span className="text-xs text-text-secondary">{t(m.label)}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-medium text-text-primary">{m.value}</span>
                     {m.warn ? (
                       <div className="flex items-center gap-1 text-[10px] font-semibold text-warning">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        Near limit
+                        {t('Near limit')}
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-[10px] text-success">
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Within limit
+                        {t('Within limit')}
                       </div>
                     )}
                   </div>
@@ -727,7 +736,7 @@ export default function RiskPage() {
           {/* Quick Presets */}
           <div className="bg-card border border-border rounded-lg p-4 space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-              Quick Presets
+              {t('Quick Presets')}
             </p>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(PRESETS) as PresetKey[]).map(k => (
@@ -741,7 +750,7 @@ export default function RiskPage() {
                       : 'border-border bg-transparent text-text-secondary hover:border-text-disabled hover:text-text-primary',
                   )}
                 >
-                  {activePreset === k && '✓ '}{k}
+                  {activePreset === k && '✓ '}{t(k)}
                 </button>
               ))}
             </div>
@@ -750,12 +759,13 @@ export default function RiskPage() {
           {/* Unsaved changes notice */}
           {changed && (
             <div className="rounded-lg p-4 text-xs bg-primary/5 border border-primary/25 text-text-link">
-              <p className="font-semibold mb-1">Unsaved changes</p>
+              <p className="font-semibold mb-1">{t('Unsaved changes')}</p>
               <p className="text-text-secondary">
-                Click &quot;Apply Changes&quot; to save.{' '}
+                {t('Click "Apply Changes" to save.')}{' '}
                 {activeAgents.length > 0
-                  ? `${activeAgents.length} active agent${activeAgents.length === 1 ? '' : 's'} will be affected.`
-                  : 'No active agents are currently running.'}
+                  ? t(activeAgents.length === 1 ? '{n} active agent will be affected.' : '{n} active agents will be affected.')
+                      .replace('{n}', String(activeAgents.length))
+                  : t('No active agents are currently running.')}
               </p>
             </div>
           )}
@@ -777,35 +787,34 @@ export default function RiskPage() {
           >
             <div className="flex items-start justify-between">
               <h3 id="risk-confirm-title" className="text-base font-semibold text-text-primary">
-                Apply Risk Settings?
+                {t('Apply Risk Settings?')}
               </h3>
               <button
                 onClick={() => setConfirm(false)}
                 className="text-text-secondary hover:text-text-primary transition-colors"
-                aria-label="Cancel"
+                aria-label={t('Cancel')}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <p className="text-sm text-text-secondary">
-              These changes update the risk parameters stored on your active mandates and apply
-              to their agents immediately.
+              {t('These changes update the risk parameters stored on your active mandates and apply to their agents immediately.')}
             </p>
 
             <div className="rounded-md px-4 py-3 text-sm space-y-1 bg-page border border-border">
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Active mandates</span>
+                <span className="text-text-secondary">{t('Active mandates')}</span>
                 <span className="font-semibold text-text-primary">{activeMandates.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Active agents</span>
+                <span className="text-text-secondary">{t('Active agents')}</span>
                 <span className="font-semibold text-warning">{activeAgents.length}</span>
               </div>
             </div>
 
             {applyMutation.isError && (
-              <p className="text-xs text-error">Failed to apply changes. Please try again.</p>
+              <p className="text-xs text-error">{t('Failed to apply changes. Please try again.')}</p>
             )}
 
             <div className="flex gap-2 pt-1">
@@ -817,14 +826,14 @@ export default function RiskPage() {
                 {applyMutation.isPending && (
                   <span className="h-4 w-4 border-2 rounded-full animate-spin border-white/30 border-t-white" />
                 )}
-                Apply Changes
+                {t('Apply Changes')}
               </button>
               <button
                 onClick={() => setConfirm(false)}
                 disabled={applyMutation.isPending}
                 className="px-5 py-2.5 rounded-md text-sm border border-border text-text-secondary hover:text-text-primary hover:border-text-disabled transition-colors disabled:opacity-60"
               >
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </div>
