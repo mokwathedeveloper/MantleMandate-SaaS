@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, FileText, Bot, TrendingUp, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 
 const NAV_ITEMS = [
   { href: '/dashboard',           label: 'Home',      Icon: LayoutDashboard },
@@ -15,11 +16,12 @@ const NAV_ITEMS = [
 
 export function MobileBottomNav() {
   const pathname = usePathname()
+  const t = useTranslation()
 
   return (
     <nav
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-page border-t border-border"
-      aria-label="Mobile navigation"
+      aria-label={t('Mobile navigation')}
     >
       <div className="flex items-stretch">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
@@ -37,7 +39,7 @@ export function MobileBottomNav() {
               aria-current={active ? 'page' : undefined}
             >
               <Icon className={cn('h-5 w-5', active && 'text-primary')} />
-              {label}
+              {t(label)}
             </Link>
           )
         })}
