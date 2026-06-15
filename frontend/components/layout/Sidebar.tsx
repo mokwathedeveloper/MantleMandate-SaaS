@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { useAlertStore } from '@/store/alertStore'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface NavItem {
   href:  string
@@ -56,7 +57,7 @@ const PLAN_LABELS: Record<string, string> = {
   institution: 'Institution',
 }
 
-function NavLink({ href, label, Icon, badge, onClose }: NavItem & { badge?: number; onClose?: () => void }) {
+function NavLink({ href, label, Icon, badge, onClose, t }: NavItem & { badge?: number; onClose?: () => void; t: (s: string) => string }) {
   const pathname = usePathname()
   const active = href === '/dashboard'
     ? pathname === '/dashboard'
@@ -74,7 +75,7 @@ function NavLink({ href, label, Icon, badge, onClose }: NavItem & { badge?: numb
       )}
     >
       <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-text-primary' : 'text-text-secondary')} />
-      <span className="flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate">{t(label)}</span>
       {badge != null && badge > 0 && (
         <span className="ml-auto h-4 min-w-4 rounded-full bg-error text-white text-[10px] font-semibold flex items-center justify-center px-1">
           {badge > 99 ? '99+' : badge}
@@ -84,11 +85,11 @@ function NavLink({ href, label, Icon, badge, onClose }: NavItem & { badge?: numb
   )
 }
 
-function NavSection({ title, items, alertCount, onClose }: { title: string; items: NavItem[]; alertCount?: number; onClose?: () => void }) {
+function NavSection({ title, items, alertCount, onClose, t }: { title: string; items: NavItem[]; alertCount?: number; onClose?: () => void; t: (s: string) => string }) {
   return (
     <div className="space-y-0.5">
       <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-disabled">
-        {title}
+        {t(title)}
       </p>
       {items.map((item) => (
         <NavLink
@@ -96,6 +97,7 @@ function NavSection({ title, items, alertCount, onClose }: { title: string; item
           {...item}
           badge={item.href === '/dashboard/alerts' ? alertCount : undefined}
           onClose={onClose}
+          t={t}
         />
       ))}
     </div>
@@ -111,6 +113,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { user } = useAuthStore()
   const logout   = useLogout()
   const { unreadCount } = useAlertStore()
+  const t = useTranslation()
 
   return (
     <aside
@@ -138,7 +141,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {/* Close button — mobile only */}
         <button
           onClick={onClose}
-          aria-label="Close menu"
+          aria-label={t('Close menu')}
           className="lg:hidden p-2 rounded-md text-text-disabled hover:text-text-primary hover:bg-card transition-colors"
         >
           <X className="h-5 w-5" />
@@ -147,10 +150,10 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 px-2 scrollbar-hidden">
-        <NavSection title="Main"            items={MAIN}      onClose={onClose} />
-        <NavSection title="Agents"          items={AGENTS}    onClose={onClose} />
-        <NavSection title="User Management" items={USER_MGMT} onClose={onClose} />
-        <NavSection title="Account"         items={ACCOUNT}   alertCount={unreadCount} onClose={onClose} />
+        <NavSection title="Main"            items={MAIN}      onClose={onClose} t={t} />
+        <NavSection title="Agents"          items={AGENTS}    onClose={onClose} t={t} />
+        <NavSection title="User Management" items={USER_MGMT} onClose={onClose} t={t} />
+        <NavSection title="Account"         items={ACCOUNT}   alertCount={unreadCount} onClose={onClose} t={t} />
       </nav>
 
       {/* User info — pinned bottom */}
@@ -164,12 +167,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-text-primary truncate">{user.name}</p>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/80 mt-0.5">
-              {PLAN_LABELS[user.plan] ?? user.plan}
+              {t(PLAN_LABELS[user.plan] ?? user.plan)}
             </p>
           </div>
           <button
             onClick={logout}
-            aria-label="Sign out"
+            aria-label={t('Sign out')}
             className="shrink-0 text-text-disabled hover:text-error transition-colors p-1.5 rounded"
           >
             <LogOut className="h-4 w-4" />
@@ -180,7 +183,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Tagline */}
       <div className="px-4 py-2.5 text-center shrink-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/60">
-          Your AI · Your Rules
+          {t('Your AI · Your Rules')}
         </p>
       </div>
     </aside>
