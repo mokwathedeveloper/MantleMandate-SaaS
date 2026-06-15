@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus, FileText, Search, Bot, TrendingUp, CheckCircle2 } from 'lucide-react'
 import { useMandates } from '@/hooks/useMandates'
 import { useAuthStore } from '@/store/authStore'
+import { useTranslation } from '@/hooks/useTranslation'
 import { formatDate, cn } from '@/lib/utils'
 import { TokenIcon } from '@/components/ui/TokenIcon'
 import type { Mandate } from '@/types/mandate'
@@ -28,7 +29,7 @@ const STRATEGY_ICONS: Record<string, string> = {
 
 // ── MandateCard ───────────────────────────────────────────────────────────────
 
-function MandateCard({ mandate }: { mandate: Mandate }) {
+function MandateCard({ mandate, t }: { mandate: Mandate; t: (s: string) => string }) {
   const st   = STATUS_CLASS[mandate.status] ?? STATUS_CLASS.draft
   const icon = mandate.strategyType ? (STRATEGY_ICONS[mandate.strategyType] ?? '📋') : '📋'
 
@@ -46,7 +47,7 @@ function MandateCard({ mandate }: { mandate: Mandate }) {
             'text-[10px] font-bold uppercase tracking-[0.08em] px-2 py-0.5 rounded shrink-0',
             st.badge,
           )}>
-            {st.label}
+            {t(st.label)}
           </span>
         </div>
 
@@ -86,7 +87,7 @@ function MandateCard({ mandate }: { mandate: Mandate }) {
             </span>
             {mandate.capitalCap && (
               <span className="text-[11px] text-text-disabled">
-                Cap: ${mandate.capitalCap.toLocaleString('en-US')}
+                {t('Cap:')} ${mandate.capitalCap.toLocaleString('en-US')}
               </span>
             )}
           </div>
@@ -120,6 +121,7 @@ const FILTER_TABS: { key: StatusFilter; label: string }[] = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MandatesPage() {
+  const t = useTranslation()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search,       setSearch]       = useState('')
 
@@ -151,17 +153,17 @@ export default function MandatesPage() {
       {/* Error banner */}
       {isError && (
         <div className="rounded-lg border border-error/30 bg-error-bg px-4 py-3 text-sm text-error flex items-center gap-2">
-          <span className="font-semibold">Couldn&apos;t load mandates</span>
-          <span className="text-text-secondary">— please try refreshing the page.</span>
+          <span className="font-semibold">{t("Couldn't load mandates")}</span>
+          <span className="text-text-secondary">— {t('please try refreshing the page.')}</span>
         </div>
       )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Mandates</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('Mandates')}</h2>
           <p className="text-sm text-text-secondary mt-1">
-            {allMandates.length} mandate{allMandates.length !== 1 ? 's' : ''} — plain-English strategies executed by AI agents
+            {t(allMandates.length === 1 ? '{n} mandate — plain-English strategies executed by AI agents' : '{n} mandates — plain-English strategies executed by AI agents').replace('{n}', String(allMandates.length))}
           </p>
         </div>
         <Link
@@ -169,7 +171,7 @@ export default function MandatesPage() {
           className="self-start sm:self-auto inline-flex items-center gap-1.5 h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" />
-          New Mandate
+          {t('New Mandate')}
         </Link>
       </div>
 
@@ -191,7 +193,7 @@ export default function MandatesPage() {
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface',
                 )}
               >
-                {label}
+                {t(label)}
                 {count > 0 && (
                   <span className={cn(
                     'text-[10px] font-bold min-w-4 h-4 rounded-full flex items-center justify-center px-1',
@@ -209,7 +211,7 @@ export default function MandatesPage() {
         <div className="relative sm:ml-auto w-full sm:w-auto">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           <input
-            placeholder="Search mandates…"
+            placeholder={t('Search mandates…')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full sm:w-52 h-9 pl-8 pr-3 rounded-md border border-border bg-page text-text-primary text-xs placeholder:text-text-disabled focus:outline-none focus:border-primary"
@@ -229,12 +231,12 @@ export default function MandatesPage() {
           <FileText className="h-12 w-12 text-text-secondary opacity-40" />
           <div>
             <p className="text-base font-semibold text-text-primary mb-1">
-              {search || statusFilter !== 'all' ? 'No mandates match' : 'No mandates yet'}
+              {search || statusFilter !== 'all' ? t('No mandates match') : t('No mandates yet')}
             </p>
             <p className="text-sm text-text-secondary max-w-sm">
               {search || statusFilter !== 'all'
-                ? 'Try clearing the search or switching to All tab.'
-                : 'Write your first investment mandate in plain English and let AI deploy an agent.'}
+                ? t('Try clearing the search or switching to All tab.')
+                : t('Write your first investment mandate in plain English and let AI deploy an agent.')}
             </p>
           </div>
           {!search && statusFilter === 'all' && (
@@ -243,13 +245,13 @@ export default function MandatesPage() {
               className="inline-flex items-center gap-1.5 h-10 px-5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors"
             >
               <Plus className="h-4 w-4" />
-              Create your first mandate
+              {t('Create your first mandate')}
             </Link>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(m => <MandateCard key={m.id} mandate={m} />)}
+          {filtered.map(m => <MandateCard key={m.id} mandate={m} t={t} />)}
         </div>
       )}
 
@@ -260,10 +262,10 @@ export default function MandatesPage() {
             <Bot className="h-5 w-5 text-success shrink-0" />
             <div>
               <p className="text-sm font-semibold text-text-primary">
-                {allMandates.filter(m => m.status === 'active').length} active mandate{allMandates.filter(m => m.status === 'active').length !== 1 ? 's' : ''} running
+                {t(allMandates.filter(m => m.status === 'active').length === 1 ? '{n} active mandate running' : '{n} active mandates running').replace('{n}', String(allMandates.filter(m => m.status === 'active').length))}
               </p>
               <p className="text-xs text-text-secondary mt-0.5">
-                AI agents are executing your strategies autonomously on Mantle Network
+                {t('AI agents are executing your strategies autonomously on Mantle Network')}
               </p>
             </div>
           </div>
@@ -271,7 +273,7 @@ export default function MandatesPage() {
             href="/dashboard/agents"
             className="self-start sm:self-auto inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md border border-success/40 text-success text-xs font-semibold hover:bg-success/5 transition-colors shrink-0"
           >
-            View agents →
+            {t('View agents →')}
           </Link>
         </div>
       )}
