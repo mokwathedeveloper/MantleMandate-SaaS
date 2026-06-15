@@ -138,7 +138,7 @@ All seven contracts are verified on Sourcify (full match), synced to Mantle Expl
 - **Pre-execution commitment** — before an agent acts, `agentTick.ts` hashes its full reasoning (asset, action, confidence, live price, RSI, etc.) and calls `commitDecision(agentId, reasoningHash)`, then calls `resolveCommitment(agentId, commitIndex, executed)` once the trade succeeds or fails — an on-chain, timestamped record of *what the agent decided and why, before it acted*.
 - **On-chain reputation** — `getReputation(agentId)` returns `(totalCommitted, totalExecuted, totalResolved)`, surfaced on the agent detail page as an "On-Chain Reputation" card.
 
-Each commitment's reasoning is also content-addressed as an IPFS CIDv1 (`frontend/lib/ipfs.ts`, 12 passing Jest tests, zero new dependencies) and stored per-trade — shown next to each trade row, with an IPFS link when an operator-configured pinning endpoint is set (`IPFS_PIN_API_URL`). Reasoning CIDs are computed and stored for every trade regardless (no network dependency), so the audit trail is real from day one; pinning to IPFS is the only optional add-on.
+Each commitment's reasoning is also content-addressed as an IPFS CIDv1 (`frontend/lib/ipfs.ts`, 15 passing Jest tests, zero new dependencies) and pinned to IPFS via Pinata (`PINATA_JWT`) — the canonical reasoning JSON is uploaded through Pinata's `pinFileToIPFS`, and Pinata's own `IpfsHash` is stored and shown as a clickable gateway link next to every trade row. A generic `IPFS_PIN_API_URL` / `IPFS_PIN_API_TOKEN` pair is supported as a fallback for operators who'd rather run their own pinning endpoint. Reasoning CIDs are computed and stored for every trade regardless of pinning (no network dependency), so the audit trail is real from day one — pinning just makes it independently fetchable and verifiable from any IPFS gateway, by anyone, not only inside our dashboard.
 
 ### 🤖 AI Integration (Claude)
 
@@ -302,6 +302,7 @@ MantleMandate-SaaS/
 │   │   ├── contracts.ts            # ABIs + deployed addresses
 │   │   ├── openrouter.ts           # LangChain ChatOpenAI wrapper for OpenRouter/Claude
 │   │   ├── docsKnowledgeBase.ts    # Docs retrieval index — powers RAG chat + MCP search_docs
+│   │   ├── ipfs.ts                 # Reasoning CIDv1 + Pinata pinning for the on-chain audit trail
 │   │   └── serverWallet.ts         # Service wallet (shadow agent execution)
 │   └── hooks/                      # useAgents, useMandates, etc. (TanStack Query)
 │
