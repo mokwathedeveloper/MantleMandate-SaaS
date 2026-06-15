@@ -376,7 +376,7 @@ export default function AuditPage() {
             valClass: 'text-success',
           },
           {
-            label:    'Last 7 Days',
+            label:    'Last 24 Hours',
             value:    t(liveEntries.length === 1 ? '{n} transaction' : '{n} transactions').replace('{n}', String(liveEntries.length)),
             sub:      liveEntries.length > 0 ? 'Live data' : '',
             subClass: 'text-success',
