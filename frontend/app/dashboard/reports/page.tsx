@@ -10,11 +10,13 @@ import {
   BarChart, Bar, Cell,
   PieChart, Pie, Legend,
 } from 'recharts'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency, formatCompactCurrency, formatDate, formatDateShort, formatDateTime } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { usePortfolioHistory } from '@/hooks/usePortfolio'
 import { useAgents } from '@/hooks/useAgents'
+import { usePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/hooks/usePreferences'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -86,39 +88,36 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
   PORTFOLIO:   'bg-surface text-text-secondary',
 }
 
-function TypeBadge({ type }: { type: string }) {
+function TypeBadge({ type, t }: { type: string; t: (s: string) => string }) {
   const cls = TYPE_BADGE_CLASS[type] ?? TYPE_BADGE_CLASS.PORTFOLIO
   return (
     <span className={cn('text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded w-fit', cls)}>
-      {type}
+      {t(type)}
     </span>
   )
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n))
+function signedCurrency(n: number, prefs?: Partial<UserPreferences>): string {
+  return `${n >= 0 ? '+' : '-'}${formatCurrency(Math.abs(n), prefs)}`
 }
 
-function dateRange(from: string, to: string): string {
-  const f = new Date(from)
-  const t = new Date(to)
-  const mo = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${mo(f)} – ${t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+function dateRange(from: string, to: string, prefs?: Partial<UserPreferences>): string {
+  return `${formatDateShort(from, prefs)} – ${formatDate(to, prefs)}`
 }
 
-function downloadReportCsv(r: Report): string {
+function downloadReportCsv(r: Report, t: (s: string) => string, prefs?: Partial<UserPreferences>): string {
   const rows = [
-    ['Field', 'Value'],
-    ['Report', r.name],
-    ['Type', r.type],
-    ['Period', dateRange(r.dateFrom, r.dateTo)],
-    ['Total P&L', `${r.totalPnl >= 0 ? '+' : '-'}$${fmt(r.totalPnl)}`],
-    ['ROI', `${r.roi >= 0 ? '+' : ''}${r.roi.toFixed(2)}%`],
-    ['Max Drawdown', r.drawdown != null ? `-$${fmt(Math.abs(r.drawdown))}` : '—'],
-    ['Sharpe Ratio', r.sharpeRatio != null ? String(r.sharpeRatio) : '—'],
-    ['Generated On', new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
+    [t('Field'), t('Value')],
+    [t('Report'), r.name],
+    [t('Type'), t(r.type)],
+    [t('Period'), dateRange(r.dateFrom, r.dateTo, prefs)],
+    [t('Total P&L'), signedCurrency(r.totalPnl, prefs)],
+    [t('ROI'), `${r.roi >= 0 ? '+' : ''}${r.roi.toFixed(2)}%`],
+    [t('Max Drawdown'), r.drawdown != null ? `-${formatCurrency(Math.abs(r.drawdown), prefs)}` : '—'],
+    [t('Sharpe Ratio'), r.sharpeRatio != null ? String(r.sharpeRatio) : '—'],
+    [t('Generated On'), formatDate(r.createdAt, prefs)],
   ]
   const csv      = rows.map(row => row.map(c => `"${c}"`).join(',')).join('\n')
   const filename = `${r.name.replace(/\s·\s|[\s/]/g, '-')}.csv`
@@ -163,19 +162,19 @@ function TableSkeleton() {
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ t }: { t: (s: string) => string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <BarChart2 className="h-12 w-12 mb-4 text-text-disabled" />
-      <p className="text-text-primary font-semibold text-sm mb-2">No reports yet</p>
+      <p className="text-text-primary font-semibold text-sm mb-2">{t('No reports yet')}</p>
       <p className="text-text-secondary text-sm max-w-sm mb-6">
-        Reports are generated automatically each week once your agents start executing trades.
+        {t('Reports are generated automatically each week once your agents start executing trades.')}
       </p>
       <NextLink
         href="/dashboard/agents"
         className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
       >
-        Deploy Your First Agent
+        {t('Deploy Your First Agent')}
       </NextLink>
     </div>
   )
@@ -183,14 +182,16 @@ function EmptyState() {
 
 // ─── Report View Modal ────────────────────────────────────────────────────────
 
-function ReportViewModal({ report, onClose }: { report: Report; onClose: () => void }) {
+function ReportViewModal({
+  report, onClose, prefs, t,
+}: { report: Report; onClose: () => void; prefs: Partial<UserPreferences>; t: (s: string) => string }) {
   const pnlPositive = report.totalPnl >= 0
   const roiPositive = report.roi >= 0
 
   const metrics = [
-    { label: 'Total P&L',    value: `${pnlPositive ? '+' : '-'}$${fmt(report.totalPnl)}`,    colorClass: pnlPositive ? 'text-success' : 'text-error' },
+    { label: 'Total P&L',    value: signedCurrency(report.totalPnl, prefs),    colorClass: pnlPositive ? 'text-success' : 'text-error' },
     { label: 'ROI',          value: `${roiPositive ? '+' : ''}${report.roi.toFixed(2)}%`,     colorClass: roiPositive ? 'text-success' : 'text-error' },
-    { label: 'Max Drawdown', value: report.drawdown != null ? `-$${fmt(Math.abs(report.drawdown))}` : '—', colorClass: 'text-error' },
+    { label: 'Max Drawdown', value: report.drawdown != null ? `-${formatCurrency(Math.abs(report.drawdown), prefs)}` : '—', colorClass: 'text-error' },
     { label: 'Sharpe Ratio', value: report.sharpeRatio != null ? String(report.sharpeRatio) : '—', colorClass: 'text-text-primary' },
   ]
 
@@ -203,8 +204,8 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
           <div className="min-w-0">
             <p className="text-sm font-semibold text-text-primary truncate">{report.name}</p>
             <div className="flex items-center gap-2 mt-1">
-              <TypeBadge type={report.type} />
-              <span className="text-xs text-text-secondary">{dateRange(report.dateFrom, report.dateTo)}</span>
+              <TypeBadge type={report.type} t={t} />
+              <span className="text-xs text-text-secondary">{dateRange(report.dateFrom, report.dateTo, prefs)}</span>
             </div>
           </div>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors shrink-0 mt-0.5">
@@ -216,7 +217,7 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
         <div className="grid grid-cols-2 gap-3 p-5">
           {metrics.map(m => (
             <div key={m.label} className="rounded-lg p-4 bg-page border border-border">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">{m.label}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">{t(m.label)}</p>
               <p className={cn('text-xl font-bold', m.colorClass)}>{m.value}</p>
             </div>
           ))}
@@ -225,13 +226,13 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
         {/* Details */}
         <div className="px-5 pb-5 space-y-2">
           {[
-            ['Report Type',   report.type],
+            ['Report Type',   t(report.type)],
             ['Period From',   report.dateFrom],
             ['Period To',     report.dateTo],
-            ['Generated On',  new Date(report.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
+            ['Generated On',  formatDate(report.createdAt, prefs)],
           ].map(([k, v]) => (
             <div key={k} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-              <span className="text-xs text-text-secondary">{k}</span>
+              <span className="text-xs text-text-secondary">{t(k)}</span>
               <span className="text-xs font-medium text-text-primary">{v}</span>
             </div>
           ))}
@@ -243,7 +244,7 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
             onClick={onClose}
             className="px-4 py-2 rounded-md border border-border text-xs text-text-secondary hover:text-text-primary transition-colors"
           >
-            Close
+            {t('Close')}
           </button>
         </div>
       </div>
@@ -254,7 +255,7 @@ function ReportViewModal({ report, onClose }: { report: Report; onClose: () => v
 // ─── Export Modal ─────────────────────────────────────────────────────────────
 
 function ExportModal({
-  onClose, onSuccess, summary, pnlTimeline, agentPnl, protocolVolume, winRate,
+  onClose, onSuccess, summary, pnlTimeline, agentPnl, protocolVolume, winRate, prefs, t,
 }: {
   onClose: () => void
   onSuccess: (msg: string) => void
@@ -263,6 +264,8 @@ function ExportModal({
   agentPnl: AgentPnlPoint[]
   protocolVolume: ProtocolVolumePoint[]
   winRate: WinRatePoint[]
+  prefs: Partial<UserPreferences>
+  t: (s: string) => string
 }) {
   const [reportType, setReportType] = useState('Performance Summary')
   const [format,     setFormat]     = useState('CSV')
@@ -275,20 +278,20 @@ function ExportModal({
     setTimeout(() => {
       setLoading(false)
       const slug      = reportType.replace(/\s+/g, '-')
-      const range     = `${dateFrom || 'all-time'} to ${dateTo || 'now'}`
+      const range     = `${dateFrom || t('all-time')} ${t('to')} ${dateTo || t('now')}`
       const filename   = `${slug}-${new Date().toISOString().slice(0, 10)}`
       const sharpeStr  = summary.sharpe !== null ? summary.sharpe.toFixed(2) : 'N/A'
 
       if (format === 'CSV') {
         const rows = [
-          ['Period', 'Metric', 'Value'],
-          [range, 'Total P&L',      `${summary.totalPnl >= 0 ? '+' : '-'}$${fmt(summary.totalPnl)}`],
-          [range, 'Win Rate',       `${summary.winRate.toFixed(1)}%`],
-          [range, 'Total Trades',   String(summary.totalTrades)],
-          [range, 'Sharpe Ratio',   sharpeStr],
-          [range, 'Max Drawdown',   `-$${fmt(Math.abs(summary.maxDrawdown))}`],
-          ...pnlTimeline.map(r => [r.d, 'Portfolio Value', `$${r.v.toLocaleString()}`]),
-          ...agentPnl.map(r    => [range, `Agent P&L — ${r.name}`, `${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}`]),
+          [t('Period'), t('Metric'), t('Value')],
+          [range, t('Total P&L'),      signedCurrency(summary.totalPnl, prefs)],
+          [range, t('Win Rate'),       `${summary.winRate.toFixed(1)}%`],
+          [range, t('Total Trades'),   String(summary.totalTrades)],
+          [range, t('Sharpe Ratio'),   sharpeStr],
+          [range, t('Max Drawdown'),   `-${formatCurrency(Math.abs(summary.maxDrawdown), prefs)}`],
+          ...pnlTimeline.map(r => [r.d, t('Portfolio Value'), formatCurrency(r.v, prefs)]),
+          ...agentPnl.map(r    => [range, `${t('Agent P&L')} — ${r.name}`, signedCurrency(r.pnl, prefs)]),
         ]
         const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv' })
@@ -318,7 +321,7 @@ function ExportModal({
         const win = window.open('', '_blank', 'width=900,height=700')
         if (!win) return
         win.document.write(`<!DOCTYPE html><html><head>
-          <title>${reportType} — ${range}</title>
+          <title>${t(reportType)} — ${range}</title>
           <style>
             body { font-family: -apple-system, sans-serif; padding: 40px; color: #111; }
             h1   { font-size: 22px; margin-bottom: 4px; }
@@ -334,37 +337,37 @@ function ExportModal({
             h2   { font-size: 15px; margin: 24px 0 8px; }
           </style>
         </head><body>
-          <h1>MantleMandate — ${reportType}</h1>
-          <p class="sub">Period: ${range} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+          <h1>MantleMandate — ${t(reportType)}</h1>
+          <p class="sub">${t('Period:')} ${range} &nbsp;·&nbsp; ${t('Generated:')} ${formatDateTime(new Date().toISOString(), prefs)}</p>
           <div class="kpi">
-            <div class="kpi-card"><div class="kpi-label">Total P&amp;L</div><div class="kpi-value">${summary.totalPnl >= 0 ? '+' : '-'}$${fmt(summary.totalPnl)}</div></div>
-            <div class="kpi-card"><div class="kpi-label">Win Rate</div><div class="kpi-value">${summary.winRate.toFixed(1)}%</div></div>
-            <div class="kpi-card"><div class="kpi-label">Total Trades</div><div class="kpi-value">${summary.totalTrades}</div></div>
-            <div class="kpi-card"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value">${sharpeStr}</div></div>
-            <div class="kpi-card"><div class="kpi-label">Max Drawdown</div><div class="kpi-value">-$${fmt(Math.abs(summary.maxDrawdown))}</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('Total P&L')}</div><div class="kpi-value">${signedCurrency(summary.totalPnl, prefs)}</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('Win Rate')}</div><div class="kpi-value">${summary.winRate.toFixed(1)}%</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('Total Trades')}</div><div class="kpi-value">${summary.totalTrades}</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('Sharpe Ratio')}</div><div class="kpi-value">${sharpeStr}</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('Max Drawdown')}</div><div class="kpi-value">-${formatCurrency(Math.abs(summary.maxDrawdown), prefs)}</div></div>
           </div>
-          <h2>Portfolio Value Timeline</h2>
-          <table><tr><th>Date</th><th>Value</th></tr>
-            ${pnlTimeline.length ? pnlTimeline.map(r => `<tr><td>${r.d}</td><td>$${r.v.toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="2">No data yet</td></tr>'}
+          <h2>${t('Portfolio Value Timeline')}</h2>
+          <table><tr><th>${t('Date')}</th><th>${t('Value')}</th></tr>
+            ${pnlTimeline.length ? pnlTimeline.map(r => `<tr><td>${r.d}</td><td>${formatCurrency(r.v, prefs)}</td></tr>`).join('') : `<tr><td colspan="2">${t('No data yet')}</td></tr>`}
           </table>
-          <h2>Agent Breakdown</h2>
-          <table><tr><th>Agent</th><th>P&amp;L</th></tr>
-            ${agentPnl.length ? agentPnl.map(r => `<tr><td>${r.name}</td><td>${r.pnl >= 0 ? '+' : ''}$${Math.abs(r.pnl).toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="2">No agents deployed yet</td></tr>'}
+          <h2>${t('Agent Breakdown')}</h2>
+          <table><tr><th>${t('Agent')}</th><th>P&amp;L</th></tr>
+            ${agentPnl.length ? agentPnl.map(r => `<tr><td>${r.name}</td><td>${signedCurrency(r.pnl, prefs)}</td></tr>`).join('') : `<tr><td colspan="2">${t('No agents deployed yet')}</td></tr>`}
           </table>
-          <h2>Protocol Volume</h2>
-          <table><tr><th>Protocol</th><th>Share</th></tr>
-            ${protocolVolume.length ? protocolVolume.map(r => `<tr><td>${r.name}</td><td>${r.value}%</td></tr>`).join('') : '<tr><td colspan="2">No trade activity yet</td></tr>'}
+          <h2>${t('Protocol Volume')}</h2>
+          <table><tr><th>${t('Protocol')}</th><th>${t('Share')}</th></tr>
+            ${protocolVolume.length ? protocolVolume.map(r => `<tr><td>${r.name}</td><td>${r.value}%</td></tr>`).join('') : `<tr><td colspan="2">${t('No trade activity yet')}</td></tr>`}
           </table>
-          <h2>Win Rates by Mandate</h2>
-          <table><tr><th>Mandate</th><th>Win %</th><th>Loss %</th></tr>
-            ${winRate.length ? winRate.map(r => `<tr><td>${r.mandate}</td><td>${r.win}%</td><td>${r.loss}%</td></tr>`).join('') : '<tr><td colspan="3">No completed trades yet</td></tr>'}
+          <h2>${t('Win Rates by Mandate')}</h2>
+          <table><tr><th>${t('Mandate')}</th><th>${t('Win %')}</th><th>${t('Loss %')}</th></tr>
+            ${winRate.length ? winRate.map(r => `<tr><td>${r.mandate}</td><td>${r.win}%</td><td>${r.loss}%</td></tr>`).join('') : `<tr><td colspan="3">${t('No completed trades yet')}</td></tr>`}
           </table>
           <script>window.onload = function(){ window.print(); }</script>
         </body></html>`)
         win.document.close()
       }
 
-      onSuccess(`${reportType} — ${format} downloaded`)
+      onSuccess(t('{reportType} — {format} downloaded').replace('{reportType}', t(reportType)).replace('{format}', format))
       onClose()
     }, 800)
   }
@@ -373,7 +376,7 @@ function ExportModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="w-[calc(100vw-2rem)] max-w-[480px] p-5 sm:p-6 space-y-5 bg-card border border-border rounded-[10px]">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-text-primary">Export Report</h3>
+          <h3 className="text-base font-semibold text-text-primary">{t('Export Report')}</h3>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
             <X className="h-5 w-5" />
           </button>
@@ -381,24 +384,24 @@ function ExportModal({
 
         {/* Report type */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Report type</p>
-          {['Performance Summary', 'Full Trade Log', 'Agent Activity Report', 'On-Chain Audit Export'].map(t => (
-            <label key={t} className="flex items-center gap-2 cursor-pointer">
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{t('Report type')}</p>
+          {['Performance Summary', 'Full Trade Log', 'Agent Activity Report', 'On-Chain Audit Export'].map(rt => (
+            <label key={rt} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="rt"
-                checked={reportType === t}
-                onChange={() => setReportType(t)}
+                checked={reportType === rt}
+                onChange={() => setReportType(rt)}
                 className="accent-primary"
               />
-              <span className="text-sm text-text-secondary">{t}</span>
+              <span className="text-sm text-text-secondary">{t(rt)}</span>
             </label>
           ))}
         </div>
 
         {/* Date range */}
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Date range</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{t('Date range')}</p>
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -406,7 +409,7 @@ function ExportModal({
               onChange={e => setDateFrom(e.target.value)}
               className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary"
             />
-            <span className="text-text-disabled text-sm">to</span>
+            <span className="text-text-disabled text-sm">{t('to')}</span>
             <input
               type="date"
               value={dateTo}
@@ -419,22 +422,22 @@ function ExportModal({
         {/* Agent + Mandate selects */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-xs text-text-secondary">Agent</label>
+            <label className="text-xs text-text-secondary">{t('Agent')}</label>
             <select className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer">
-              <option>All Agents</option>
+              <option>{t('All Agents')}</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-text-secondary">Mandate</label>
+            <label className="text-xs text-text-secondary">{t('Mandate')}</label>
             <select className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer">
-              <option>All Mandates</option>
+              <option>{t('All Mandates')}</option>
             </select>
           </div>
         </div>
 
         {/* Format */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Format</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{t('Format')}</p>
           <div className="flex gap-4">
             {['CSV', 'PDF', 'JSON'].map(f => (
               <label key={f} className="flex items-center gap-2 cursor-pointer">
@@ -463,13 +466,13 @@ function ExportModal({
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Generate &amp; Download
+            {t('Generate & Download')}
           </button>
           <button
             onClick={onClose}
             className="px-4 py-2.5 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
-            Cancel
+            {t('Cancel')}
           </button>
         </div>
       </div>
@@ -505,11 +508,11 @@ function ChartEmptyState({ message }: { message: string }) {
   )
 }
 
-function PnlTimeline({ data }: { data: PnlPoint[] }) {
+function PnlTimeline({ data, prefs, t }: { data: PnlPoint[]; prefs: Partial<UserPreferences>; t: (s: string) => string }) {
   const [range, setRange] = useState('1M')
   return (
     <ChartCard
-      title="Portfolio Value Over Time"
+      title={t('Portfolio Value Over Time')}
       actions={
         <div className="flex items-center gap-1">
           {['1W', '1M', '3M', '1Y'].map(r => (
@@ -528,7 +531,7 @@ function PnlTimeline({ data }: { data: PnlPoint[] }) {
       }
     >
       {data.length === 0 ? (
-        <ChartEmptyState message="No portfolio history yet" />
+        <ChartEmptyState message={t('No portfolio history yet')} />
       ) : (
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -541,8 +544,8 @@ function PnlTimeline({ data }: { data: PnlPoint[] }) {
           <CartesianGrid stroke="#21262D" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="d" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} width={50}
-            tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => [`$${fmt(Number(v))}`, 'Value']} />
+            tickFormatter={v => formatCompactCurrency(v, prefs)} />
+          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => [formatCurrency(Number(v), prefs), t('Value')]} />
           <Line type="monotone" dataKey="v" stroke="#0066FF" strokeWidth={2} dot={false} fill="url(#pnlGrad)" />
         </LineChart>
       </ResponsiveContainer>
@@ -551,19 +554,19 @@ function PnlTimeline({ data }: { data: PnlPoint[] }) {
   )
 }
 
-function AgentPnlChart({ data }: { data: AgentPnlPoint[] }) {
+function AgentPnlChart({ data, prefs, t }: { data: AgentPnlPoint[]; prefs: Partial<UserPreferences>; t: (s: string) => string }) {
   return (
-    <ChartCard title="P&L by Agent">
+    <ChartCard title={t('P&L by Agent')}>
       {data.length === 0 ? (
-        <ChartEmptyState message="No agents deployed yet" />
+        <ChartEmptyState message={t('No agents deployed yet')} />
       ) : (
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#21262D" strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false}
-            tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+            tickFormatter={v => formatCompactCurrency(v, prefs)} />
           <YAxis type="category" dataKey="name" tick={{ fill: '#8B949E', fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
-          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => { const n = Number(v); return [`${n >= 0 ? '+' : ''}$${fmt(n)}`, 'P&L'] }} />
+          <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(v) => [signedCurrency(Number(v), prefs), t('P&L')]} />
           <Bar dataKey="pnl" radius={[0, 3, 3, 0]}>
             {data.map((entry, i) => (
               <Cell key={i} fill={entry.pnl >= 0 ? '#22C55E' : '#EF4444'} />
@@ -576,11 +579,11 @@ function AgentPnlChart({ data }: { data: AgentPnlPoint[] }) {
   )
 }
 
-function ProtocolChart({ data }: { data: ProtocolVolumePoint[] }) {
+function ProtocolChart({ data, t }: { data: ProtocolVolumePoint[]; t: (s: string) => string }) {
   return (
-    <ChartCard title="Trade Volume by Protocol">
+    <ChartCard title={t('Trade Volume by Protocol')}>
       {data.length === 0 ? (
-        <ChartEmptyState message="No trade activity yet" />
+        <ChartEmptyState message={t('No trade activity yet')} />
       ) : (
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
@@ -599,7 +602,7 @@ function ProtocolChart({ data }: { data: ProtocolVolumePoint[] }) {
           </Pie>
           <Tooltip
             {...CHART_TOOLTIP_STYLE}
-            formatter={(v) => [`${v}%`, 'Volume']}
+            formatter={(v) => [`${v}%`, t('Volume')]}
           />
           <Legend
             iconType="circle"
@@ -613,11 +616,11 @@ function ProtocolChart({ data }: { data: ProtocolVolumePoint[] }) {
   )
 }
 
-function WinRateChart({ data }: { data: WinRatePoint[] }) {
+function WinRateChart({ data, t }: { data: WinRatePoint[]; t: (s: string) => string }) {
   return (
-    <ChartCard title="Win Rate by Mandate">
+    <ChartCard title={t('Win Rate by Mandate')}>
       {data.length === 0 ? (
-        <ChartEmptyState message="No completed trades yet" />
+        <ChartEmptyState message={t('No completed trades yet')} />
       ) : (
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
@@ -640,6 +643,7 @@ function WinRateChart({ data }: { data: WinRatePoint[] }) {
 type ViewMode = 'table' | 'charts'
 
 export default function ReportsPage() {
+  const t = useTranslation()
   const [view,         setView]         = useState<ViewMode>('table')
   const [showExport,   setExport]       = useState(false)
   const [toast,        setToast]        = useState<string | null>(null)
@@ -647,6 +651,8 @@ export default function ReportsPage() {
   const [dateFrom,     setDateFrom]     = useState('')
   const [dateTo,       setDateTo]       = useState('')
   const [viewReport,   setViewReport]   = useState<Report | null>(null)
+
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
 
   const { data, isLoading, isError } = useQuery<Report[]>({
     queryKey: ['reports'],
@@ -687,10 +693,10 @@ export default function ReportsPage() {
 
   const pnlTimeline = useMemo<PnlPoint[]>(
     () => (portfolioHistory ?? []).map(p => ({
-      d: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      d: formatDateShort(p.date, prefs),
       v: p.value,
     })),
-    [portfolioHistory],
+    [portfolioHistory, prefs],
   )
 
   const agentPnl = useMemo<AgentPnlPoint[]>(
@@ -701,7 +707,7 @@ export default function ReportsPage() {
   const protocolVolume = useMemo<ProtocolVolumePoint[]>(() => {
     const rows = tradeRows ?? []
     const totals: Record<string, number> = {}
-    rows.forEach(t => { totals[t.protocol] = (totals[t.protocol] ?? 0) + (t.amount_usd ?? 0) })
+    rows.forEach(row => { totals[row.protocol] = (totals[row.protocol] ?? 0) + (row.amount_usd ?? 0) })
     const grandTotal = Object.values(totals).reduce((s, v) => s + v, 0)
     return Object.entries(totals).map(([name, v], i) => ({
       name,
@@ -713,12 +719,12 @@ export default function ReportsPage() {
   const winRate = useMemo<WinRatePoint[]>(() => {
     const rows = tradeRows ?? []
     const byMandate: Record<string, { win: number; total: number }> = {}
-    rows.forEach(t => {
-      if (t.status !== 'success') return
-      const name = t.mandate?.name ?? 'Unknown'
+    rows.forEach(row => {
+      if (row.status !== 'success') return
+      const name = row.mandate?.name ?? t('Unknown')
       const entry = byMandate[name] ?? { win: 0, total: 0 }
       entry.total += 1
-      if ((t.pnl ?? 0) > 0) entry.win += 1
+      if ((row.pnl ?? 0) > 0) entry.win += 1
       byMandate[name] = entry
     })
     return Object.entries(byMandate).map(([mandate, { win, total }]) => ({
@@ -726,7 +732,7 @@ export default function ReportsPage() {
       win:  total > 0 ? Math.round((win / total) * 100) : 0,
       loss: total > 0 ? Math.round(((total - win) / total) * 100) : 0,
     }))
-  }, [tradeRows])
+  }, [tradeRows, t])
 
   const summary = useMemo<ReportsSummary>(() => {
     const rows = tradeRows ?? []
@@ -750,7 +756,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      {viewReport && <ReportViewModal report={viewReport} onClose={() => setViewReport(null)} />}
+      {viewReport && <ReportViewModal report={viewReport} onClose={() => setViewReport(null)} prefs={prefs} t={t} />}
       {showExport && (
         <ExportModal
           onClose={() => setExport(false)}
@@ -760,6 +766,8 @@ export default function ReportsPage() {
           agentPnl={agentPnl}
           protocolVolume={protocolVolume}
           winRate={winRate}
+          prefs={prefs}
+          t={t}
         />
       )}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
@@ -767,9 +775,9 @@ export default function ReportsPage() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Reports &amp; Exporting</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('Reports & Exporting')}</h2>
           <p className="text-sm text-text-secondary mt-0.5">
-            Performance summaries, trade logs, and compliance exports.
+            {t('Performance summaries, trade logs, and compliance exports.')}
           </p>
         </div>
         <button
@@ -777,7 +785,7 @@ export default function ReportsPage() {
           className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-md transition-colors shrink-0 self-start"
         >
           <Download className="h-4 w-4" />
-          Export Report
+          {t('Export Report')}
         </button>
       </div>
 
@@ -785,19 +793,19 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {([
           { label: 'Total Reports', value: String(kpi.count),                                                                           sub: 'In selected range',  colorClass: '' },
-          { label: 'Total P&L',     value: `${kpi.totalPnl >= 0 ? '+' : '-'}$${fmt(Math.abs(kpi.totalPnl))}`,                           sub: 'Selected range',     colorClass: kpi.totalPnl >= 0 ? 'text-success' : 'text-error' },
+          { label: 'Total P&L',     value: signedCurrency(kpi.totalPnl, prefs),                                                          sub: 'Selected range',     colorClass: kpi.totalPnl >= 0 ? 'text-success' : 'text-error' },
           { label: 'Avg ROI',       value: `${kpi.avgRoi >= 0 ? '+' : ''}${kpi.avgRoi.toFixed(2)}%`,                                    sub: '',                   colorClass: kpi.avgRoi >= 0 ? 'text-success' : 'text-error' },
-          { label: 'Max Drawdown',  value: kpi.maxDrawdown !== 0 ? `-$${fmt(Math.abs(kpi.maxDrawdown))}` : '—',                         sub: '',                   colorClass: 'text-error' },
+          { label: 'Max Drawdown',  value: kpi.maxDrawdown !== 0 ? `-${formatCurrency(Math.abs(kpi.maxDrawdown), prefs)}` : '—',                         sub: '',                   colorClass: 'text-error' },
           { label: 'Avg Sharpe',    value: kpi.avgSharpe > 0 ? kpi.avgSharpe.toFixed(2) : '—',                                          sub: 'Risk-adjusted',      colorClass: '' },
         ] as { label: string; value: string; sub: string; colorClass: string }[]).map(c => (
           <div key={c.label} className="bg-card border border-border rounded-lg p-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-1">
-              {c.label}
+              {t(c.label)}
             </p>
             <p className={cn('text-base sm:text-xl font-bold truncate', c.colorClass || 'text-text-primary')}>
               {c.value}
             </p>
-            {c.sub && <p className="text-xs text-text-secondary mt-0.5">{c.sub}</p>}
+            {c.sub && <p className="text-xs text-text-secondary mt-0.5">{t(c.sub)}</p>}
           </div>
         ))}
       </div>
@@ -817,7 +825,7 @@ export default function ReportsPage() {
                   : 'text-text-secondary hover:text-text-primary',
               )}
             >
-              {v === 'table' ? '≡ Table' : '📊 Charts'}
+              {v === 'table' ? `≡ ${t('Table')}` : `📊 ${t('Charts')}`}
             </button>
           ))}
         </div>
@@ -830,7 +838,7 @@ export default function ReportsPage() {
             onChange={e => setDateFrom(e.target.value)}
             className="bg-input border border-border rounded-md px-3 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
           />
-          <span className="text-text-disabled text-sm">to</span>
+          <span className="text-text-disabled text-sm">{t('to')}</span>
           <input
             type="date"
             value={dateTo}
@@ -842,7 +850,7 @@ export default function ReportsPage() {
               key={f}
               className="bg-input border border-border rounded-md px-3 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option>All {f}s</option>
+              <option>{t(`All ${f}s`)}</option>
             </select>
           ))}
         </div>
@@ -858,7 +866,7 @@ export default function ReportsPage() {
               ...(showExtra ? ['GENERATED ON', 'DRAWDOWN', 'SHARPE'] : [])
             ].map(h => (
               <span key={h} className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-                {h}
+                {t(h)}
               </span>
             ))}
           </div>
@@ -869,13 +877,13 @@ export default function ReportsPage() {
               onClick={() => setShowExtra(v => !v)}
               className="text-[12px] flex items-center gap-0.5 transition-colors text-text-link"
             >
-              {showExtra ? 'Hide extra columns −' : 'Show more columns +'}
+              {showExtra ? t('Hide extra columns −') : t('Show more columns +')}
             </button>
           </div>
 
           {isLoading && <TableSkeleton />}
-          {isError   && <div className="py-8 text-center text-sm text-error">Failed to load reports.</div>}
-          {isEmpty   && <EmptyState />}
+          {isError   && <div className="py-8 text-center text-sm text-error">{t('Failed to load reports.')}</div>}
+          {isEmpty   && <EmptyState t={t} />}
 
           {!isEmpty && !isLoading && !isError && (filteredReports as Report[]).map((r: Report, i: number) => (
             <div
@@ -889,10 +897,10 @@ export default function ReportsPage() {
               >
                 {r.name}
               </button>
-              <TypeBadge type={r.type} />
-              <span className="text-xs text-text-secondary whitespace-nowrap">{dateRange(r.dateFrom, r.dateTo)}</span>
+              <TypeBadge type={r.type} t={t} />
+              <span className="text-xs text-text-secondary whitespace-nowrap">{dateRange(r.dateFrom, r.dateTo, prefs)}</span>
               <span className={cn('text-sm font-medium whitespace-nowrap', r.totalPnl >= 0 ? 'text-success' : 'text-error')}>
-                {r.totalPnl >= 0 ? '+' : '-'}${fmt(r.totalPnl)}
+                {signedCurrency(r.totalPnl, prefs)}
               </span>
               <span className={cn('text-sm font-medium whitespace-nowrap', r.roi >= 0 ? 'text-success' : 'text-error')}>
                 {r.roi >= 0 ? '+' : ''}{r.roi.toFixed(2)}%
@@ -902,22 +910,22 @@ export default function ReportsPage() {
                   onClick={() => setViewReport(r)}
                   className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
                 >
-                  <Eye className="h-3 w-3" /> View
+                  <Eye className="h-3 w-3" /> {t('View')}
                 </button>
                 <button
-                  onClick={() => setToast(`Report downloaded: ${downloadReportCsv(r)}`)}
+                  onClick={() => setToast(t('Report downloaded: {filename}').replace('{filename}', downloadReportCsv(r, t, prefs)))}
                   className="flex items-center gap-1 text-xs border border-border rounded px-2 py-1 text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
                 >
-                  <Download className="h-3 w-3" /> Export
+                  <Download className="h-3 w-3" /> {t('Export')}
                 </button>
               </div>
               {showExtra && (
                 <>
                   <span className="text-xs text-text-secondary whitespace-nowrap">
-                    {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(r.createdAt, prefs)}
                   </span>
                   <span className="text-xs font-medium whitespace-nowrap text-error">
-                    {r.drawdown != null ? `-$${fmt(Math.abs(r.drawdown))}` : '—'}
+                    {r.drawdown != null ? `-${formatCurrency(Math.abs(r.drawdown), prefs)}` : '—'}
                   </span>
                   <span className="text-xs text-text-secondary">
                     {r.sharpeRatio ?? '—'}
@@ -933,10 +941,10 @@ export default function ReportsPage() {
       {/* ── Charts View ── */}
       {view === 'charts' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <PnlTimeline data={pnlTimeline} />
-          <AgentPnlChart data={agentPnl} />
-          <ProtocolChart data={protocolVolume} />
-          <WinRateChart data={winRate} />
+          <PnlTimeline data={pnlTimeline} prefs={prefs} t={t} />
+          <AgentPnlChart data={agentPnl} prefs={prefs} t={t} />
+          <ProtocolChart data={protocolVolume} t={t} />
+          <WinRateChart data={winRate} t={t} />
         </div>
       )}
     </div>
