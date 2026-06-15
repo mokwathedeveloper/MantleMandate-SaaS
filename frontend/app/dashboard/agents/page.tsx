@@ -21,6 +21,7 @@ import {
 import { useMandates } from '@/hooks/useMandates'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import type { Agent } from '@/types/agent'
 
@@ -40,6 +41,14 @@ const STATUS_DOT: Record<string, string> = {
   failed:   'bg-error',
   stopped:  'bg-text-disabled',
   inactive: 'bg-text-disabled',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  active:   'active',
+  paused:   'paused',
+  failed:   'failed',
+  stopped:  'stopped',
+  inactive: 'inactive',
 }
 
 const SORT_OPTIONS = ['P&L', 'ROI', 'Volume', 'Name', 'Date deployed'] as const
@@ -64,7 +73,7 @@ function generateSparkline(agent: Agent, points = 30) {
 
 // ── AgentCard ─────────────────────────────────────────────────────────────────
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({ agent, t }: { agent: Agent; t: (s: string) => string }) {
   const { mutate: pause,  isPending: pausing  } = usePauseAgent()
   const { mutate: resume, isPending: resuming } = useResumeAgent()
   const { mutate: stop,   isPending: stopping } = useStopAgent()
@@ -92,12 +101,12 @@ function AgentCard({ agent }: { agent: Agent }) {
               </h3>
             </Link>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mt-0.5 truncate">
-              Running: {agent.mandateName}
+              {t('Running:')} {agent.mandateName}
             </p>
           </div>
         </div>
         <Badge variant={STATUS_VARIANT[agent.status]} dot>
-          {agent.status}
+          {t(STATUS_LABEL[agent.status] ?? agent.status)}
         </Badge>
       </div>
 
@@ -127,7 +136,7 @@ function AgentCard({ agent }: { agent: Agent }) {
         ].map(({ label, value, color }) => (
           <div key={label}>
             <p className="text-[9px] font-semibold uppercase tracking-wider text-text-secondary">
-              {label}
+              {t(label)}
             </p>
             <p className={cn('text-[13px] font-bold mt-0.5 leading-tight', color)}>{value}</p>
           </div>
@@ -160,14 +169,14 @@ function AgentCard({ agent }: { agent: Agent }) {
       {/* Bottom row */}
       <div className="flex items-center justify-between pt-1 border-t border-border">
         <span className="text-[11px] text-text-disabled">
-          Deployed: {agent.deployedAt ? formatDate(agent.deployedAt) : '—'}
+          {t('Deployed:')} {agent.deployedAt ? formatDate(agent.deployedAt) : '—'}
         </span>
         <div className="flex items-center gap-1">
           {agent.status === 'active' && (
             <>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-warning hover:border-warning transition-colors"
-                aria-label="Pause agent"
+                aria-label={t('Pause agent')}
                 disabled={pausing}
                 onClick={() => pause(agent.id)}
               >
@@ -175,7 +184,7 @@ function AgentCard({ agent }: { agent: Agent }) {
               </button>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-error hover:border-error transition-colors"
-                aria-label="Stop agent"
+                aria-label={t('Stop agent')}
                 disabled={stopping}
                 onClick={() => stop(agent.id)}
               >
@@ -187,7 +196,7 @@ function AgentCard({ agent }: { agent: Agent }) {
             <>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-success hover:border-success transition-colors"
-                aria-label="Resume agent"
+                aria-label={t('Resume agent')}
                 disabled={resuming}
                 onClick={() => resume(agent.id)}
               >
@@ -195,7 +204,7 @@ function AgentCard({ agent }: { agent: Agent }) {
               </button>
               <button
                 className="p-1.5 rounded border border-border text-text-secondary hover:text-error hover:border-error transition-colors"
-                aria-label="Stop agent"
+                aria-label={t('Stop agent')}
                 disabled={stopping}
                 onClick={() => stop(agent.id)}
               >
@@ -206,14 +215,14 @@ function AgentCard({ agent }: { agent: Agent }) {
           <Link
             href={`/dashboard/agents/${agent.id}`}
             className="p-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
-            aria-label="Agent settings"
+            aria-label={t('Agent settings')}
           >
             <Settings className="h-3 w-3" />
           </Link>
           <Link
             href={`/dashboard/agents/${agent.id}`}
             className="p-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
-            aria-label="View agent detail"
+            aria-label={t('View agent detail')}
           >
             <ExternalLink className="h-3 w-3" />
           </Link>
@@ -225,7 +234,7 @@ function AgentCard({ agent }: { agent: Agent }) {
 
 // ── Deploy Modal ───────────────────────────────────────────────────────────────
 
-function DeployModal({ onClose }: { onClose: () => void }) {
+function DeployModal({ onClose, t }: { onClose: () => void; t: (s: string) => string }) {
   const router = useRouter()
   const qc     = useQueryClient()
   const { data: mandatesData } = useMandates()
@@ -255,20 +264,20 @@ function DeployModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-xl w-[calc(100vw-2rem)] max-w-[440px] p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-text-primary">Deploy New Agent</h3>
+          <h3 className="text-base font-semibold text-text-primary">{t('Deploy New Agent')}</h3>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs text-text-secondary font-medium">From existing mandate:</label>
+          <label className="text-xs text-text-secondary font-medium">{t('From existing mandate:')}</label>
           <div className="relative">
             <select
               value={mandateId}
               onChange={e => setMandateId(e.target.value)}
               className="w-full appearance-none bg-input border border-border rounded-md px-3 pr-8 py-2 text-sm text-text-primary focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="">Select mandate…</option>
+              <option value="">{t('Select mandate…')}</option>
               {mandates.map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -278,17 +287,17 @@ function DeployModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-text-secondary font-medium">Agent name (optional)</label>
+          <label className="text-xs text-text-secondary font-medium">{t('Agent name (optional)')}</label>
           <input
             value={agentName}
             onChange={e => setAgentName(e.target.value)}
-            placeholder="Auto-named from mandate"
+            placeholder={t('Auto-named from mandate')}
             className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-primary placeholder:text-text-disabled"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-text-secondary font-medium">Capital cap ($)</label>
+          <label className="text-xs text-text-secondary font-medium">{t('Capital cap ($)')}</label>
           <input
             type="number"
             value={capital}
@@ -298,10 +307,10 @@ function DeployModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-text-secondary font-medium">Wallet</label>
+          <label className="text-xs text-text-secondary font-medium">{t('Wallet')}</label>
           <div className="relative">
             <select className="w-full appearance-none bg-input border border-border rounded-md px-3 pr-8 py-2 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer">
-              <option>0x1a2b…9f3c (Primary)</option>
+              <option>0x1a2b…9f3c ({t('Primary')})</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           </div>
@@ -315,12 +324,12 @@ function DeployModal({ onClose }: { onClose: () => void }) {
           onClick={handleDeploy}
         >
           <Zap className="h-4 w-4" />
-          Deploy Agent
+          {t('Deploy Agent')}
         </Button>
 
         <div className="relative flex items-center gap-3">
           <div className="flex-1 border-t border-border" />
-          <span className="text-xs text-text-disabled shrink-0">or</span>
+          <span className="text-xs text-text-disabled shrink-0">{t('or')}</span>
           <div className="flex-1 border-t border-border" />
         </div>
 
@@ -328,7 +337,7 @@ function DeployModal({ onClose }: { onClose: () => void }) {
           onClick={() => { onClose(); router.push('/dashboard/mandates/new') }}
           className="w-full py-2 border border-border rounded-md text-sm text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
         >
-          Create a New Mandate First
+          {t('Create a New Mandate First')}
         </button>
       </div>
     </div>
@@ -338,6 +347,7 @@ function DeployModal({ onClose }: { onClose: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
+  const t = useTranslation()
   const { data: agents, isLoading } = useAgents()
 
   const [activeTab, setTab]     = useState<TabFilter>('All')
@@ -386,14 +396,18 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-6">
-      {showDeploy && <DeployModal onClose={() => setDeploy(false)} />}
+      {showDeploy && <DeployModal onClose={() => setDeploy(false)} t={t} />}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">AI Agents</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{t('AI Agents')}</h2>
           <p className="text-sm text-text-secondary mt-0.5">
-            {all} agents deployed · {active} active · {paused} paused · {failed} failed
+            {t('{n} agents deployed · {a} active · {p} paused · {f} failed')
+              .replace('{n}', String(all))
+              .replace('{a}', String(active))
+              .replace('{p}', String(paused))
+              .replace('{f}', String(failed))}
           </p>
         </div>
         <button
@@ -401,7 +415,7 @@ export default function AgentsPage() {
           className="flex items-center gap-2 h-10 px-4 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors shrink-0 self-start"
         >
           <Zap className="h-4 w-4" />
-          Deploy New Agent
+          {t('Deploy New Agent')}
         </button>
       </div>
 
@@ -414,7 +428,7 @@ export default function AgentsPage() {
           { label: 'Failed',       value: failed, color: 'text-error'        },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-card border border-border rounded-lg px-5 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{label}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t(label)}</p>
             <p className={cn('text-2xl font-black mt-0.5', color)}>{value}</p>
           </div>
         ))}
@@ -423,18 +437,18 @@ export default function AgentsPage() {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">
-          {TABS.map(t => (
+          {TABS.map(tab => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tab.key}
+              onClick={() => setTab(tab.key)}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium transition-colors rounded',
-                activeTab === t.key
+                activeTab === tab.key
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-text-secondary hover:text-text-primary',
               )}
             >
-              {t.label} ({t.count})
+              {t(tab.label)} ({tab.count})
             </button>
           ))}
         </div>
@@ -445,7 +459,7 @@ export default function AgentsPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search agents…"
+              placeholder={t('Search agents…')}
               className="w-full sm:w-52 bg-input border border-border rounded-md pl-9 pr-3 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-primary"
             />
             {search && (
@@ -460,7 +474,7 @@ export default function AgentsPage() {
               onChange={e => setSort(e.target.value as SortOption)}
               className="appearance-none bg-input border border-border rounded-md pl-3 pr-7 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             >
-              {SORT_OPTIONS.map(o => <option key={o} value={o}>Sort: {o}</option>)}
+              {SORT_OPTIONS.map(o => <option key={o} value={o}>{t('Sort: {o}').replace('{o}', t(o))}</option>)}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           </div>
@@ -476,9 +490,9 @@ export default function AgentsPage() {
         <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
           <Bot className="h-14 w-14 text-text-secondary opacity-40" />
           <div>
-            <p className="text-lg font-semibold text-text-primary">No agents deployed yet</p>
+            <p className="text-lg font-semibold text-text-primary">{t('No agents deployed yet')}</p>
             <p className="text-sm text-text-secondary mt-1 max-w-sm">
-              Create a mandate and deploy your first AI agent to start trading automatically on Mantle Network.
+              {t('Create a mandate and deploy your first AI agent to start trading automatically on Mantle Network.')}
             </p>
           </div>
           <button
@@ -486,24 +500,24 @@ export default function AgentsPage() {
             className="inline-flex items-center gap-2 h-10 px-5 text-sm font-medium rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors"
           >
             <Zap className="h-4 w-4" />
-            Deploy My First Agent
+            {t('Deploy My First Agent')}
           </button>
           <Link href="/dashboard/mandates" className="text-sm text-text-link hover:text-text-link-hover transition-colors">
-            or browse example mandates
+            {t('or browse example mandates')}
           </Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
           <Bot className="h-10 w-10 text-text-secondary opacity-40" />
-          <p className="text-sm text-text-secondary">No agents match your filter.</p>
+          <p className="text-sm text-text-secondary">{t('No agents match your filter.')}</p>
           <button onClick={() => { setTab('All'); setSearch('') }} className="text-xs text-text-link hover:text-text-link-hover">
-            Clear filters
+            {t('Clear filters')}
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard key={agent.id} agent={agent} t={t} />
           ))}
         </div>
       )}
