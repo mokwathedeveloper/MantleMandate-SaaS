@@ -6,6 +6,7 @@ import NextLink from 'next/link'
 import { useAlerts, useMarkAllRead, type Alert } from '@/hooks/useAlerts'
 import { useAgents } from '@/hooks/useAgents'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/useTranslation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,11 @@ const SEVERITY_BADGE_CLASS: Record<string, string> = {
   high:   'text-error',
   medium: 'text-warning',
   low:    'text-text-link',
+}
+const SEVERITY_LABEL: Record<string, string> = {
+  high:   'high',
+  medium: 'medium',
+  low:    'low',
 }
 
 // ─── Action buttons per alert type ───────────────────────────────────────────
@@ -78,12 +84,12 @@ function Toggle({ on, locked }: { on: boolean; locked?: boolean }) {
 
 // ─── Alert Card ───────────────────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead: (id: string) => void; agentNames: Record<string, string> }) {
+function AlertCard({ alert, onMarkRead, agentNames, t }: { alert: Alert; onMarkRead: (id: string) => void; agentNames: Record<string, string>; t: (s: string) => string }) {
   const dotClass   = SEVERITY_DOT_CLASS[alert.severity] ?? 'bg-text-secondary'
   const badgeClass = SEVERITY_BADGE_CLASS[alert.severity] ?? 'text-text-secondary'
   const action     = ACTION_LABEL[alert.alertType]
   const actionHref = ACTION_HREF[alert.alertType]
-  const agentName  = alert.agentId ? (agentNames[alert.agentId] ?? `Agent ${alert.agentId.slice(0, 8)}`) : null
+  const agentName  = alert.agentId ? (agentNames[alert.agentId] ?? `${t('Agent')} ${alert.agentId.slice(0, 8)}`) : null
 
   return (
     <div className={cn(
@@ -108,7 +114,7 @@ function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead
             {/* Agent name */}
             {agentName && (
               <p className="text-xs text-text-disabled mt-1">
-                Agent: {agentName}
+                {t('Agent')}: {agentName}
               </p>
             )}
             {/* Timestamp */}
@@ -124,7 +130,7 @@ function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead
                 href={`/dashboard/agents/${alert.agentId}`}
                 className="text-xs text-text-link hover:underline underline-offset-2 mt-1 inline-block"
               >
-                View agent →
+                {t('View agent →')}
               </NextLink>
             )}
           </div>
@@ -134,7 +140,7 @@ function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead
         <div className="flex flex-col items-end gap-2 shrink-0">
           <div className="flex items-center gap-2">
             <span className={cn('text-[10px] font-semibold uppercase tracking-wider', badgeClass)}>
-              {alert.severity}
+              {t(SEVERITY_LABEL[alert.severity] ?? alert.severity)}
             </span>
             {alert.isRead
               ? <Check className="h-3.5 w-3.5 text-text-disabled" />
@@ -147,7 +153,7 @@ function AlertCard({ alert, onMarkRead, agentNames }: { alert: Alert; onMarkRead
               onClick={() => onMarkRead(alert.id)}
               className="text-xs border border-border text-text-secondary rounded px-2 py-1 h-[26px] transition-colors hover:opacity-80 inline-flex items-center"
             >
-              {action}
+              {t(action)}
             </NextLink>
           )}
         </div>
@@ -176,12 +182,12 @@ function AlertSkeleton() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ t }: { t: (s: string) => string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <Bell className="h-12 w-12 mb-4 text-text-disabled" />
-      <p className="font-semibold text-sm text-text-primary mb-1">{"You're all caught up"}</p>
-      <p className="text-sm text-text-secondary">No alerts right now. Your agents are running smoothly.</p>
+      <p className="font-semibold text-sm text-text-primary mb-1">{t("You're all caught up")}</p>
+      <p className="text-sm text-text-secondary">{t('No alerts right now. Your agents are running smoothly.')}</p>
     </div>
   )
 }
@@ -189,6 +195,7 @@ function EmptyState() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AlertsPage() {
+  const t = useTranslation()
   const [filter,      setFilter]      = useState<Filter>('all')
   const [agentFilter, setAgentFilter] = useState('all')
   const [typeFilter,  setTypeFilter]  = useState('all')
@@ -237,11 +244,11 @@ export default function AlertsPage() {
   )
 
   const TABS: { key: Filter; label: string }[] = [
-    { key: 'all',    label: 'All' },
-    { key: 'unread', label: `Unread (${unreadCount})` },
-    { key: 'high',   label: 'HIGH' },
-    { key: 'medium', label: 'MEDIUM' },
-    { key: 'low',    label: 'LOW' },
+    { key: 'all',    label: t('All') },
+    { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
+    { key: 'high',   label: t('HIGH') },
+    { key: 'medium', label: t('MEDIUM') },
+    { key: 'low',    label: t('LOW') },
   ]
 
   const uniqueTypes = Array.from(new Set(displayAlerts.map(a => a.alertType)))
@@ -263,9 +270,9 @@ export default function AlertsPage() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">Alerts</h2>
+        <h2 className="text-2xl font-bold text-text-primary">{t('Alerts')}</h2>
         <p className="text-sm text-text-secondary mt-0.5">
-          Real-time notifications from your agents and mandates.
+          {t('Real-time notifications from your agents and mandates.')}
         </p>
       </div>
 
@@ -274,18 +281,18 @@ export default function AlertsPage() {
         {/* Severity tabs + actions */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-0.5">
-            {TABS.map(t => (
+            {TABS.map(tab => (
               <button
-                key={t.key}
-                onClick={() => setFilter(t.key)}
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium transition-colors rounded',
-                  filter === t.key
+                  filter === tab.key
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-text-secondary hover:text-text-primary',
                 )}
               >
-                {t.label}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -294,13 +301,13 @@ export default function AlertsPage() {
               onClick={handleMarkAllRead}
               className="text-xs text-text-link transition-colors hover:underline underline-offset-2"
             >
-              Mark all read
+              {t('Mark all read')}
             </button>
             <button
               onClick={handleClearAll}
               className="text-xs text-text-secondary hover:text-text-primary transition-colors"
             >
-              Clear all
+              {t('Clear all')}
             </button>
           </div>
         </div>
@@ -314,7 +321,7 @@ export default function AlertsPage() {
               onChange={e => setAgentFilter(e.target.value)}
               className="appearance-none bg-input border border-border rounded-md pl-3 pr-7 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="all">All Agents</option>
+              <option value="all">{t('All Agents')}</option>
               {Object.entries(agentNames).map(([id, name]) => (
                 <option key={id} value={id}>{name}</option>
               ))}
@@ -329,9 +336,9 @@ export default function AlertsPage() {
               onChange={e => setTypeFilter(e.target.value)}
               className="appearance-none bg-input border border-border rounded-md pl-3 pr-7 py-1.5 text-sm text-text-secondary focus:outline-none focus:border-primary cursor-pointer"
             >
-              <option value="all">All Types</option>
-              {uniqueTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
+              <option value="all">{t('All Types')}</option>
+              {uniqueTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
@@ -341,11 +348,11 @@ export default function AlertsPage() {
 
       {/* Alert list */}
       {isLoading && <AlertSkeleton />}
-      {!isLoading && filtered.length === 0 && <EmptyState />}
+      {!isLoading && filtered.length === 0 && <EmptyState t={t} />}
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-2">
           {filtered.map(a => (
-            <AlertCard key={a.id} alert={a} onMarkRead={handleMarkRead} agentNames={agentNames} />
+            <AlertCard key={a.id} alert={a} onMarkRead={handleMarkRead} agentNames={agentNames} t={t} />
           ))}
         </div>
       )}
@@ -356,7 +363,7 @@ export default function AlertsPage() {
           onClick={() => setShowNotif(v => !v)}
           className="w-full flex items-center justify-between px-5 py-4 text-text-primary hover:bg-surface transition-colors"
         >
-          <span className="font-semibold text-sm">Notification Preferences</span>
+          <span className="font-semibold text-sm">{t('Notification Preferences')}</span>
           <ChevronDown className={cn(
             'h-4 w-4 text-text-secondary transition-transform duration-200',
             showNotif && 'rotate-180',
@@ -369,7 +376,7 @@ export default function AlertsPage() {
             {/* Email toggles */}
             <div className="space-y-3 pt-4">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                Email Notifications
+                {t('Email Notifications')}
               </p>
               {[
                 ['Trade executions', true],
@@ -378,7 +385,7 @@ export default function AlertsPage() {
                 ['Daily summary',    false],
               ].map(([label, on]) => (
                 <div key={String(label)} className="flex items-center justify-between">
-                  <span className="text-sm text-text-secondary">{String(label)}</span>
+                  <span className="text-sm text-text-secondary">{t(String(label))}</span>
                   <Toggle on={Boolean(on)} />
                 </div>
               ))}
@@ -387,21 +394,21 @@ export default function AlertsPage() {
             {/* In-app */}
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                In-App Notifications
+                {t('In-App Notifications')}
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-text-secondary">All alerts (always on)</span>
+                <span className="text-sm text-text-secondary">{t('All alerts (always on)')}</span>
                 <Toggle on locked />
               </div>
               <p className="text-xs text-text-disabled italic">
-                In-app alerts cannot be disabled for system-critical events.
+                {t('In-app alerts cannot be disabled for system-critical events.')}
               </p>
             </div>
 
             {/* Telegram webhook */}
             <div className="space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-text-disabled">
-                Telegram Webhook (optional)
+                {t('Telegram Webhook (optional)')}
               </p>
               <div className="flex gap-2 flex-wrap">
                 <input
@@ -414,24 +421,24 @@ export default function AlertsPage() {
                   onClick={testTelegram}
                   className="px-3 py-2 border border-border rounded-md text-xs text-text-secondary hover:text-text-primary hover:border-primary transition-colors shrink-0"
                 >
-                  Test Connection
+                  {t('Test Connection')}
                 </button>
                 <button
                   onClick={saveTelegram}
                   disabled={!telegramUrl.trim()}
                   className="px-3 py-2 bg-primary hover:bg-primary-hover text-white text-xs rounded-md transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {telegramSaved ? '✓ Saved' : 'Save'}
+                  {telegramSaved ? `✓ ${t('Saved')}` : t('Save')}
                 </button>
               </div>
               {telegramStatus === 'connected' && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
-                  <Check className="h-3.5 w-3.5" /> Connected ✓
+                  <Check className="h-3.5 w-3.5" /> {t('Connected')} ✓
                 </span>
               )}
               {telegramStatus === 'failed' && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-error">
-                  <X className="h-3.5 w-3.5" /> Connection failed
+                  <X className="h-3.5 w-3.5" /> {t('Connection failed')}
                 </span>
               )}
             </div>
