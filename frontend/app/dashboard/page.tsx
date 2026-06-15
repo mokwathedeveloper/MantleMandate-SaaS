@@ -23,6 +23,8 @@ import { usePortfolioStats, usePortfolioHistory } from '@/hooks/usePortfolio'
 import { useAgents } from '@/hooks/useAgents'
 import { useRecentTrades } from '@/hooks/useTrades'
 import { useRiskSummary } from '@/hooks/useRiskSummary'
+import { usePreferences, DEFAULT_PREFERENCES } from '@/hooks/usePreferences'
+import { useTranslation } from '@/hooks/useTranslation'
 import type { Trade } from '@/types/trade'
 
 import { formatCurrency, formatPercent, truncateAddress, explorerTxUrl, cn } from '@/lib/utils'
@@ -51,14 +53,14 @@ function formatLargeUsd(n: number) {
   return `$${n.toFixed(0)}`
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (s: string) => string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
   const min = Math.floor(diffMs / 60_000)
-  if (min < 1)  return 'just now'
-  if (min < 60) return `${min} min ago`
+  if (min < 1)  return t('just now')
+  if (min < 60) return t('{n} min ago').replace('{n}', String(min))
   const hr = Math.floor(min / 60)
-  if (hr < 24)  return `${hr}h ago`
-  return `${Math.floor(hr / 24)}d ago`
+  if (hr < 24)  return t('{n}h ago').replace('{n}', String(hr))
+  return t('{n}d ago').replace('{n}', String(Math.floor(hr / 24)))
 }
 
 interface DisplayTrade {
@@ -88,6 +90,7 @@ function tradeToDisplay(t: Trade): DisplayTrade {
 }
 
 export default function DashboardPage() {
+  const t = useTranslation()
   const [tab, setTab] = useState<TimeTab>('30D')
 
   const { data: stats }     = usePortfolioStats()
@@ -95,6 +98,7 @@ export default function DashboardPage() {
   const { data: agents = [] } = useAgents()
   const { data: tradesResp } = useRecentTrades(6)
   const { data: riskSummary } = useRiskSummary()
+  const { data: prefs = DEFAULT_PREFERENCES } = usePreferences()
 
   const k = stats ?? { totalValue: 0, totalPnl24h: 0, totalPnlPct: 0, activeAgents: 0, totalTrades: 0, winRate: 0 }
   const chartData = history ?? []
@@ -110,18 +114,18 @@ export default function DashboardPage() {
     <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-10 space-y-6">
       <PageHeader
         breadcrumb="OPERATIONS"
-        title="Dashboard"
-        subtitle="Real-time overview of mandates, agents, executions, and policy posture across your Mantle deployment."
+        title={t('Dashboard')}
+        subtitle={t('Real-time overview of mandates, agents, executions, and policy posture across your Mantle deployment.')}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/reports">
               <PrimaryButton variant="secondary" icon={<BarChart2 className="h-4 w-4" />}>
-                View Reports
+                {t('View Reports')}
               </PrimaryButton>
             </Link>
             <Link href="/dashboard/mandates/new">
               <PrimaryButton variant="primary" icon={<Plus className="h-4 w-4" />}>
-                New Mandate
+                {t('New Mandate')}
               </PrimaryButton>
             </Link>
           </div>
@@ -136,11 +140,11 @@ export default function DashboardPage() {
 
       <InlineAlert
         tone="success"
-        title="All systems operational — Policy Engine, Risk Engine, and 4 protocols are online."
-        description={`${k.activeAgents} active agent${k.activeAgents === 1 ? '' : 's'} · ${trades.filter(t => t.status === 'success').length} successful trades shown · on-chain via Mantle Network`}
+        title={t('All systems operational — Policy Engine, Risk Engine, and 4 protocols are online.')}
+        description={`${t(k.activeAgents === 1 ? '{n} active agent' : '{n} active agents').replace('{n}', String(k.activeAgents))} · ${t(trades.filter(tr => tr.status === 'success').length === 1 ? '{n} successful trade shown' : '{n} successful trades shown').replace('{n}', String(trades.filter(tr => tr.status === 'success').length))} · ${t('on-chain via Mantle Network')}`}
         action={
           <Link href="/dashboard/agents" className="text-xs font-semibold text-success hover:underline">
-            View status →
+            {t('View status →')}
           </Link>
         }
       />
@@ -148,33 +152,33 @@ export default function DashboardPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard
-          label="Portfolio Value"
-          value={formatCurrency(k.totalValue)}
-          delta={`${agents.length} agent${agents.length === 1 ? '' : 's'} deployed`}
+          label={t('Portfolio Value')}
+          value={formatCurrency(k.totalValue, prefs)}
+          delta={t(agents.length === 1 ? '{n} agent deployed' : '{n} agents deployed').replace('{n}', String(agents.length))}
           deltaTone="neutral"
         />
         <MetricCard
-          label="P&L (24h)"
-          value={formatCurrency(k.totalPnl24h)}
+          label={t('P&L (24h)')}
+          value={formatCurrency(k.totalPnl24h, prefs)}
           delta={formatPercent(k.totalPnlPct)}
           deltaTone={k.totalPnlPct >= 0 ? 'positive' : 'negative'}
         />
         <MetricCard
-          label="Active Agents"
+          label={t('Active Agents')}
           value={k.activeAgents.toString()}
-          delta={`of ${agents.length} agent${agents.length === 1 ? '' : 's'}`}
+          delta={t(agents.length === 1 ? 'of {n} agent' : 'of {n} agents').replace('{n}', String(agents.length))}
           deltaTone="neutral"
         />
         <MetricCard
-          label="Total Trades"
+          label={t('Total Trades')}
           value={k.totalTrades.toLocaleString()}
-          delta={`${k.winRate.toFixed(0)}% win rate`}
+          delta={t('{n}% win rate').replace('{n}', k.winRate.toFixed(0))}
           deltaTone={k.winRate >= 50 ? 'positive' : 'neutral'}
         />
         <MetricCard
-          label="Max Drawdown"
+          label={t('Max Drawdown')}
           value={`-${maxDrawdown.toFixed(2)}%`}
-          delta="within healthy range"
+          delta={t('within healthy range')}
           deltaTone="positive"
         />
       </div>
@@ -183,8 +187,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <SectionCard
           className="lg:col-span-2"
-          title="Portfolio Value"
-          subtitle={`${tab} performance — net of fees and gas`}
+          title={t('Portfolio Value')}
+          subtitle={`${tab} ${t('performance — net of fees and gas')}`}
           action={
             <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border bg-page p-0.5">
               {TIME_TABS.map((t) => (
@@ -207,9 +211,9 @@ export default function DashboardPage() {
         >
           {chartData.length === 0 ? (
             <div className="flex h-[260px] flex-col items-center justify-center gap-1 text-center">
-              <p className="text-sm font-semibold text-text-primary">No portfolio history yet</p>
+              <p className="text-sm font-semibold text-text-primary">{t('No portfolio history yet')}</p>
               <p className="text-xs text-text-secondary">
-                Snapshots accumulate daily once your agents start trading.
+                {t('Snapshots accumulate daily once your agents start trading.')}
               </p>
             </div>
           ) : (
@@ -240,7 +244,7 @@ export default function DashboardPage() {
                 contentStyle={{ background: '#161B22', border: '1px solid #21262D', borderRadius: 8, fontSize: 12 }}
                 labelStyle={{ color: '#8B949E' }}
                 itemStyle={{ color: '#F0F6FC' }}
-                formatter={(value) => [formatCurrency(Number(value)), 'Portfolio']}
+                formatter={(value) => [formatCurrency(Number(value), prefs), t('Portfolio')]}
               />
               <Area
                 type="monotone"
@@ -257,11 +261,11 @@ export default function DashboardPage() {
         </SectionCard>
 
         <SectionCard
-          title="Active Agents"
-          subtitle={`${activeAgents.length} running · ${agents.length - activeAgents.length} paused/stopped`}
+          title={t('Active Agents')}
+          subtitle={`${t('{n} running').replace('{n}', String(activeAgents.length))} · ${t('{n} paused/stopped').replace('{n}', String(agents.length - activeAgents.length))}`}
           action={
             <Link href="/dashboard/agents" className="text-[12px] text-text-link hover:text-text-link-hover">
-              Manage →
+              {t('Manage →')}
             </Link>
           }
           padding="none"
@@ -279,7 +283,7 @@ export default function DashboardPage() {
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-text-primary truncate">{a.name}</p>
                         <p className="text-[11px] text-text-secondary truncate">
-                          {a.mandateName || 'No mandate'}
+                          {a.mandateName || t('No mandate')}
                         </p>
                       </div>
                     </div>
@@ -290,7 +294,7 @@ export default function DashboardPage() {
                       )}>
                         {positive ? '+' : ''}{a.totalRoi.toFixed(2)}%
                       </p>
-                      <p className="text-[10px] text-text-disabled">{a.lastTradeAt ? timeAgo(a.lastTradeAt) : 'no trades yet'}</p>
+                      <p className="text-[10px] text-text-disabled">{a.lastTradeAt ? timeAgo(a.lastTradeAt, t) : t('no trades yet')}</p>
                     </div>
                   </div>
                 </div>
@@ -298,7 +302,7 @@ export default function DashboardPage() {
             })}
             {activeAgents.length === 0 && (
               <div className="px-4 py-6 text-center text-[12px] text-text-secondary">
-                No active agents yet.
+                {t('No active agents yet.')}
               </div>
             )}
           </div>
@@ -309,11 +313,11 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <SectionCard
           className="lg:col-span-2"
-          title="Recent Trades"
-          subtitle="Last 6 executions across all active agents"
+          title={t('Recent Trades')}
+          subtitle={t('Last 6 executions across all active agents')}
           action={
             <Link href="/dashboard/trades" className="text-[12px] text-text-link hover:text-text-link-hover">
-              View all →
+              {t('View all →')}
             </Link>
           }
           padding="none"
@@ -322,12 +326,12 @@ export default function DashboardPage() {
             <table className="w-full text-sm">
               <thead className="bg-page border-b border-border">
                 <tr>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Pair</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Side</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Amount</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{t('Pair')}</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{t('Side')}</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{t('Amount')}</th>
                   <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">P&amp;L</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Protocol</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">Status</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{t('Protocol')}</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{t('Status')}</th>
                   <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-text-secondary">TX</th>
                 </tr>
               </thead>
@@ -335,7 +339,7 @@ export default function DashboardPage() {
                 {trades.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-10 text-center text-[12px] text-text-secondary">
-                      No trades yet — once your agents execute on Mantle, they&apos;ll appear here.
+                      {t("No trades yet — once your agents execute on Mantle, they'll appear here.")}
                     </td>
                   </tr>
                 )}
@@ -351,14 +355,14 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-text-primary font-medium tabular-nums">
-                      {formatCurrency(t.amountUsd)}
+                      {formatCurrency(t.amountUsd, prefs)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {t.pnl == null ? (
                         <span className="text-text-disabled">—</span>
                       ) : (
                         <span className={cn('font-medium', t.pnl >= 0 ? 'text-success' : 'text-error')}>
-                          {t.pnl >= 0 ? '+' : ''}{formatCurrency(t.pnl)}
+                          {t.pnl >= 0 ? '+' : ''}{formatCurrency(t.pnl, prefs)}
                         </span>
                       )}
                     </td>
@@ -385,20 +389,20 @@ export default function DashboardPage() {
         </SectionCard>
 
         <SectionCard
-          title="Risk Posture"
-          subtitle="Current exposure across mandates"
+          title={t('Risk Posture')}
+          subtitle={t('Current exposure across mandates')}
           action={<ShieldCheck className="h-4 w-4 text-success" />}
         >
           {!riskSummary?.hasData ? (
             <div className="space-y-4">
               <p className="text-sm text-text-secondary">
-                No active agents yet — risk metrics will appear once an agent is deployed.
+                {t('No active agents yet — risk metrics will appear once an agent is deployed.')}
               </p>
               <Link
                 href="/dashboard/risk"
                 className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
               >
-                Open Risk Engine →
+                {t('Open Risk Engine →')}
               </Link>
             </div>
           ) : (
@@ -411,7 +415,7 @@ export default function DashboardPage() {
                   )}>
                     {riskSummary.score}
                   </span>
-                  <span className="text-text-secondary text-xs">/ 100</span>
+                  <span className="text-text-secondary text-xs">{t('/ 100')}</span>
                   <StatusBadge
                     status={riskSummary.score < 30 ? 'active' : riskSummary.score < 60 ? 'pending' : 'failed'}
                     label={riskSummary.level}
@@ -442,7 +446,7 @@ export default function DashboardPage() {
                 href="/dashboard/risk"
                 className="block w-full text-center text-[12px] font-semibold text-primary hover:text-primary-hover py-2 rounded-md border border-primary/30 hover:bg-primary/5 transition-colors"
               >
-                Open Risk Engine →
+                {t('Open Risk Engine →')}
               </Link>
             </div>
           )}
@@ -450,7 +454,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick actions row */}
-      <SectionCard title="Quick Actions" subtitle="Common operational shortcuts">
+      <SectionCard title={t('Quick Actions')} subtitle={t('Common operational shortcuts')}>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
             { label: 'Create Mandate',  Icon: Plus,         href: '/dashboard/mandates/new', desc: 'Plain-English strategy → on-chain policy' },
@@ -464,8 +468,8 @@ export default function DashboardPage() {
               className="flex flex-col gap-1 rounded-md border border-border bg-page p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors"
             >
               <q.Icon className="h-4 w-4 text-primary" />
-              <p className="text-[13px] font-semibold text-text-primary">{q.label}</p>
-              <p className="text-[11px] text-text-secondary leading-snug">{q.desc}</p>
+              <p className="text-[13px] font-semibold text-text-primary">{t(q.label)}</p>
+              <p className="text-[11px] text-text-secondary leading-snug">{t(q.desc)}</p>
             </Link>
           ))}
         </div>
