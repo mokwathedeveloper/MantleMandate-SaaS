@@ -2,7 +2,7 @@ import { ChatOpenAI } from '@langchain/openai'
 import { SystemMessage, HumanMessage, AIMessage, type BaseMessage, type MessageContent } from '@langchain/core/messages'
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
-const MODEL = 'anthropic/claude-sonnet-4-5'
+const MODEL = 'anthropic/claude-haiku-4-5'
 
 interface Message {
   role: 'system' | 'user' | 'assistant'
@@ -29,7 +29,7 @@ export async function chat(messages: Message[], opts?: { temperature?: number })
     apiKey: process.env.OPENROUTER_API_KEY,
     model: MODEL,
     temperature: opts?.temperature ?? 0.2,
-    maxTokens: 400,
+    maxTokens: 300,
     configuration: {
       baseURL: OPENROUTER_BASE,
       defaultHeaders: {
